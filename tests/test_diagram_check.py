@@ -105,7 +105,9 @@ def test_every_template_in_the_standard_passes_the_source_pass():
 def test_a_limit_matches_the_standards_layout_table(row, limit):
     cell = re.search(rf"^\| {re.escape(row)} \| (.+?) \|$", STANDARD, re.MULTILINE)
     assert cell, f"the Layout table has no `{row}` row"
-    assert float(re.search(r"\d+(?:\.\d+)?", cell.group(1)).group()) == limit
+    number = re.search(r"\d+(?:\.\d+)?", cell.group(1))
+    assert number, f"the `{row}` row has no number"
+    assert float(number.group()) == limit
 
 
 @pytest.mark.parametrize(
@@ -116,7 +118,9 @@ def test_a_limit_matches_the_standards_layout_table(row, limit):
     ],
 )
 def test_a_limit_matches_the_standards_prose(phrase, limit):
-    assert int(re.search(phrase, STANDARD).group(1)) == limit
+    found = re.search(phrase, STANDARD)
+    assert found, f"the standard never says {phrase!r}"
+    assert int(found.group(1)) == limit
 
 
 @pytest.mark.parametrize(

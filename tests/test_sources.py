@@ -100,7 +100,7 @@ def test_update_repins_a_moved_source_and_reports_a_broken_one(site):
     by_source = {change.source: change for change in changes}
     assert by_source["demo"].old == "pkg_1.zip"
     assert by_source["demo"].error is None
-    assert "needs 'revision'" in by_source["needs-revision"].error
+    assert "needs 'revision'" in str(by_source["needs-revision"].error)
     assert "needs-revision" not in pins
 
 

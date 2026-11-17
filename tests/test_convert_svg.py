@@ -67,10 +67,11 @@ def test_clean_keeps_artwork_and_isolates_each_icon(
     source, body_has, body_lacks, fields, notes
 ):
     icon, found = svg.clean(source.encode(), "k")
+    body = str(icon["body"])
     for text in body_has:
-        assert text in icon["body"]
+        assert text in body
     for text in body_lacks:
-        assert text not in icon["body"]
+        assert text not in body
     for name, value in fields.items():
         assert icon[name] == value
     assert found == notes
@@ -149,7 +150,9 @@ def test_pack_reads_every_container_and_reports_what_it_dropped(tmp_path, kind):
     source = write_archive(kind, tmp_path)
     pack, report = svg.pack(members(source), "aws", RULES)
     assert pack["prefix"] == "aws"
-    assert list(pack["icons"]) == ["amazon-ec2"]
+    icons = pack["icons"]
+    assert isinstance(icons, dict)
+    assert list(icons) == ["amazon-ec2"]
     assert report.icons == 1
     assert len(report.duplicates) == 1
     assert len(report.failed) == 1
