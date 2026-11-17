@@ -87,10 +87,29 @@ def _page(
         name, top, _, _ = stencil.master(master_id)
         return name, top[0] if top else None
 
+    def origin(shape: ET.Element, ox: float, oy: float) -> tuple[float, float]:
+        master = master_of(shape)[1]
+        x = ox + _cell(shape, master, "PinX") - _cell(shape, master, "LocPinX")
+        y = oy + _cell(shape, master, "PinY") - _cell(shape, master, "LocPinY")
+        return x, y
+
+    def flatten(
+        found: list[ET.Element], ox: float, oy: float
+    ) -> list[tuple[ET.Element, float, float]]:
+        """Every shape with its page offset: a group's children are in its frame."""
+        flat = []
+        for shape in found:
+            flat.append((shape, ox, oy))
+            inner = shape.find(f"{V}Shapes")
+            if shape.get("Type") == "Group" and inner is not None:
+                gx, gy = origin(shape, ox, oy)
+                flat += flatten(inner.findall(f"{V}Shape"), gx, gy)
+        return flat
+
     labels: dict[str, list[str]] = {}
     boxes: dict[str, Box] = {}
     connectors: dict[str, ET.Element] = {}
-    for shape in shapes:
+    for shape, ox, oy in flatten(shapes, 0.0, 0.0):
         shape_id = shape.get("ID", "")
         master_name, master = master_of(shape)
         is_connector = (
@@ -104,15 +123,9 @@ def _page(
         if not lines:
             drawing.dropped.append(f"{shape_id}: unlabelled shape")
             continue
-        pin_x, pin_y = _cell(shape, master, "PinX"), _cell(shape, master, "PinY")
-        loc_x, loc_y = _cell(shape, master, "LocPinX"), _cell(shape, master, "LocPinY")
+        x0, y0 = origin(shape, ox, oy)
         width, height = _cell(shape, master, "Width"), _cell(shape, master, "Height")
-        boxes[shape_id] = (
-            pin_x - loc_x,
-            pin_y - loc_y,
-            pin_x - loc_x + width,
-            pin_y - loc_y + height,
-        )
+        boxes[shape_id] = (x0, y0, x0 + width, y0 + height)
         labels[shape_id] = lines
 
     enclosing = nest_by_bounds(boxes, set(boxes))
