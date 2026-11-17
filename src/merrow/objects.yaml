@@ -25,4 +25,14 @@ objects:
   aws.nat-gateway: {label: NAT gateway, icon: "aws:res-amazon-vpc-nat-gateway"}
   aws.internet-gateway: {label: Internet gateway, icon: "aws:res-amazon-vpc-internet-gateway"}
   aws.ec2: {label: Amazon EC2 instances, icon: "aws:res-amazon-ec2-instances"}
+  aws.ec2-instance: {label: Instance, icon: "aws:res-amazon-ec2-instance"}
   aws.vpc-endpoint: {label: VPC endpoint, icon: "aws:res-amazon-vpc-endpoints"}
+  aws.client: {label: Client, icon: "aws:res-client"}
+  aws.waf: {label: AWS WAF, icon: "aws:aws-waf"}
+  aws.cloudfront: {label: Amazon CloudFront, icon: "aws:amazon-cloudfront"}
+  aws.acm: {label: AWS Certificate Manager, icon: "aws:aws-certificate-manager"}
+  aws.alb: {label: Application Load Balancer, icon: "aws:res-elastic-load-balancing-application-load-balancer"}
+  aws.rds: {label: Amazon RDS, icon: "aws:amazon-rds"}
+  aws.elasticache: {label: Amazon ElastiCache, icon: "aws:amazon-elasticache"}
+  aws.efs: {label: Amazon EFS, icon: "aws:amazon-efs"}
+  aws.asg: {label: Auto Scaling group, group_style: auto-scaling-group}
