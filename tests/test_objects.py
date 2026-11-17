@@ -148,3 +148,33 @@ def test_a_node_with_no_object_takes_the_profile_default_class(monkeypatch, tmp_
     assert "  class repo part\n" in source
     assert "  class web ui\n" in source
     assert problems == []
+
+
+@pytest.mark.parametrize(
+    ("built", "expected"),
+    [
+        (True, {"demo.amazon-ec2": "Amazon EC2", "demo.bus": "Kafka"}),
+        (False, {"demo.bus": "Kafka"}),
+    ],
+    ids=["pack_built", "pack_not_built"],
+)
+def test_a_pack_titles_become_objects_and_configured_ones_win(
+    monkeypatch, tmp_path, built, expected
+):
+    packs = tmp_path / "packs"
+    packs.mkdir()
+    if built:
+        titles = {"amazon-ec2": "Amazon EC2", "bus": "Generated bus"}
+        pack = {"prefix": "demo", "icons": {}, "titles": titles}
+        (packs / "demo.json").write_text(json.dumps(pack), encoding="utf-8")
+    monkeypatch.setenv("MERROW_PACKS_DIR", str(packs))
+    settings = settings_with(
+        monkeypatch,
+        tmp_path,
+        "generated_objects:\n  - {pack: demo, id_prefix: demo.}\n"
+        "objects:\n  demo.bus: {class: bus, label: Kafka}\n",
+    )
+    found = objects.library(settings)
+    assert {k: v.label for k, v in found.items() if k.startswith("demo.")} == expected
+    if built:
+        assert found["demo.amazon-ec2"].icon == "demo:amazon-ec2"

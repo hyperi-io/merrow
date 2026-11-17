@@ -85,24 +85,29 @@ def test_clean_rejects_malformed_xml():
 RULES = naming.rules(
     [
         {"match": "__MACOSX/", "key": None},
-        {"match": r"/Arch_([^/]+)_64\.svg$", "key": r"\1"},
+        {"match": r"/Arch_([^/]+)_64\.svg$", "key": r"\1", "title": r"\1"},
         {"match": r"/Res_([^/]+)_48_Dark\.svg$", "key": r"res-\1-dark"},
     ]
 )
 
 
 @pytest.mark.parametrize(
-    ("path", "key"),
+    ("path", "key", "title"),
     [
-        ("pkg_0731/Compute/64/Arch_Amazon-EC2_64.svg", "amazon-ec2"),
-        ("pkg_0731/Res/Res_Amazon-S3_Bucket_48_Dark.svg", "res-amazon-s3-bucket-dark"),
-        ("__MACOSX/pkg/Arch_Amazon-EC2_64.svg", None),
-        ("pkg_0731/Compute/32/Arch_Amazon-EC2_32.svg", False),
+        ("pkg_0731/Compute/64/Arch_Amazon-EC2_64.svg", "amazon-ec2", "Amazon EC2"),
+        (
+            "pkg_0731/Res/Res_Amazon-S3_Bucket_48_Dark.svg",
+            "res-amazon-s3-bucket-dark",
+            None,
+        ),
+        ("__MACOSX/pkg/Arch_Amazon-EC2_64.svg", None, None),
+        ("pkg_0731/Compute/32/Arch_Amazon-EC2_32.svg", False, None),
     ],
     ids=["service", "dark-resource", "skipped", "unmatched"],
 )
-def test_names_come_from_the_sources_rules(path, key):
+def test_names_come_from_the_sources_rules(path, key, title):
     assert naming.key_for(path, RULES) == key
+    assert naming.title_for(path, RULES) == title
 
 
 def test_a_rule_without_match_is_refused():
@@ -153,6 +158,7 @@ def test_pack_reads_every_container_and_reports_what_it_dropped(tmp_path, kind):
     icons = pack["icons"]
     assert isinstance(icons, dict)
     assert list(icons) == ["amazon-ec2"]
+    assert pack["titles"] == {"amazon-ec2": "Amazon EC2"}
     assert report.icons == 1
     assert len(report.duplicates) == 1
     assert len(report.failed) == 1

@@ -1,9 +1,13 @@
 """L1 objects: a thing drawn the same way everywhere, defined once in config."""
 
+import functools
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any
 
+from merrow import config
 from merrow.graph import Graph
 
 
@@ -30,13 +34,36 @@ class L1Object:
     group_style: str | None = None
 
 
+@functools.cache
+def _titles(path: Path, mtime: float) -> dict[str, str]:
+    """Return a built pack's titles by icon key. `mtime` keys the cache."""
+    return dict(json.loads(path.read_text(encoding="utf-8")).get("titles") or {})
+
+
+def generated(settings: Any) -> dict[str, L1Object]:
+    """Return one object per titled icon in each `generated_objects` pack that is built.
+
+    A pack not built yet gives none: `merrow pack build` makes it.
+    """
+    found = {}
+    for entry in settings.get("generated_objects") or []:
+        path = config.packs_dir(settings) / f"{entry['pack']}.json"
+        if not path.is_file():
+            continue
+        prefix = str(entry["id_prefix"])
+        for key, title in _titles(path, path.stat().st_mtime).items():
+            icon = f"{entry['pack']}:{key}"
+            found[prefix + key] = L1Object(prefix + key, "", title, icon=icon)
+    return found
+
+
 def library(settings: Any) -> dict[str, L1Object]:
-    """Return every configured object by id.
+    """Return every object by id: the generated ones, then the configured ones over them.
 
     Raises:
         KeyError: An entry has no `label`.
     """
-    found = {}
+    found = generated(settings)
     for object_id, entry in (settings.get("objects") or {}).items():
         found[object_id] = L1Object(
             object_id,
