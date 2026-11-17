@@ -228,3 +228,32 @@ def test_every_shipped_alias_and_target_is_in_slug_form(limits):
         for short, target in (source.options.get("aliases") or {}).items():
             assert short == naming.slug(short), short
             assert target == naming.slug(target), target
+
+
+@pytest.mark.parametrize(
+    ("path", "key", "title"),
+    [
+        (
+            "P/Arch_General-Icons/64/Arch_AWS-Marketplace_Light_64.svg",
+            "aws-marketplace",
+            "AWS Marketplace",
+        ),
+        (
+            "P/Arch_General-Icons/64/Arch_AWS-Marketplace_Dark_64.svg",
+            "aws-marketplace-dark",
+            None,
+        ),
+        ("P/Arch_Compute/64/Arch_Amazon-EC2_64.svg", "amazon-ec2", "Amazon EC2"),
+        (
+            "P/Res_Compute/Res_Amazon-EC2_Instance_48.svg",
+            "res-amazon-ec2-instance",
+            "Amazon EC2 Instance",
+        ),
+        ("P/Arch_Compute/16/Arch_Amazon-EC2_16.svg", None, None),
+    ],
+    ids=["light", "dark", "service", "resource", "skipped_size"],
+)
+def test_the_shipped_aws_rules_name_and_title_icons(limits, path, key, title):
+    rules = naming.rules(config.sources(config.load())["aws-icons"].options["names"])
+    assert naming.key_for(path, rules) == key
+    assert naming.title_for(path, rules) == title
