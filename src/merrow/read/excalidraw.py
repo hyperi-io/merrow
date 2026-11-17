@@ -9,24 +9,10 @@ sits in it, the same bounds rule the other readers use.
 import json
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass, field
 from typing import Any
 
 from merrow.graph import Box, Edge, Graph, Group, Node, nest_by_bounds
-from merrow.read import skipper
-
-
-@dataclass(slots=True)
-class Scene:
-    """One Excalidraw scene.
-
-    Attributes:
-        graph: What it holds.
-        dropped: Elements left out and why, for review.
-    """
-
-    graph: Graph
-    dropped: list[str] = field(default_factory=list)
+from merrow.read import Drawing, skipper
 
 
 def _box(element: Mapping[str, Any]) -> Box:
@@ -39,7 +25,7 @@ def _box(element: Mapping[str, Any]) -> Box:
     )
 
 
-def read(data: bytes, rules: Mapping[str, object]) -> Scene:
+def read(data: bytes, rules: Mapping[str, object]) -> Drawing:
     """Return an Excalidraw scene as a Graph. `rules` holds `readers.excalidraw`.
 
     Raises:
@@ -51,7 +37,7 @@ def read(data: bytes, rules: Mapping[str, object]) -> Scene:
     shapes = set(str(rules.get("shapes", "")).split(","))
     optional = set(str(rules.get("optional_stroke", "")).split(","))
     skip = skipper(rules.get("skip_labels"))
-    scene = Scene(Graph())
+    scene = Drawing("scene", Graph())
 
     labels: dict[str, list[str]] = {}
     for element in elements:

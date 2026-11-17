@@ -11,11 +11,10 @@ import re
 import xml.etree.ElementTree as ET
 import zipfile
 from collections.abc import Mapping
-from dataclasses import dataclass, field
 
 from merrow.convert import opc
 from merrow.graph import Box, Edge, Graph, Group, Node, nest_by_bounds
-from merrow.read import skipper
+from merrow.read import Drawing, skipper
 
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 P = "http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -24,21 +23,6 @@ NS = {"a": A, "p": P}
 # A group's child coordinates: (child offset x, y, slide offset x, y, scale x, y).
 type Frame = tuple[float, float, float, float, float, float]
 _IDENTITY: Frame = (0.0, 0.0, 0.0, 0.0, 1.0, 1.0)
-
-
-@dataclass(slots=True)
-class Slide:
-    """One slide read from a deck.
-
-    Attributes:
-        number: The slide's position in the deck, from 1.
-        graph: What it holds.
-        dropped: Shapes and connectors left out and why, for review.
-    """
-
-    number: int
-    graph: Graph
-    dropped: list[str] = field(default_factory=list)
 
 
 def _text(shape: ET.Element) -> list[str]:
@@ -96,9 +80,9 @@ def _walk(tree: ET.Element, frame: Frame, shapes: list, connectors: list) -> Non
             connectors.append(child)
 
 
-def read_slide(number: int, slide: ET.Element, rules: Mapping[str, object]) -> Slide:
+def read_slide(number: int, slide: ET.Element, rules: Mapping[str, object]) -> Drawing:
     """Return one slide's Graph. `rules` holds the `readers.pptx` config."""
-    result = Slide(number, Graph())
+    result = Drawing(str(number), Graph())
     tree = slide.find("p:cSld/p:spTree", NS)
     if tree is None:
         return result
@@ -155,7 +139,7 @@ def read_slide(number: int, slide: ET.Element, rules: Mapping[str, object]) -> S
     return result
 
 
-def slides(data: bytes, rules: Mapping[str, object]) -> list[Slide]:
+def slides(data: bytes, rules: Mapping[str, object]) -> list[Drawing]:
     """Return every slide in a deck as a Graph, in deck order.
 
     Raises:

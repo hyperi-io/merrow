@@ -107,3 +107,11 @@ readers:
     # Arrow stroke styles marking an optional path (drawn dotted).
     optional_stroke: dashed,dotted
     skip_labels: ["%[^%]+%", "\\d{1,2}"]
+  visio:
+    # Master names that are connectors, beside shapes with begin and end points.
+    connector_masters: connector
+    # A floating connector end snaps to a shape this close, in inches.
+    snap_in: 0.15
+    # LinePattern values that draw dashed or dotted: an optional path.
+    optional_patterns: 2,3,4,9,10
+    skip_labels: ["%[^%]+%", "\\d{1,2}"]

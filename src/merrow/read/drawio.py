@@ -12,27 +12,11 @@ import re
 import xml.etree.ElementTree as ET
 import zlib
 from collections.abc import Mapping
-from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from urllib.parse import unquote
 
 from merrow.graph import Box, Edge, Graph, Group, Node, nest_by_bounds
-from merrow.read import skipper
-
-
-@dataclass(slots=True)
-class Page:
-    """One page read from a draw.io file.
-
-    Attributes:
-        name: The page's tab name.
-        graph: What it holds.
-        dropped: Cells left out and why, for review.
-    """
-
-    name: str
-    graph: Graph
-    dropped: list[str] = field(default_factory=list)
+from merrow.read import Drawing, skipper
 
 
 class _Text(HTMLParser):
@@ -74,7 +58,7 @@ def _model(diagram: ET.Element) -> ET.Element | None:
     return ET.fromstring(xml)  # noqa: S314 -- expat refuses entity expansion attacks
 
 
-def pages(data: bytes, rules: Mapping[str, object]) -> list[Page]:
+def pages(data: bytes, rules: Mapping[str, object]) -> list[Drawing]:
     """Return every page in a draw.io file as a Graph.
 
     `rules` holds the `readers.drawio` config: `container` (style keys marking a
@@ -132,7 +116,7 @@ def _boxes(cells: Mapping[str, ET.Element]) -> dict[str, Box]:
     return {cell_id: absolute(cell_id) for cell_id in local}
 
 
-def _page(name: str, model: ET.Element, rules: Mapping[str, object]) -> Page:
+def _page(name: str, model: ET.Element, rules: Mapping[str, object]) -> Drawing:
     cells = _cells(model)
     container_keys = _keys(rules, "container")
     title_keys = _keys(rules, "title")
@@ -142,7 +126,7 @@ def _page(name: str, model: ET.Element, rules: Mapping[str, object]) -> Page:
         for pair in str(rules.get("optional", "")).split(",")
         if "=" in pair
     )
-    page = Page(name, Graph())
+    page = Drawing(name, Graph())
     vertices = {i: c for i, c in cells.items() if c.get("vertex") == "1"}
     has_children = {c.get("parent") for c in vertices.values()}
     groups = {
