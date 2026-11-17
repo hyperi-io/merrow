@@ -5,11 +5,23 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+import yaml
 from scalo.cli import Argument, Option, Typer
 from scalo.cli.version import version_option
 from typer import BadParameter, Exit
 
-from merrow import apply, config, node, objects, proc, profile, render
+from merrow import (
+    apply,
+    config,
+    node,
+    objects,
+    patterns,
+    proc,
+    profile,
+    render,
+    spec,
+    write,
+)
 from merrow.convert import CONVERTERS
 from merrow.lint import diagram_check
 from merrow.model import Limits
@@ -24,12 +36,17 @@ source_app = Typer(
 diagram_app = Typer(help="Diagrams: render to SVG and lint.", no_args_is_help=True)
 pack_app = Typer(help="Icon packs built from vendor sources.", no_args_is_help=True)
 profile_app = Typer(help="Profiles: the look a diagram takes.", no_args_is_help=True)
+graph_app = Typer(
+    help="Diagram files: a Graph or an L2 pattern, drawn in a profile.",
+    no_args_is_help=True,
+)
 app.add_typer(config_app, name="config")
 app.add_typer(tools_app, name="tools")
 app.add_typer(source_app, name="source")
 app.add_typer(pack_app, name="pack")
 app.add_typer(diagram_app, name="diagram")
 app.add_typer(profile_app, name="profile")
+app.add_typer(graph_app, name="graph")
 
 
 @app.callback()
@@ -177,6 +194,77 @@ def diagram_render(
     """Render each diagram once per configured theme. Prints one JSON line per SVG."""
     settings = config.load()
     items = [diagram for path in files for diagram in render.diagrams(path)]
+    for written in render.render(items, out_dir, settings):
+        print(json.dumps(written))
+
+
+def _written(path: Path, settings: Any, shown: profile.Profile) -> str:
+    """Return a diagram file as Mermaid in the profile.
+
+    Raises:
+        ValueError: The file, its graph or its objects can't be drawn.
+        yaml.YAMLError: The file isn't YAML or JSON.
+    """
+    found = spec.read(path)
+    graph = spec.graph(found, patterns.library(settings))
+    library = objects.library(settings)
+    return write.house(graph, shown, library, found.title, found.description)
+
+
+@graph_app.command("schema")
+def graph_schema() -> None:
+    """Print the diagram file's JSON Schema."""
+    print(json.dumps(spec.schema(), indent=1))
+
+
+@graph_app.command("validate")
+def graph_validate(
+    files: list[Path] = Argument(help="Diagram files, YAML or JSON"),
+    name: str = Option("", "--profile", help="Profile, default the configured one"),
+) -> None:
+    """Check each file draws and passes lint's source pass. Exits 1 on any problem."""
+    settings = config.load()
+    shown = profile.load(settings, name or None)
+    names = frozenset(objects.by_class_name(objects.library(settings)))
+    failed = False
+    for path in files:
+        try:
+            source = _written(path, settings, shown)
+        except (ValueError, yaml.YAMLError) as error:
+            problems = [str(error)]
+        else:
+            block = diagram_check.Block(path.name, source, None, None)
+            problems = diagram_check.source_problems(
+                block, diagram_check.CLASS_LINES, shown, names
+            )
+        failed = failed or bool(problems)
+        print(f"{'FAIL' if problems else 'ok  '}  {path}")
+        for problem in problems:
+            print(f"        {problem}")
+    if failed:
+        raise Exit(1)
+
+
+@graph_app.command("render")
+def graph_render(
+    files: list[Path] = Argument(help="Diagram files, YAML or JSON"),
+    out_dir: Path = Option(..., "--out", help="Directory for the .mmd and SVGs"),
+    name: str = Option("", "--profile", help="Profile, default the configured one"),
+) -> None:
+    """Write each file as Mermaid, then render it. Prints one JSON line per SVG."""
+    settings = config.load()
+    shown = profile.load(settings, name or None)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    items = []
+    for path in files:
+        try:
+            source = _written(path, settings, shown)
+        except (ValueError, yaml.YAMLError) as error:
+            raise BadParameter(f"{path}: {error}") from error
+        (out_dir / f"{path.stem}.mmd").write_text(
+            source, encoding="utf-8", newline="\n"
+        )
+        items.append(render.Diagram(path.stem, source))
     for written in render.render(items, out_dir, settings):
         print(json.dumps(written))
 

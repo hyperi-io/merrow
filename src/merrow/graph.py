@@ -8,7 +8,13 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from pydantic import ConfigDict, TypeAdapter, with_config
 
+# A field the model doesn't know is an error, so a misspelt key never vanishes.
+_STRICT = ConfigDict(extra="forbid")
+
+
+@with_config(_STRICT)
 @dataclass(frozen=True, slots=True)
 class Node:
     """One box.
@@ -28,6 +34,7 @@ class Node:
     group: str | None = None
 
 
+@with_config(_STRICT)
 @dataclass(frozen=True, slots=True)
 class Edge:
     """One arrow, from `source` to `target`, each a node or group id.
@@ -45,6 +52,7 @@ class Edge:
     optional: bool = False
 
 
+@with_config(_STRICT)
 @dataclass(frozen=True, slots=True)
 class Group:
     """A boundary that exists: a system, a stage, a region.
@@ -62,6 +70,7 @@ class Group:
     object: str | None = None
 
 
+@with_config(_STRICT)
 @dataclass(slots=True)
 class Graph:
     """Nodes, edges and groups, in the order they were added."""
@@ -114,13 +123,9 @@ class Graph:
         """Return the graph plain data describes.
 
         Raises:
-            TypeError: An entry has a field the model doesn't know.
+            pydantic.ValidationError: A field is missing, mistyped or unknown.
         """
-        return cls(
-            nodes=[Node(**n) for n in data.get("nodes", [])],
-            edges=[Edge(**e) for e in data.get("edges", [])],
-            groups=[Group(**g) for g in data.get("groups", [])],
-        )
+        return TypeAdapter(cls).validate_python(data)
 
 
 def _set_fields(item: Node | Edge | Group) -> dict[str, Any]:

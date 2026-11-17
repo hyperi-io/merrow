@@ -15,6 +15,7 @@ dependencies = [
     "filelock>=4.2",
     "nvchecker>=2.22",
     "playwright>=1.64.1",
+    "pydantic>=2.14",
     "pydot>=4.0.1",
     "pyyaml>=6.0",
     "scalo[http]>=2.32.7",
