@@ -1,43 +1,38 @@
-<!-- Project: HyperI AI -->
+# Drawing a diagram with merrow
 
-# Diagrams -- the /docs procedure
+An agent writes a diagram file, never Mermaid styling. merrow turns the file into Mermaid in the profile's look, renders it and lints it. The rules are [style/diagrams.md](../style/diagrams.md). This page is the loop.
 
-Every RULE about diagrams is `standards/universal/diagrams.md`: the ten rules, the levels L0 to L4, layout and lines, the role palette, the page wrapper, the templates and the rules for generators. Its short form is section 19 of `standards/rules/universal.md`. Read one of them before drawing or judging a diagram. This file is how `/docs` runs the gate.
+1. Pick the level (L0 to L4) and a pattern. `merrow config get | jq '.patterns | keys'` lists them. A path through several components is `data-path`, and config flowing to a runtime is `gitops-control`. Nothing fits: write the graph yourself.
+2. Pick the objects. `merrow config get | jq '.objects | keys'` lists them, such as `dfe.loader`. An object brings its label, subtitle, class and shape.
+3. Write the file. `merrow graph schema` prints its JSON Schema.
 
-## The gate
+   ```yaml
+   title: L2 Services -- DFE data path
+   description: Senders reach dfe-receiver, which produces to Kafka. dfe-loader writes ClickHouse.
+   pattern: data-path
+   fills:
+     senders: [{label: Push clients, object: dfe.proxy}]
+     intake: [dfe.receiver]
+     bus: [dfe.kafka]
+     loader: [dfe.loader]
+     store: [dfe.clickhouse]
+   ```
 
-Nobody writing Mermaid can see the layout from the source, and LLM-drafted Mermaid gets both syntax and layout wrong. So every page `/docs` touched goes through the checker:
+4. `merrow graph validate file.yaml`. Fix every line it prints and run it again.
+5. `merrow graph render file.yaml --out out/` writes `out/file.mmd` and a light and a dark SVG.
+6. `merrow diagram lint out/file.mmd` renders it and measures it against the profile's column, height, node and arrow limits. Fix a layout finding in the file: split the diagram, move detail down a level, or mark a path optional. Never fix it with styling.
+7. Open both SVGs. Lint can't see contrast, lines drawn on top of each other, or a box that isn't in the code.
+8. Put the Mermaid from `out/file.mmd` in a `mermaid` fence, with a caption under it: `*Figure N. <title>.* Up: <parent>.`
 
-```bash
-uv run ~/.local/share/hyperi-ai/tools/diagram_check.py <page.md>... --png .hyperi-ai/tmp/diagrams
-```
+No Chrome on the host: `merrow diagram lint --no-render` runs the source pass alone. Say "not rendered" when you report it.
 
-- One verdict line a diagram: `ok` or `FAIL`, the rendered size, and the node and arrow counts. Findings sit under it, each naming its rule.
-- Fix every finding on a diagram this run wrote or touched, and run it again. Layout findings are fixed with the repair ladder in the standard, never with `linkStyle` or config.
-- Open the light and the dark screenshot of each diagram written. The checker cannot see contrast, lines that run on top of each other, or a node that is not in the code. It measures lines in flowcharts alone, so a sequence, state, ER or class diagram is judged from its screenshot.
-- Terminal output with table borders (`+----+`) goes in a `console` fence. In a `text` or untagged fence it is reported as a text-box diagram.
-- No Chrome on the host: run it with `--no-render`, which is the source pass alone, and say "not rendered" in the report. Never claim the render pass ran.
-- A diagram on the page that this run did not touch is reported, not fixed, unless the run is `--diagrams`.
+Hand-written Mermaid works too. Write the body only and name each object as `loader:::dfe-loader`, the object id with dots as hyphens. `merrow diagram apply page.md` adds the frontmatter and the class block, and fills in each bare object's label. Never type frontmatter, `classDef` or `style` lines.
 
-## Convergence -- `/docs --diagrams`
+## What goes wrong
 
-Converge a repo's existing diagrams to the standard as they are touched. `--diagrams` is that pass across a whole repo, one page at a time, checker run after each.
-
-| Found | Becomes |
-|---|---|
-| `graph`, `TD`, a long top-down chain | `flowchart LR`, or stage subgraphs with `direction LR` |
-| A text-box diagram in a `text` fence | Mermaid |
-| `style` lines, made-up `classDef` names and colours | The standard's class lines, by role |
-| No `accTitle`, `accDescr`, intro sentence or caption | The page wrapper, with the level in the title |
-| More than 12 nodes, or two levels in one diagram | A parent and its child diagrams, linked `Up` and `Down` |
-| `block-beta`, `C4Context`, `gantt` | A flowchart, or a table |
-
-The nodes and arrows come from the code and the existing diagram, never from imagination. A redraw that drops or adds an arrow is a `DOC-FACT-1` finding.
-
-## The gate ids
-
-| Id | Fails when |
-|---|---|
-| `DOC-DIAG-1` | The checker prints `FAIL` for a diagram this run wrote or touched |
-| `DOC-DIAG-4` | A diagram a human would squint at in its screenshot -- see `standards/universal/diagrams.md`, "Review checklist" |
-| `DOC-FACT-1` | A node or arrow that is not in the code -- diagrams come from analysis, never imagination |
+- A home-made renderer or apply script. merrow's commands are the tooling.
+- A long chain in one row. The writer stacks a chain past four ranks in stages, so let it.
+- A dropped optional path. Mark the edge `optional: true` and it draws dotted, with its label.
+- A node or arrow that isn't in the code. Diagrams come from reading the code, never from imagination.
+- An intro or caption that restates the picture, or names a colour or a dash. Words beside a diagram carry only what the picture can't show: why, the limits, what is optional.
+- Hexagons, `graph TD` and `style` lines. Lint fails them.
