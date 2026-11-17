@@ -75,7 +75,7 @@ def test_the_script_carries_the_standards_class_lines():
 
 
 def test_the_render_bundle_is_the_version_merrows_lock_pins():
-    lock = (ROOT / "src" / "merrow" / "node" / "package-lock.json").read_text(
+    lock = (ROOT / "src" / "merrow" / "npm" / "package-lock.json").read_text(
         encoding="utf-8"
     )
     assert (

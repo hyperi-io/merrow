@@ -1,9 +1,6 @@
 import dataclasses
-import functools
 import hashlib
-import http.server
 import json
-import threading
 from pathlib import Path
 
 import pytest
@@ -21,24 +18,9 @@ LIMITS = Limits(
     download_bytes=10**6,
     group_name_chars=40,
     download_timeout_seconds=10,
-    npm_timeout_seconds=10,
+    install_timeout_seconds=10,
     detect_timeout_seconds=60,
 )
-
-
-@pytest.fixture
-def site(tmp_path):
-    """A real HTTP server over a directory, on a free local port."""
-    root = tmp_path / "site"
-    root.mkdir()
-    handler = functools.partial(
-        http.server.SimpleHTTPRequestHandler, directory=str(root)
-    )
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    yield root, f"http://127.0.0.1:{server.server_address[1]}"
-    server.shutdown()
 
 
 def publish(root: Path, name: str, data: bytes) -> str:

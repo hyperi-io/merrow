@@ -73,7 +73,7 @@ class Limits:
     download_bytes: int
     group_name_chars: int
     download_timeout_seconds: float
-    npm_timeout_seconds: float
+    install_timeout_seconds: float
     detect_timeout_seconds: float
     ignore: re.Pattern[str] | None = None
 
@@ -87,7 +87,7 @@ class Limits:
             download_bytes=int(limits["download_bytes"]),
             group_name_chars=int(limits["group_name_chars"]),
             download_timeout_seconds=float(limits["download_timeout_seconds"]),
-            npm_timeout_seconds=float(limits["npm_timeout_seconds"]),
+            install_timeout_seconds=float(limits["install_timeout_seconds"]),
             detect_timeout_seconds=float(limits["detect_timeout_seconds"]),
         )
 

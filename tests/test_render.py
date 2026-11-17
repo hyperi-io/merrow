@@ -1,5 +1,4 @@
 import json
-import shutil
 
 import pytest
 
@@ -25,19 +24,15 @@ def test_markdown_yields_each_mermaid_fence_and_mmd_yields_the_file(tmp_path):
 
 
 def test_only_iconify_packs_are_registered(tmp_path):
-    (tmp_path / "aws.json").write_text(
-        json.dumps({"prefix": "aws", "icons": {}}), encoding="utf-8"
-    )
+    aws = {"prefix": "aws", "icons": {}}
+    (tmp_path / "aws.json").write_text(json.dumps(aws), encoding="utf-8")
     (tmp_path / "aws-groups.json").write_text(
         json.dumps({"light": []}), encoding="utf-8"
     )
-    args = render.icon_pack_args(tmp_path)
-    assert args[0] == "--iconPacksNamesAndUrls"
-    assert args[1:] == [f"aws#{(tmp_path / 'aws.json').resolve().as_uri()}"]
-    assert render.icon_pack_args(tmp_path / "empty") == []
+    assert render.icon_packs(tmp_path) == [aws]
+    assert render.icon_packs(tmp_path / "empty") == []
 
 
-@pytest.mark.skipif(shutil.which("npm") is None, reason="needs node and npm")
 def test_render_writes_one_svg_per_theme_with_local_icons(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     packs = tmp_path / "packs"
@@ -63,7 +58,6 @@ def test_render_writes_one_svg_per_theme_with_local_icons(tmp_path, monkeypatch)
         assert "<svg" in svg
 
 
-@pytest.mark.skipif(shutil.which("npm") is None, reason="needs node and npm")
 def test_render_names_the_diagram_mermaid_rejects(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     bad = tmp_path / "bad.mmd"

@@ -60,13 +60,17 @@ def fetch(cache_dir: Path, source: str, pin: Pin, limits: Limits) -> Path:
         raise DownloadError(
             f"{source}: {pin.url} has SHA-256 {digest}, the lock pins {pin.sha256}"
         )
+    write_atomic(target, data)
+    return target
+
+
+def write_atomic(target: Path, data: bytes) -> None:
+    """Write `data` to `target` through a rename, so a reader never sees a partial file."""
     target.parent.mkdir(parents=True, exist_ok=True)
-    # Write then rename, so a reader never sees a partial file.
     handle, staging = tempfile.mkstemp(dir=target.parent, prefix=".partial-")
     with os.fdopen(handle, "wb") as out:
         out.write(data)
     Path(staging).replace(target)
-    return target
 
 
 def _sha256(data: bytes) -> str:

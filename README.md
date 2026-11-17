@@ -6,11 +6,11 @@ SVG is the master format. Headline diagrams are pre-rendered to committed SVG. E
 
 ## Install
 
-merrow is a CLI, installed with uv. It needs Python 3.14 and Node.js 22.13 or later on the PATH. Linux and macOS are supported, Windows is best effort.
+merrow is a CLI, installed with uv. It needs Python 3.14. Linux and macOS are supported, Windows is best effort.
 
 ```bash
 uv tool install git+https://github.com/hyperi-io/merrow
-merrow tools ensure    # installs the pinned mermaid-cli and its browser, once
+merrow tools ensure    # fetches the pinned Mermaid bundle and its browser, once
 ```
 
 ## Use

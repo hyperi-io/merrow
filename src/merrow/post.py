@@ -11,7 +11,6 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from merrow.browser import launch
 from merrow.write import GROUP_ICON
 
 _MARK = re.compile(rf"^\s*{re.escape(GROUP_ICON)}\s+(\S+)\s+(\S+)\s*$", re.MULTILINE)
@@ -38,7 +37,9 @@ _PLACE = """([text, groups]) => {
       label.setAttribute('transform', `translate(${x + icon.width + 8}, ${y + (icon.height - bb.height) / 2})`);
     }
   }
-  return new XMLSerializer().serializeToString(svg);
+  const out = new XMLSerializer().serializeToString(svg);
+  svg.remove();
+  return out;
 }"""
 
 
@@ -70,36 +71,19 @@ def _icons(
 
 
 def group_icons(
-    jobs: Sequence[tuple[Path, Mapping[str, str], str]],
-    packs_dir: Path,
-    executable: Path | None = None,
-) -> None:
-    """Place group icons in each rendered SVG, in place, in the `executable` browser.
+    page: Any, svg: str, groups: Mapping[str, str], packs_dir: Path, suffix: str
+) -> str:
+    """Return a rendered SVG with each marked group's icon placed, laid out in `page`.
 
-    A job is the SVG, its marks and the icon name suffix for its theme.
+    `suffix` picks each icon's variant for the theme, where one exists.
 
     Raises:
         KeyError: A marked icon isn't in its pack.
         FileNotFoundError: A marked icon's pack isn't built.
     """
-    if not jobs:
-        return
-    # Imported here so nothing else pays for playwright at import.
-    from playwright.sync_api import sync_playwright
-
-    with sync_playwright() as driver:
-        browser = launch(driver, executable)
-        try:
-            page = browser.new_page()
-            for svg, groups, suffix in jobs:
-                icons = _icons(packs_dir, sorted(set(groups.values())), suffix)
-                by_group = {gid: icons[key] for gid, key in groups.items()}
-                page.set_content("<!doctype html><body></body>")
-                text = svg.read_text(encoding="utf-8")
-                placed = page.evaluate(_PLACE, [text, by_group])
-                svg.write_text(placed, encoding="utf-8", newline="\n")
-        finally:
-            browser.close()
+    icons = _icons(packs_dir, sorted(set(groups.values())), suffix)
+    by_group = {gid: icons[key] for gid, key in groups.items()}
+    return page.evaluate(_PLACE, [svg, by_group])
 
 
 _ICON_REF = re.compile(r'(icon:\s*")([a-z0-9-]+):([a-z0-9-]+)(")')

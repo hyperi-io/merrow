@@ -1,4 +1,4 @@
-"""Run a tool merrow drives (node, npm, mermaid-cli, nvchecker) and capture its text."""
+"""Run a tool merrow drives (playwright's browser install, nvchecker) and capture its text."""
 
 import subprocess
 from collections.abc import Sequence

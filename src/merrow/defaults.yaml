@@ -33,8 +33,8 @@ limits:
   # Longer text on a groups slide is a caption, not a group name.
   group_name_chars: 40
   download_timeout_seconds: 300
-  # A cold `npm ci` fetches about 200 tarballs and the browser about 150M.
-  npm_timeout_seconds: 900
+  # The browser install fetches about 150M.
+  install_timeout_seconds: 900
   detect_timeout_seconds: 300
 
 # Paths in any download that are never content: macOS resource forks.
@@ -60,7 +60,7 @@ tokens:
   github: GITHUB_TOKEN
 
 render:
-  # One SVG per theme. `mermaid` is mermaid-cli's theme name.
+  # One SVG per theme. `mermaid` is Mermaid's theme name.
   themes:
     light:
       mermaid: default
@@ -70,7 +70,7 @@ render:
       background: "#1B1B1D"
       # An icon with a variant of this name drawn for dark, as AWS ships.
       icon_suffix: "-dark"
-  # Passed to mermaid-cli as its config file. useMaxWidth shrinks wide diagrams.
+  # Mermaid's initialize() config. useMaxWidth shrinks wide diagrams.
   mermaid_config:
     flowchart:
       useMaxWidth: false
@@ -78,9 +78,11 @@ render:
       useMaxWidth: false
     sequence:
       useMaxWidth: false
-  # puppeteer launch options, passed to mermaid-cli as its puppeteer config.
-  # A container without user namespaces sets `args: ["--no-sandbox"]` here.
-  puppeteer: {}
+  # The Mermaid bundle: the npm package npm/package-lock.json pins, and the
+  # file in its tarball that runs in the page.
+  bundle:
+    package: mermaid
+    file: package/dist/mermaid.min.js
 
 lint:
   # Where a diagram names an icon as `prefix:name`, by Mermaid syntax. Group 1
@@ -93,8 +95,9 @@ lint:
 # personal skills dir.
 skill_dir: ~/.claude/skills
 
-# The browser puppeteer fetches for render, by puppeteer's own name for it.
-browser: chrome-headless-shell
+# The browser playwright installs for every laid-out page, by playwright's
+# own name for it. The headless shell is the smallest build.
+browser: chromium-headless-shell
 
 # How each diagram reader recognises structure in its format.
 readers:

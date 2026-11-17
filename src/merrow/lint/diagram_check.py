@@ -10,7 +10,7 @@
 Nobody writing Mermaid can see the layout from the source, so each diagram gets
 two passes. The source pass reads the text: type, direction, class lines, the
 accessibility lines, the caption and the banned syntax. The render pass lays the
-diagram out with Mermaid in the host's Chrome and measures what a reader sees:
+diagram out with Mermaid in a browser page and measures what a reader sees:
 its size, and for a flowchart the node and arrow counts, crossed lines, lines
 through boxes, overlapping labels, skip arrows, orphan boxes and labels that wrap
 past 2 lines. A state diagram gets the same line checks, less the back-arrow
@@ -24,7 +24,7 @@ checked, apart from fences nested inside another fence, and its ``text`` and
 untagged fences read for a text-box diagram. Exit 1 when a diagram fails.
 
 Layout differs between Mermaid releases, so the bundle is the one merrow renders
-with, pinned by its npm lock and installed into the cache. ``--mermaid`` takes a
+with, pinned by its npm lock and downloaded into the cache. ``--mermaid`` takes a
 local bundle, for a host with no network or a site on another version.
 """
 
@@ -35,8 +35,10 @@ import sys
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
-from merrow import config, node
+from merrow import bundle as pinned
+from merrow import config
 from merrow.browser import launch
 from merrow.lint import icons
 from merrow.objects import by_class_name, library
@@ -668,28 +670,17 @@ window.measure = async (src, cfg, id, dir) => {
 """
 
 
-def bundle(path: Path | None = None) -> Path:
-    """Return the Mermaid bundle to render with: ``path``, else the one merrow's npm lock pins."""
-    if path is not None:
-        return path
-    return (
-        node.installed(config.load())
-        / "node_modules"
-        / "mermaid"
-        / "dist"
-        / "mermaid.min.js"
-    )
-
-
 def mermaid_version() -> str:
     """Return the Mermaid version merrow's npm lock pins."""
-    return json.loads(node.MANIFEST.read_text(encoding="utf-8"))["dependencies"][
-        "mermaid"
-    ]
+    return pinned.version(config.load())
 
 
 def render(
-    blocks: list[Block], library: Path, column: int, png: Path | None = None
+    blocks: list[Block],
+    library: Path,
+    column: int,
+    settings: Any,
+    png: Path | None = None,
 ) -> list[dict]:
     """Lay each diagram out in a ``column`` px page and return its measurements, with screenshots under ``png``."""
     # Imported here so the source pass runs on a host without playwright.
@@ -697,7 +688,7 @@ def render(
 
     results: list[dict] = []
     with sync_playwright() as driver:
-        browser = launch(driver)
+        browser = launch(driver, settings)
         page = browser.new_page(viewport={"width": column + 40, "height": 700})
         page.set_content(
             f'<!doctype html><div id="o" style="width:{column}px;padding:16px"></div>'
@@ -762,7 +753,8 @@ def main(argv: list[str] | None = None) -> int:
     how = "source only, not rendered"
     if not args.no_render:
         column = profile.limits["column"]
-        measured = list(render(blocks, bundle(args.mermaid), column, args.png))
+        script = args.mermaid or pinned.path(settings)
+        measured = list(render(blocks, script, column, settings, args.png))
         how = (
             f"rendered with {args.mermaid.name}"
             if args.mermaid

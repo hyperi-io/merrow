@@ -1,4 +1,4 @@
-"""Mermaid to SVG, once per configured theme, with every built icon pack registered.
+"""Mermaid to SVG in a browser page, once per configured theme, with every built icon pack registered.
 
 Packs are read from the packs dir as local files, so a render never fetches
 anything. A Markdown file renders each of its `mermaid` fences.
@@ -6,19 +6,33 @@ anything. A Markdown file renders each of its `mermaid` fences.
 
 import json
 import re
-import tempfile
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from merrow import config, node, post, proc
+from merrow import browser, bundle, config, post
 
 FENCE = re.compile(r"^```mermaid[^\n]*\n(.*?)^```", re.MULTILINE | re.DOTALL)
 
+# Runs in the page with [source, id, Mermaid config, background colour]. Mermaid's
+# HTML labels are not valid XML, so the SVG is parsed as HTML and written as XML.
+_RENDER = """async ([source, id, options, background]) => {
+  mermaid.initialize({startOnLoad: false, ...options});
+  const { svg } = await mermaid.render(id, source);
+  const host = document.createElement('div');
+  host.innerHTML = svg;
+  const root = host.querySelector('svg');
+  root.style.backgroundColor = background;
+  return new XMLSerializer().serializeToString(root);
+}"""
+_PACKS = (
+    "packs => mermaid.registerIconPacks(packs.map(p => ({name: p.prefix, icons: p})))"
+)
+
 
 class RenderError(RuntimeError):
-    """mermaid-cli failed on a diagram."""
+    """Mermaid failed on a diagram."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,14 +58,14 @@ def diagrams(path: Path) -> Iterator[Diagram]:
         yield Diagram(f"{path.stem}-{number}", fence.group(1))
 
 
-def icon_pack_args(packs_dir: Path) -> list[str]:
-    """Return mermaid-cli's arguments registering every Iconify pack in the dir."""
-    pairs = []
+def icon_packs(packs_dir: Path) -> list[dict[str, Any]]:
+    """Return every Iconify pack in the dir, to register with Mermaid."""
+    found = []
     for pack in sorted(packs_dir.glob("*.json")):
         data = json.loads(pack.read_text(encoding="utf-8"))
         if isinstance(data, dict) and "icons" in data and "prefix" in data:
-            pairs.append(f"{data['prefix']}#{pack.resolve().as_uri()}")
-    return ["--iconPacksNamesAndUrls", *pairs] if pairs else []
+            found.append(data)
+    return found
 
 
 def render(
@@ -65,59 +79,44 @@ def render(
     `themes` limits it to those configured themes.
 
     Raises:
-        RenderError: mermaid-cli failed on a diagram.
+        RenderError: Mermaid failed on a diagram.
     """
+    # Imported here so the steps that need no page run without playwright.
+    from playwright.sync_api import Error, sync_playwright
+
     options: Mapping[str, Any] = settings.get("render")
-    argv = node.mmdc(settings)
     packs_dir = config.packs_dir(settings)
-    packs = icon_pack_args(packs_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
-    jobs: list[tuple[Path, dict[str, str], str]] = []
-    with tempfile.TemporaryDirectory(prefix="merrow-render-") as work:
-        puppeteer_config = Path(work) / "puppeteer.json"
-        puppeteer_config.write_text(
-            json.dumps(options.get("puppeteer") or {}), encoding="utf-8"
-        )
-        mermaid_config = Path(work) / "mermaid.json"
-        mermaid_config.write_text(
-            json.dumps(options["mermaid_config"]), encoding="utf-8"
-        )
-        for item in items:
-            groups = post.marks(item.source)
-            for theme, look in options["themes"].items():
-                if themes is not None and theme not in themes:
-                    continue
-                suffix = str(look.get("icon_suffix", ""))
-                source = Path(work) / f"{item.name}-{theme}.mmd"
-                text = post.themed(item.source, suffix, packs_dir)
-                source.write_text(text, encoding="utf-8")
-                target = out_dir / f"{item.name}-{theme}.svg"
-                command = [
-                    *argv,
-                    "--quiet",
-                    "--input",
-                    str(source),
-                    "--output",
-                    str(target),
-                    "--theme",
-                    look["mermaid"],
-                    "--backgroundColor",
-                    look["background"],
-                    "--configFile",
-                    str(mermaid_config),
-                    "--puppeteerConfigFile",
-                    str(puppeteer_config),
-                    *packs,
-                ]
-                result = proc.run(command)
-                if result.returncode != 0:
-                    raise RenderError(f"{item.name} ({theme}): {proc.tail(result, 20)}")
-                written.append(
-                    {"diagram": item.name, "theme": theme, "svg": str(target)}
-                )
-                if groups:
-                    jobs.append((target, groups, suffix))
-    if jobs:
-        post.group_icons(jobs, packs_dir, node.browser_path(settings))
+    with sync_playwright() as driver:
+        shown = browser.launch(driver, settings)
+        try:
+            page = shown.new_page()
+            page.set_content("<!doctype html><body></body>")
+            page.add_script_tag(path=str(bundle.path(settings)))
+            page.evaluate(_PACKS, icon_packs(packs_dir))
+            for number, item in enumerate(items):
+                groups = post.marks(item.source)
+                for theme, look in options["themes"].items():
+                    if themes is not None and theme not in themes:
+                        continue
+                    suffix = str(look.get("icon_suffix", ""))
+                    text = post.themed(item.source, suffix, packs_dir)
+                    mermaid = {**options["mermaid_config"], "theme": look["mermaid"]}
+                    call = [text, f"d{number}{theme}", mermaid, look["background"]]
+                    try:
+                        svg = page.evaluate(_RENDER, call)
+                    except Error as failure:
+                        raise RenderError(
+                            f"{item.name} ({theme}): {failure.message}"
+                        ) from failure
+                    if groups:
+                        svg = post.group_icons(page, svg, groups, packs_dir, suffix)
+                    target = out_dir / f"{item.name}-{theme}.svg"
+                    target.write_text(svg, encoding="utf-8", newline="\n")
+                    written.append(
+                        {"diagram": item.name, "theme": theme, "svg": str(target)}
+                    )
+        finally:
+            shown.close()
     return written

@@ -15,11 +15,11 @@ from typer import BadParameter, Exit
 
 from merrow import (
     apply,
+    browser,
+    bundle,
     config,
-    node,
     objects,
     patterns,
-    proc,
     profile,
     render,
     spec,
@@ -32,7 +32,9 @@ from merrow.sources import detect, fetch, lock
 
 app = Typer(help="Style, render and lint Mermaid diagrams.", no_args_is_help=True)
 config_app = Typer(help="The resolved configuration.", no_args_is_help=True)
-tools_app = Typer(help="The pinned npm tools render runs on.", no_args_is_help=True)
+tools_app = Typer(
+    help="The pinned Mermaid bundle and browser render runs on.", no_args_is_help=True
+)
 source_app = Typer(
     help="Vendor sources: detect releases, pin, fetch.", no_args_is_help=True
 )
@@ -94,21 +96,15 @@ def tools_ensure(
         help="Also install the browser's system libraries (Linux, needs root)",
     ),
 ) -> None:
-    """Install the pinned mermaid-cli and browser if missing, then print them."""
+    """Fetch the pinned Mermaid bundle and install the browser if missing, then print them."""
     settings = config.load()
-    if install_deps:
-        node.install_browser_deps(settings)
-    argv = node.mmdc(settings)
-    result = proc.run([*argv, "--version"])
-    if result.returncode != 0:
-        raise node.NodeToolsError(f"mmdc --version failed: {proc.tail(result)}")
-    version = result.stdout.strip()
+    browser.ensure(settings, deps=install_deps)
     print(
         json.dumps(
             {
-                "mmdc": argv[-1],
-                "version": version,
-                "cache_dir": str(config.cache_dir(settings)),
+                "mermaid": bundle.version(settings),
+                "bundle": str(bundle.path(settings)),
+                "browser": settings.get("browser"),
             }
         )
     )
