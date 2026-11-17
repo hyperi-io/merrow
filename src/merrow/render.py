@@ -66,7 +66,7 @@ def render(items: list[Diagram], out_dir: Path, settings: Any) -> list[dict[str,
     packs = icon_pack_args(packs_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
-    jobs: list[tuple[Path, dict[str, tuple[str, int]], str]] = []
+    jobs: list[tuple[Path, dict[str, str], str]] = []
     with tempfile.TemporaryDirectory(prefix="merrow-render-") as work:
         puppeteer_config = Path(work) / "puppeteer.json"
         puppeteer_config.write_text(

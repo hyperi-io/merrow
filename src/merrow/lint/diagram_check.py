@@ -483,7 +483,7 @@ def layout_problems(
 ) -> list[str]:
     """Return what the rendered diagram breaks in the standard, from the page's measurements.
 
-    ``limits`` is the profile's ``column``, ``max_width`` and ``max_height``.
+    ``limits`` is the profile's ``column``, ``max_width`` and ``max_height``, and optionally ``nodes`` and ``subgraphs``.
     ``landscape`` is False for the types that are not held to the proportion: sequence, ER and class.
     """
     if not result["ok"]:
@@ -500,10 +500,12 @@ def layout_problems(
         problems.append(
             f"R2 not landscape: width is {width / max(height, 1):.2f} x height, minimum {MIN_RATIO}"
         )
-    if result["nodes"] > MAX_NODES:
-        problems.append(f"R3 {result['nodes']} nodes, limit {MAX_NODES}")
-    if result["groups"] > MAX_SUBGRAPHS:
-        problems.append(f"{result['groups']} subgraphs, limit {MAX_SUBGRAPHS}")
+    max_nodes = limits.get("nodes", MAX_NODES)
+    max_groups = limits.get("subgraphs", MAX_SUBGRAPHS)
+    if result["nodes"] > max_nodes:
+        problems.append(f"R3 {result['nodes']} nodes, limit {max_nodes}")
+    if result["groups"] > max_groups:
+        problems.append(f"{result['groups']} subgraphs, limit {max_groups}")
     if result["edges"] > result["nodes"] + EXTRA_ARROWS:
         problems.append(
             f"{result['edges']} arrows on {result['nodes']} nodes, limit is nodes plus {EXTRA_ARROWS}"

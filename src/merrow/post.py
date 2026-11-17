@@ -14,11 +14,9 @@ from typing import Any
 from merrow.browser import launch
 from merrow.write import GROUP_ICON
 
-_MARK = re.compile(
-    rf"^\s*{re.escape(GROUP_ICON)}\s+(\S+)\s+(\S+)\s+(\d+)\s*$", re.MULTILINE
-)
+_MARK = re.compile(rf"^\s*{re.escape(GROUP_ICON)}\s+(\S+)\s+(\S+)\s*$", re.MULTILINE)
 
-# Runs in the page with [svg text, {group id: icon and size}]. Returns the SVG as XML.
+# Runs in the page with [svg text, {group id: icon}]. Each icon draws at its own artwork size.
 _PLACE = """([text, groups]) => {
   const svg = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement;
   document.body.appendChild(svg);
@@ -26,27 +24,27 @@ _PLACE = """([text, groups]) => {
     const id = Object.keys(groups).find(k => cluster.id === k || cluster.id.endsWith('-' + k));
     const rect = cluster.querySelector('rect');
     if (!id || !rect) continue;
-    const icon = groups[id], size = icon.size;
+    const icon = groups[id];
     const x = +rect.getAttribute('x'), y = +rect.getAttribute('y');
     const box = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     box.setAttribute('x', x); box.setAttribute('y', y);
-    box.setAttribute('width', size); box.setAttribute('height', size);
+    box.setAttribute('width', icon.width); box.setAttribute('height', icon.height);
     box.setAttribute('viewBox', `${icon.left} ${icon.top} ${icon.width} ${icon.height}`);
     box.innerHTML = icon.body;
     cluster.parentNode.insertBefore(box, cluster.nextSibling);
     const label = cluster.querySelector('.cluster-label');
     if (label) {
       const bb = label.getBBox();
-      label.setAttribute('transform', `translate(${x + size + 8}, ${y + (size - bb.height) / 2})`);
+      label.setAttribute('transform', `translate(${x + icon.width + 8}, ${y + (icon.height - bb.height) / 2})`);
     }
   }
   return new XMLSerializer().serializeToString(svg);
 }"""
 
 
-def marks(source: str) -> dict[str, tuple[str, int]]:
-    """Return each marked group's Mermaid id with its icon key and px size."""
-    return {gid: (key, int(size)) for gid, key, size in _MARK.findall(source)}
+def marks(source: str) -> dict[str, str]:
+    """Return each marked group's Mermaid id and its icon key."""
+    return dict(_MARK.findall(source))
 
 
 def _icons(
@@ -72,7 +70,7 @@ def _icons(
 
 
 def group_icons(
-    jobs: Sequence[tuple[Path, Mapping[str, tuple[str, int]], str]], packs_dir: Path
+    jobs: Sequence[tuple[Path, Mapping[str, str], str]], packs_dir: Path
 ) -> None:
     """Place group icons in each rendered SVG, in place.
 
@@ -92,12 +90,8 @@ def group_icons(
         try:
             page = browser.new_page()
             for svg, groups, suffix in jobs:
-                keys = sorted({key for key, _ in groups.values()})
-                icons = _icons(packs_dir, keys, suffix)
-                by_group = {
-                    gid: {**icons[key], "size": size}
-                    for gid, (key, size) in groups.items()
-                }
+                icons = _icons(packs_dir, sorted(set(groups.values())), suffix)
+                by_group = {gid: icons[key] for gid, key in groups.items()}
                 page.set_content("<!doctype html><body></body>")
                 text = svg.read_text(encoding="utf-8")
                 placed = page.evaluate(_PLACE, [text, by_group])

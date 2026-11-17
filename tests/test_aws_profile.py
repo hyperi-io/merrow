@@ -84,12 +84,10 @@ def test_aws_group_borders_come_from_the_pack(settings):
 def test_one_graph_draws_clean_under_either_profile(settings, name):
     source, problems = drawn(settings, name)
     assert problems == []
-    icons = 'users@{ icon: "aws:res-users"' in source
+    icons = 'users@{ icon: "aws:res-users", label: "Users", pos: "b", h: 10 }' in source
     assert icons is (name == "aws"), "only aws draws icons"
     assert ("style region fill:none,stroke:#00A4A6" in source) is (name == "aws")
-    assert (f"{write.GROUP_ICON} region aws:group-region 32" in source) is (
-        name == "aws"
-    )
+    assert (f"{write.GROUP_ICON} region aws:group-region" in source) is (name == "aws")
     assert re.search(r"^  class \S*\bapp\b\S* part$", source, re.M), (
         "no box is classless"
     )
@@ -130,3 +128,12 @@ def test_render_puts_each_group_icon_in_its_corner(settings, tmp_path):
     assert light.count('<svg x="') == 2, "one icon a group"
     assert 'fill="#123456"' in light
     assert dark.startswith("<svg")
+
+
+def test_an_icon_in_no_built_pack_is_refused(settings):
+    graph = Graph([Node("q", object="aws.sqs")])
+    shown = profile.load(settings, "aws")
+    with pytest.raises(
+        ValueError, match="aws:amazon-simple-queue-service is in no built pack"
+    ):
+        write.diagram(graph, shown, objects.library(settings), "L2 Services -- X", "X.")

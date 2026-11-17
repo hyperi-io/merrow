@@ -7,9 +7,7 @@
     "font": { "$type": "fontFamily", "$value": ["Inter", "Helvetica", "Arial", "sans-serif"] },
     "size": {
       "label": { "$type": "dimension", "$value": "14px" },
-      "detail": { "$type": "dimension", "$value": "12px" },
-      "icon": { "$type": "dimension", "$value": "48" },
-      "group-icon": { "$type": "dimension", "$value": "32" }
+      "detail": { "$type": "dimension", "$value": "12px" }
     }
   }
 }

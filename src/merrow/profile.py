@@ -40,8 +40,9 @@ class Profile:
         icon_node: How a node whose object has an icon is drawn, its `{node.*}`
             fields left for the writer. None draws every node as a box.
         group_boundaries: A group's style by the `group_style` its object names.
-        group_icon_size: The px size of the icon put on a group after render,
-            0 for none.
+        group_icons: Put each group's icon in its corner after render.
+        icon_sizes: Each built icon's artwork height by `prefix:name`, from the
+            packs the profile names.
     """
 
     name: str
@@ -60,7 +61,8 @@ class Profile:
     icon_node: str | None = None
     layout_waive: re.Pattern[str] | None = None
     group_boundaries: Mapping[str, str] = field(default_factory=dict)
-    group_icon_size: int = 0
+    group_icons: bool = False
+    icon_sizes: Mapping[str, int] = field(default_factory=dict)
 
     @property
     def classes(self) -> frozenset[str]:
@@ -138,6 +140,31 @@ def _partial(text: str, scope: Mapping[str, str]) -> str:
             return text
         text = done
     raise ProfileError(f"aliases nest deeper than {_MAX_DEPTH}: {text}")
+
+
+def _icon_sizes(settings: Any, packs: Sequence[str]) -> dict[str, int]:
+    """Return each icon's height in the named built packs, aliases included.
+
+    Raises:
+        FileNotFoundError: A pack isn't built.
+    """
+    found = {}
+    for name in packs:
+        path = config.packs_dir(settings) / f"{name}.json"
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"{path} is missing: run `merrow pack build` for it"
+            )
+        pack = json.loads(path.read_text(encoding="utf-8"))
+        default = pack.get("height", 16)
+        sizes = {
+            key: int(icon.get("height", default)) for key, icon in pack["icons"].items()
+        }
+        for alias, target in (pack.get("aliases") or {}).items():
+            if target.get("parent") in sizes:
+                sizes[alias] = sizes[target["parent"]]
+        found |= {f"{pack['prefix']}:{key}": size for key, size in sizes.items()}
+    return found
 
 
 def _group_boundaries(
@@ -228,5 +255,6 @@ def load(settings: Any, name: str | None = None) -> Profile:
         _group_boundaries(settings, entry["group_styles"], order, scope)
         if entry.get("group_styles")
         else {},
-        int(resolve(str(entry.get("group_icon_size", 0)), scope)),
+        bool(entry.get("group_icons")),
+        _icon_sizes(settings, entry.get("icon_packs") or []),
     )

@@ -142,9 +142,12 @@ profiles:
       stroke_width: "{stroke.boundary}"
       dash: {solid: "", sysDash: "3 3", dash: "8 6"}
     # A node whose object has an icon is drawn as the icon, its label under it.
-    icon_node: '@{ icon: "{node.icon}", label: "{node.text}", pos: "b", h: {aws.size.icon} }'
+    # Icons draw at their own artwork size, which AWS's terms require, read
+    # from these built packs.
+    icon_node: '@{ icon: "{node.icon}", label: "{node.text}", pos: "b", h: {node.size} }'
+    icon_packs: [aws]
     # After render: each group's icon flush top-left, its title beside it.
-    group_icon_size: "{aws.size.group-icon}"
+    group_icons: true
     limits: {column: 1600, max_width: 2400, max_height: 1600, nodes: 30, subgraphs: 8}
     lint:
       <<: *lint

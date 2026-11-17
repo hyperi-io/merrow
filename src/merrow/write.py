@@ -135,11 +135,11 @@ def profile_label(profile: Profile, node: Node, shape: str | None = None) -> str
     return fill(form, fields)
 
 
-def _icon_node(form: str, node: Node, icon: str) -> str:
+def _icon_node(form: str, node: Node, icon: str, size: int) -> str:
     text = _quoted(node.label) + (
         f"<br/>{_quoted(node.subtitle)}" if node.subtitle else ""
     )
-    return fill(form, {"node.icon": icon, "node.text": text})
+    return fill(form, {"node.icon": icon, "node.text": text, "node.size": str(size)})
 
 
 def _group_style(profile: Profile, known: L1Object | None, problems: list[str]) -> str:
@@ -182,7 +182,11 @@ def diagram(
             if wrong:
                 continue
         if known is not None and known.icon and profile.icon_node:
-            labels[node.id] = _icon_node(profile.icon_node, node, known.icon)
+            size = profile.icon_sizes.get(known.icon)
+            if size is None:
+                problems.append(f"{known.id} icon {known.icon} is in no built pack")
+                continue
+            labels[node.id] = _icon_node(profile.icon_node, node, known.icon, size)
             continue
         style = (known.style if known else "") or profile.default_class
         styles.setdefault(style, []).append(node.id)
@@ -215,9 +219,9 @@ def diagram(
     ]
     tail += profile.class_lines
     tail += [f"style {ids[gid]} {style}" for gid, style in group_styles.items()]
-    if profile.group_icon_size:
+    if profile.group_icons:
         tail += [
-            f"{GROUP_ICON} {ids[gid]} {known.icon} {profile.group_icon_size}"
+            f"{GROUP_ICON} {ids[gid]} {known.icon}"
             for gid, known in group_objects.items()
             if known is not None and known.icon
         ]
