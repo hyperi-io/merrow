@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.scripts]
-merrow = "merrow.cli:app"
+merrow = "merrow.cli:run"
 
 [dependency-groups]
 dev = [

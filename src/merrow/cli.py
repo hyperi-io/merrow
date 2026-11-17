@@ -1,6 +1,7 @@
 """merrow command line: `merrow <noun> <verb>`."""
 
 import json
+import sys
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -330,3 +331,12 @@ def diagram_lint(
     code = diagram_check.main(argv)
     if code:
         raise Exit(code)
+
+
+def run() -> None:
+    """Run the CLI, printing a missing reference repo, file or profile as one line."""
+    try:
+        app()
+    except (FileNotFoundError, profile.ProfileError) as error:
+        print(f"merrow: {error}", file=sys.stderr)
+        sys.exit(2)

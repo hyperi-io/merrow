@@ -1,10 +1,11 @@
 import json
+import sys
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
-from merrow.cli import app
+from merrow.cli import app, run
 
 
 def write_repo(root, name, body):
@@ -60,6 +61,21 @@ def test_listed_repo_without_data_file_fails(monkeypatch, tmp_path):
     result = config_get(monkeypatch, [empty])
     assert result.exit_code != 0
     assert isinstance(result.exception, FileNotFoundError)
+
+
+def test_the_installed_command_prints_a_missing_repo_as_one_line(
+    monkeypatch, tmp_path, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("MERROW_REFERENCES", json.dumps([str(tmp_path / "gone")]))
+    monkeypatch.setattr(sys, "argv", ["merrow", "profile", "show"])
+    with pytest.raises(SystemExit) as stopped:
+        run()
+    assert stopped.value.code == 2
+    assert (
+        capsys.readouterr().err
+        == f"merrow: reference repo {tmp_path / 'gone'} has no merrow.yaml\n"
+    )
 
 
 @pytest.mark.parametrize(
