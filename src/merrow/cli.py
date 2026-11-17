@@ -272,22 +272,29 @@ def graph_render(
     out_dir: Path = Option(..., "--out", help="Directory for the .mmd and SVGs"),
     name: str = Option("", "--profile", help="Profile, default the configured one"),
 ) -> None:
-    """Write each file as Mermaid, then render it. Prints one JSON line per SVG."""
+    """Write each file as Mermaid, then render it. Prints one JSON line per SVG.
+
+    Each render theme draws from the profile in that theme, and `<file>.mmd`
+    is the profile with no theme, for a page.
+    """
     settings = config.load()
-    shown = profile.load(settings, name or None)
     out_dir.mkdir(parents=True, exist_ok=True)
-    items = []
+    themes = [str(theme) for theme in settings.get("render")["themes"]]
+    shown = {
+        theme: profile.load(settings, name or None, theme) for theme in [None, *themes]
+    }
     for path in files:
         try:
-            source = _written(path, settings, shown)
+            sources = {t: _written(path, settings, p) for t, p in shown.items()}
         except (ValueError, yaml.YAMLError) as error:
             raise BadParameter(f"{path}: {error}") from error
         (out_dir / f"{path.stem}.mmd").write_text(
-            source, encoding="utf-8", newline="\n"
+            sources[None], encoding="utf-8", newline="\n"
         )
-        items.append(render.Diagram(path.stem, source))
-    for written in render.render(items, out_dir, settings):
-        print(json.dumps(written))
+        for theme in themes:
+            item = render.Diagram(path.stem, sources[theme])
+            for written in render.render([item], out_dir, settings, [theme]):
+                print(json.dumps(written))
 
 
 @source_app.command("list")

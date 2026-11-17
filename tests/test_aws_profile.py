@@ -29,7 +29,7 @@ GROUPS = {
             "key": "region",
             "stroke": "#00A4A6",
             "dash": "sysDash",
-            "label_colour": "#000000",
+            "label_colour": ink,
         },
         {
             "key": "virtual-private-cloud-vpc",
@@ -38,7 +38,7 @@ GROUPS = {
             "label_colour": "#000000",
         },
     ]
-    for theme in ("light", "dark")
+    for theme, ink in (("light", "#000000"), ("dark", "#FFFFFF"))
 }
 GRAPH = Graph(
     [
@@ -159,3 +159,12 @@ def test_a_service_group_takes_its_icon_colour(settings):
     assert f"{write.GROUP_ICON} eks aws:amazon-elastic-kubernetes-service-32" in source
     block = dc.Block("x.mmd", source, None, None)
     assert dc.source_problems(block, frozenset(), shown) == []
+
+
+def test_a_dark_theme_takes_the_dark_slide_and_ink(settings):
+    dark = profile.load(settings, "aws", "dark")
+    assert dark.group_boundaries["region"].endswith("color:#FFFFFF")
+    assert 'primaryTextColor: "#FFFFFF"' in dark.fronts["flowchart"]
+    light = profile.load(settings, "aws", "light")
+    assert light.group_boundaries["region"].endswith("color:#000000")
+    assert profile.load(settings, "house", "dark") == profile.load(settings, "house")

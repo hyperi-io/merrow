@@ -145,6 +145,11 @@ profiles:
       # service icon's category colour.
       service: service
       service_label: "{aws.ink}"
+    # A render theme's overrides: dark ink and AWS's dark group styles.
+    themes:
+      dark:
+        tokens: [profiles/house.tokens.json, profiles/aws.tokens.json, profiles/aws-dark.tokens.json]
+        group_styles: {theme: dark}
     # A node whose object has an icon is drawn as the icon, its label under it.
     # Icons draw at their own artwork size, which AWS's terms require, read
     # from these built packs.

@@ -226,8 +226,11 @@ def _properties(
     )
 
 
-def load(settings: Any, name: str | None = None) -> Profile:
+def load(settings: Any, name: str | None = None, theme: str | None = None) -> Profile:
     """Return the named profile, else the configured one, generated from its tokens.
+
+    A `theme` the profile lists under `themes` overrides its entries, a
+    mapping entry key by key.
 
     Raises:
         ProfileError: The profile, or a token it names, isn't defined.
@@ -237,6 +240,13 @@ def load(settings: Any, name: str | None = None) -> Profile:
     entry = (settings.get("profiles") or {}).get(name)
     if not entry:
         raise ProfileError(f"no profile {name}")
+    override = (entry.get("themes") or {}).get(theme) or {}
+    entry: dict[str, Any] = {
+        key: {**entry[key], **value}
+        if isinstance(value, Mapping) and isinstance(entry.get(key), Mapping)
+        else value
+        for key, value in override.items()
+    } | {key: value for key, value in entry.items() if key not in override}
     scope: dict[str, str] = {}
     for relative in entry["tokens"]:
         path = config.data_file(settings, relative)

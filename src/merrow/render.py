@@ -7,7 +7,7 @@ anything. A Markdown file renders each of its `mermaid` fences.
 import json
 import re
 import tempfile
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -54,8 +54,15 @@ def icon_pack_args(packs_dir: Path) -> list[str]:
     return ["--iconPacksNamesAndUrls", *pairs] if pairs else []
 
 
-def render(items: list[Diagram], out_dir: Path, settings: Any) -> list[dict[str, str]]:
+def render(
+    items: list[Diagram],
+    out_dir: Path,
+    settings: Any,
+    themes: Sequence[str] | None = None,
+) -> list[dict[str, str]]:
     """Render each diagram once per theme into `out_dir` and return what was written.
+
+    `themes` limits it to those configured themes.
 
     Raises:
         RenderError: mermaid-cli failed on a diagram.
@@ -79,6 +86,8 @@ def render(items: list[Diagram], out_dir: Path, settings: Any) -> list[dict[str,
         for item in items:
             groups = post.marks(item.source)
             for theme, look in options["themes"].items():
+                if themes is not None and theme not in themes:
+                    continue
                 suffix = str(look.get("icon_suffix", ""))
                 source = Path(work) / f"{item.name}-{theme}.mmd"
                 text = post.themed(item.source, suffix, packs_dir)
