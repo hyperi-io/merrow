@@ -18,7 +18,7 @@ dependencies = [
     "pydantic>=2.14",
     "pydot>=4.0.1",
     "pyyaml>=6.0",
-    "scalo[http]>=2.32.7",
+    "scalo[http]>=2.32.9",
     "tomli-w>=1.2.0",
     "typer>=0.27",
 ]
