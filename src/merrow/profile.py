@@ -26,8 +26,10 @@ class Profile:
         fronts: Frontmatter by diagram family, `flowchart` or `other`.
         class_lines: One `classDef` line a class, in the configured order.
         boundary: The style a subgraph boundary line carries.
-        node_label: A node's shape and label, `subtitle` and `plain`, its
-            `{node.*}` fields left for the writer.
+        node_label: A node's label, `subtitle` and `plain`, its `{node.*}` and
+            `{shape.*}` fields left for the writer.
+        shapes: Each shape's opening and closing brackets.
+        default_shape: The shape of a node whose object names none.
         max_ranks: The longest chain drawn left to right before pattern B.
         stage_title: A pattern B stage's title, `{n}` its number.
         limits: Rendered `column`, `max_width` and `max_height`, in px.
@@ -40,6 +42,8 @@ class Profile:
     class_lines: tuple[str, ...]
     boundary: str
     node_label: Mapping[str, str]
+    shapes: Mapping[str, tuple[str, str]]
+    default_shape: str
     max_ranks: int
     stage_title: str
     limits: Mapping[str, int]
@@ -149,6 +153,11 @@ def load(settings: Any, name: str | None = None) -> Profile:
         tuple(class_lines),
         _properties(entry["boundary"], order, scope),
         dict(entry["node_label"]),
+        {
+            shape: (str(pair[0]), str(pair[1]))
+            for shape, pair in entry["shapes"].items()
+        },
+        str(entry["default_shape"]),
         int(entry["layout"]["max_ranks"]),
         str(entry["layout"]["stage_title"]),
         {key: int(value) for key, value in entry["limits"].items()},

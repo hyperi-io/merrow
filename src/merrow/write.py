@@ -109,11 +109,26 @@ def flowchart(
     return "\n".join(lines) + "\n"
 
 
-def profile_label(profile: Profile, node: Node) -> str:
+def misfits(profile: Profile, known: L1Object) -> list[str]:
+    """Return why an object can't be drawn in the profile: its class or shape."""
+    found = []
+    if known.style not in profile.classes:
+        found.append(
+            f"{known.id} styles as {known.style!r}, not a {profile.name} class"
+        )
+    if known.shape is not None and known.shape not in profile.shapes:
+        found.append(
+            f"{known.id} has shape {known.shape!r}, not a {profile.name} shape"
+        )
+    return found
+
+
+def profile_label(profile: Profile, node: Node, shape: str | None = None) -> str:
     """Return a node's shape and label in the profile's label form."""
     form = profile.node_label["subtitle" if node.subtitle else "plain"]
-    fields = {"node.label": _quoted(node.label)}
-    fields["node.subtitle"] = _quoted(node.subtitle or "")
+    opening, closing = profile.shapes[shape or profile.default_shape]
+    fields = {"node.label": _quoted(node.label), "shape.open": opening}
+    fields |= {"node.subtitle": _quoted(node.subtitle or ""), "shape.close": closing}
     return fill(form, fields)
 
 
@@ -135,15 +150,13 @@ def house(
     """
     bound, problems = bind(graph, library)
     styles: dict[str, list[str]] = {}
+    shapes: dict[str, str | None] = {}
     for node in bound.nodes:
         known = library.get(node.object) if node.object else None
-        if known is not None and known.style not in profile.classes:
-            problems.append(
-                f"object {known.id!r} styles as {known.style!r}, not a "
-                f"{profile.name} class"
-            )
-        elif known is not None:
+        if known is not None:
+            problems += misfits(profile, known)
             styles.setdefault(known.style, []).append(node.id)
+            shapes[node.id] = known.shape
     if problems:
         raise ValueError("; ".join(problems))
 
@@ -153,7 +166,7 @@ def house(
     body = flowchart(
         layout.graph,
         layout.direction,
-        lambda node: profile_label(profile, node),
+        lambda node: profile_label(profile, node, shapes.get(node.id)),
         head,
         ids,
         layout.inner,

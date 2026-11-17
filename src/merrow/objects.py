@@ -17,6 +17,7 @@ class L1Object:
         label: The name a node takes when it gives none.
         subtitle: The second line a node takes when it gives none.
         icon: An Iconify key, `prefix:name`, for profiles that draw icons.
+        shape: A profile shape such as `cylinder`. None takes the profile's default.
     """
 
     id: str
@@ -24,6 +25,7 @@ class L1Object:
     label: str
     subtitle: str | None = None
     icon: str | None = None
+    shape: str | None = None
 
 
 def library(settings: Any) -> dict[str, L1Object]:
@@ -40,6 +42,7 @@ def library(settings: Any) -> dict[str, L1Object]:
             str(entry["label"]),
             entry.get("subtitle"),
             entry.get("icon"),
+            entry.get("shape"),
         )
     return found
 

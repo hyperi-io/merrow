@@ -50,10 +50,16 @@ profiles:
     layout:
       max_ranks: 4
       stage_title: "Stage {n}"
-    # A node's shape and label, from its `{node.*}` fields.
+    # A node's label from its `{node.*}` fields, inside its shape's brackets.
     node_label:
-      subtitle: '("<b>{node.label}</b><br/><span>{node.subtitle}</span>")'
-      plain: '("<b>{node.label}</b>")'
+      subtitle: '{shape.open}"<b>{node.label}</b><br/><span>{node.subtitle}</span>"{shape.close}'
+      plain: '{shape.open}"<b>{node.label}</b>"{shape.close}'
+    # An object's `shape`, as Mermaid's opening and closing brackets.
+    shapes:
+      rounded: ["(", ")"]
+      cylinder: ["[(", ")]"]
+      stadium: ["([", "])"]
+    default_shape: rounded
     front:
       flowchart: |-
         ---

@@ -15,7 +15,7 @@ from merrow.lint.diagram_check import diagram_type, split_front
 from merrow.objects import L1Object
 from merrow.profile import Profile
 from merrow.render import FENCE
-from merrow.write import profile_label
+from merrow.write import misfits, profile_label
 
 BEGIN = "%% merrow:begin"
 END = "%% merrow:end"
@@ -52,12 +52,10 @@ def apply(source: str, profile: Profile, by_ref: Mapping[str, L1Object]) -> str:
         match = _REF.match(line.strip())
         known = by_ref.get(match["ref"]) if match else None
         if match and known is not None:
-            if known.style not in profile.classes:
-                raise ValueError(
-                    f"{known.id} styles as {known.style!r}, not a {profile.name} class"
-                )
+            if problems := misfits(profile, known):
+                raise ValueError("; ".join(problems))
             node = Node(match["id"], known.label, known.subtitle)
-            label = match["label"] or profile_label(profile, node)
+            label = match["label"] or profile_label(profile, node, known.shape)
             line = f"{_indent(line)}{match['id']}{label}:::{match['ref']}"
             styles.setdefault(known.style, []).append(match["id"])
         if found := _SUBGRAPH.match(line.strip()):

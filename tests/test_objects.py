@@ -106,3 +106,36 @@ def test_label_text_is_never_read_as_a_token(monkeypatch, tmp_path):
     source, problems = written(settings, Graph([Node("a", 'Say "{color.ink}"')]))
     assert "<b>Say #quot;{color.ink}#quot;</b>" in source
     assert problems == []
+
+
+@pytest.mark.parametrize(
+    ("shape", "drawn"),
+    [
+        ("cylinder", '[("<b>Store</b>")]'),
+        ("stadium", '(["<b>Store</b>"])'),
+        (None, '("<b>Store</b>")'),
+    ],
+    ids=["cylinder", "stadium", "default_rounded"],
+)
+def test_an_object_shape_sets_the_brackets(monkeypatch, tmp_path, shape, drawn):
+    entry = (
+        f"{{class: store, label: Store, shape: {shape}}}"
+        if shape
+        else "{class: store, label: Store}"
+    )
+    settings = settings_with(
+        monkeypatch, tmp_path, f"objects:\n  demo.store: {entry}\n"
+    )
+    source, problems = written(settings, Graph([Node("ch", object="demo.store")]))
+    assert f"  ch{drawn}\n" in source
+    assert problems == []
+
+
+def test_a_shape_outside_the_profile_is_refused(monkeypatch, tmp_path):
+    settings = settings_with(
+        monkeypatch,
+        tmp_path,
+        "objects:\n  demo.x: {class: store, label: X, shape: hexagon}\n",
+    )
+    with pytest.raises(ValueError, match="has shape 'hexagon', not a house shape"):
+        written(settings, Graph([Node("x", object="demo.x")]))
