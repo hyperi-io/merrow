@@ -1,11 +1,54 @@
-# Generated icon packs and the download cache. Publisher terms bar redistribution.
+# Built icon packs and downloads. Publisher terms bar redistribution, so no
+# pack or source file is ever committed. Rendered diagrams are fine.
 packs/
 .cache/
 *.vssx
 *.vsdx
+*.vstx
 *.pptx
+*.drawio
+*.excalidraw
 
-# Python
+# Python build artefacts
 __pycache__/
-*.pyc
+*.py[cod]
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Python virtual envs and tool caches
 .venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ty_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Node. The pinned tools install into merrow's cache, never the repo.
+node_modules/
+
+# Render output from a local run
+out/
+*.png
+
+# Local environment files (never commit -- contain secrets)
+.env
+.env.*
+
+# Git worktrees
+.worktrees/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Local working files (not committed). Mirrored in .git/info/exclude.
+.hyperi-ai
+.claude/settings.local.json
+.playwright-mcp/
+CLAUDE.local.md

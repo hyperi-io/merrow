@@ -1,0 +1,198 @@
+# Profiles: DTCG token files plus templates. `{a.b}` in a template is a token.
+# Later token files win, so a realm restyles a profile by adding one file.
+# A profile with `extends: <profile>` takes that profile's entries under its
+# own, a mapping entry key by key, so a reference repo's brand profile names
+# only what it changes.
+
+profile: house
+
+profiles:
+  house:
+    tokens: [profiles/house.tokens.json]
+    # Mermaid's own order for these properties, which the class lines keep.
+    class_properties: &class_properties [fill, stroke, stroke-width, stroke-dasharray, color]
+    class_defaults: &class_defaults
+      fill: "{color.paper}"
+      stroke-width: "{stroke.role}"
+      color: "{color.ink}"
+    # Identity classes first, then role classes. Icon lines follow this order.
+    classes: &classes
+      ingest: {stroke: "{color.role.ingest}", icon: "{color.role.ingest}"}
+      xform: {stroke: "{color.role.xform}", icon: "{color.role.xform}"}
+      load: {stroke: "{color.role.load}", icon: "{color.role.load}"}
+      bus: {stroke: "{color.role.bus}", icon: "{color.role.bus}"}
+      store: {stroke: "{color.role.store}", icon: "{color.role.store}"}
+      ui: {stroke: "{color.role.ui}", icon: "{color.role.ui}"}
+      ext:
+        fill: "{color.wash}"
+        stroke: "{color.role.ext}"
+        stroke-width: "{stroke.part}"
+        stroke-dasharray: "{dash.ext}"
+        icon: "{color.line}"
+      decision: {stroke: "{color.role.decision}"}
+      error: {stroke: "{color.role.error}"}
+      control: {stroke: "{color.role.control}"}
+      part: {stroke: "{color.role.part}", stroke-width: "{stroke.part}"}
+    # One `style <subgraph> ...` line a subgraph, from this.
+    boundary:
+      fill: none
+      stroke: "{color.group}"
+      stroke-width: "{stroke.boundary}"
+      stroke-dasharray: "{dash.boundary}"
+    icon_css: ".{class.name} .label-icon{color:{class.icon}}"
+    # Rendered limits in px. A diagram wider than `column` is shown scaled to
+    # it, and `max_height` is measured at that scale.
+    limits: {column: 860, max_width: 1250, max_height: 600}
+    # Styling lint fails outside the class lines: inside a quoted label, and
+    # named in a caption, where it goes stale when the profile changes.
+    lint: &lint
+      label_styling: '(?i)style\s*=|<font\b|\bcolou?r\s*:|\bfill\s*:|\bstroke\s*:'
+      caption_styling: '(?i)\b(?:red|orange|yellow|green|teal|blue|purple|pink|grey|gray|black|white)\s+(?:box(?:es)?|arrows?|lines?|borders?|outlines?|nodes?|groups?|is|are|means|marks|shows)\b|\b(?:dashed|dotted|thick|bold)\b'
+    # A chain of more ranks than this is drawn as pattern B, in stages titled
+    # from `stage_title` (`{n}` is the stage number).
+    layout:
+      max_ranks: 4
+      stage_title: "Stage {n}"
+    # A node's label from its `{node.*}` fields, inside its shape's brackets.
+    node_label: &node_label
+      subtitle: '{shape.open}"<b>{node.label}</b><br/><span>{node.subtitle}</span>"{shape.close}'
+      plain: '{shape.open}"<b>{node.label}</b>"{shape.close}'
+    # An object's `shape`, as Mermaid's opening and closing brackets.
+    shapes: &shapes
+      rounded: ["(", ")"]
+      cylinder: ["[(", ")]"]
+      stadium: ["([", "])"]
+    default_shape: rounded
+    # The class of a node with no object, so no box falls back to Mermaid's own fill.
+    default_class: part
+    front:
+      flowchart: |-
+        ---
+        config:
+          theme: base
+          look: neo
+          fontFamily: {font.family}
+          flowchart:
+            curve: linear
+            nodeSpacing: 40
+            rankSpacing: 64
+            padding: 18
+            wrappingWidth: 280
+            htmlLabels: true
+          elk:
+            preset: modelOrder
+          themeVariables:
+            fontSize: {font.size.label}
+            lineColor: "{color.line}"
+            primaryTextColor: "{color.ink}"
+            clusterBorder: "{color.group}"
+            edgeLabelBackground: "{color.paper}"
+          themeCSS: >-
+            p{margin:0}
+            .node[data-look] rect,.node[data-look] path,.node[data-look] polygon,.node[data-look] .outer-path{filter:drop-shadow(0 1px 2px {color.shadow}) drop-shadow(0 6px 14px {color.shadow})}
+            .node rect{rx:10px;ry:10px}
+            .cluster rect{rx:16px;ry:16px}
+            .node .label div{min-width:150px}
+            .node.decision .label div{min-width:0}
+            .cluster[data-look] rect{filter:none}
+            .nodeLabel{line-height:1.35}
+            .nodeLabel b{font-weight:600;font-size:{font.size.label};letter-spacing:-0.01em}
+            .nodeLabel span{font-size:{font.size.detail};font-weight:400;color:{color.ink-muted}}
+            .cluster-label span.nodeLabel{display:inline-block;background:{color.paper};color:{color.ink-group};border:{stroke.boundary} solid {color.group};border-radius:999px;padding:2px 12px;font-size:{font.size.group};font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+            .flowchart-link{stroke-width:{stroke.link}}
+            .labelBkg{background:transparent!important}
+            span.edgeLabel{display:inline-block;background:{color.paper}!important;color:{color.ink-edge};border:{stroke.pill} solid {color.rule};border-radius:999px;padding:2px 10px;font-size:{font.size.edge};font-weight:500}
+            span.edgeLabel p{background:transparent!important}
+            .label-icon{width:20px;height:20px;vertical-align:-4px;margin-right:6px}
+            {profile.icon_css}
+        ---
+      # Sequence, state, ER and class diagrams.
+      other: &other_front |-
+        ---
+        config:
+          theme: base
+          fontFamily: {font.family}
+          themeVariables:
+            fontSize: {font.size.label}
+            lineColor: "{color.line}"
+            primaryTextColor: "{color.ink}"
+            actorBkg: "{color.paper}"
+            actorBorder: "{color.rule}"
+            actorTextColor: "{color.ink}"
+            actorLineColor: "{color.line}"
+            signalColor: "{color.line}"
+            signalTextColor: "{color.ink}"
+          themeCSS: >-
+            .messageText{paint-order:stroke;stroke:{color.paper};stroke-width:3px;stroke-linejoin:round}
+        ---
+  aws:
+    # AWS's look: icon nodes and AWS group borders. Your own boxes inside an
+    # AWS diagram keep the house classes.
+    tokens: [profiles/house.tokens.json, profiles/aws.tokens.json]
+    class_properties: *class_properties
+    class_defaults: *class_defaults
+    classes: *classes
+    # A group whose object names no AWS group style.
+    boundary:
+      fill: none
+      stroke: "{aws.line}"
+      stroke-width: "{stroke.boundary}"
+    # Each AWS group's border from the built pack of AWS's deck, its dash names
+    # as SVG dasharrays. An object picks one by `group_style`, the pack's `key`.
+    group_styles:
+      pack: aws-groups
+      theme: light
+      stroke_width: "{stroke.boundary}"
+      dash: {solid: "", sysDash: "3 3", dash: "8 6"}
+      # AWS's custom group for one service (deck slide 26): its border is the
+      # service icon's category colour.
+      service: service
+      service_label: "{aws.ink}"
+    # A render theme's overrides: dark ink and AWS's dark group styles.
+    themes:
+      dark:
+        tokens: [profiles/house.tokens.json, profiles/aws.tokens.json, profiles/aws-dark.tokens.json]
+        group_styles: {theme: dark}
+    # A node whose object has an icon is drawn as the icon, its label under it.
+    # Icons draw at their own artwork size, which AWS's terms require, read
+    # from these built packs.
+    icon_node: '@{ icon: "{node.icon}", label: "{node.text}", pos: "b", h: {node.size} }'
+    icon_packs: [aws]
+    # After render: each group's icon flush top-left, its title beside it.
+    group_icons: true
+    limits: {column: 1600, max_width: 2400, max_height: 1600, nodes: 30, subgraphs: 8}
+    lint:
+      <<: *lint
+      # AWS deployment diagrams run arrows every way, as AWS's own deck does.
+      layout_waive: '^(skip arrow|a solid arrow against the flow)'
+    layout:
+      max_ranks: 8
+      stage_title: "Stage {n}"
+    node_label: *node_label
+    shapes: *shapes
+    default_shape: rounded
+    default_class: part
+    front:
+      flowchart: |-
+        ---
+        config:
+          theme: base
+          look: classic
+          fontFamily: {aws.font}
+          flowchart:
+            curve: linear
+            nodeSpacing: 28
+            rankSpacing: 44
+            padding: 14
+            wrappingWidth: 280
+            htmlLabels: true
+          themeVariables:
+            fontSize: {aws.size.label}
+            lineColor: "{aws.line}"
+            primaryTextColor: "{aws.ink}"
+            edgeLabelBackground: "{aws.paper}"
+            clusterBkg: transparent
+          themeCSS: >-
+            .nodeLabel span{font-size:{aws.size.detail};color:{color.ink-muted}}
+        ---
+      other: *other_front

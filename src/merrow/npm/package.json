@@ -1,0 +1,7 @@
+{
+  "name": "merrow-mermaid",
+  "private": true,
+  "dependencies": {
+    "mermaid": "12.3.0"
+  }
+}

@@ -1,0 +1,31 @@
+# Project:   merrow
+# File:      .hyperi-ci.yaml
+# Purpose:   HyperI CI configuration
+#
+# License:   Apache-2.0
+# Copyright: (c) 2026 HYPERI PTY LIMITED
+#
+# Override defaults with HYPERCI_* env vars.
+# Reference: config/defaults.yaml in hyperi-ci.
+
+language: python
+classification: general-oss
+project:
+  status: experimental
+quality:
+  enabled: true
+test:
+  enabled: true
+  python:
+    # Every fixture lives in tmp_path or on a port the OS picks.
+    parallel: auto
+build:
+  enabled: true
+  strategies:
+  - native
+release:
+  enabled: true
+  channel: alpha
+  # Private until Derek flips it public: install from git, never PyPI.
+  destinations:
+    python: false

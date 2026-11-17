@@ -1,0 +1,8 @@
+{
+  "$description": "merrow aws profile tokens for a dark render, over aws.tokens.json. Dark group borders come from the dark slide of AWS's deck through the aws-groups pack.",
+  "aws": {
+    "ink": { "$type": "color", "$value": "#FFFFFF", "$description": "Label and title text" },
+    "paper": { "$type": "color", "$value": "#232F3E", "$description": "Edge label background: AWS's dark slide" },
+    "line": { "$type": "color", "$value": "#D5DBDB", "$description": "Edges, and a group with no AWS style" }
+  }
+}

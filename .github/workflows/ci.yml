@@ -1,0 +1,84 @@
+# Project:   merrow
+# File:      .github/workflows/ci.yml
+# Purpose:   CI pipeline
+#
+# License:   Apache-2.0
+# Copyright: (c) 2026 HYPERI PTY LIMITED
+
+name: CI
+
+"on":
+  push:
+    branches: ["**", "!gh-readonly-queue/**"]
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        required: false
+        default: ""
+        description: "Tag to re-publish (existing tag). Omit + set from-head to release HEAD."
+      from-head:
+        type: string
+        required: false
+        default: ""
+        description: "'true' to release/retry the current HEAD -- the CI creates the tag (issue #35)."
+      bump:
+        type: string
+        required: false
+        default: "auto"
+        description: "Version resolution for from-head: auto | patch | minor (forced -- release even with no release-worthy commit) | X.Y.Z (exact version)."
+      skip-optimize:
+        type: string
+        required: false
+        default: ""
+        description: "'true' to skip the optimisation stage for this run (Rust: no PGO, no BOLT). Empty = optimisation on."
+      release-unoptimized:
+        type: string
+        required: false
+        default: ""
+        description: "'true' to consent, for this run only, to shipping a skipped-optimisation build under a release tag."
+      optimize-tier:
+        type: string
+        required: false
+        default: ""
+        description: "'release' to build the release optimisation tier on a run that publishes nothing (Rust: PGO + BOLT)."
+      test-tier:
+        type: choice
+        required: false
+        default: "core"
+        options: [core, full]
+        description: "full runs the full test tier on this run. core never lowers a tier."
+  schedule:
+    - cron: '24 14 * * *'
+
+permissions:
+  contents: write
+  packages: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  ci:
+    uses: hyperi-io/hyperi-ci/.github/workflows/python-ci.yml@main
+    with:
+      tag: ${{ inputs.tag || '' }}
+      from-head: ${{ inputs.from-head || '' }}
+      bump: ${{ inputs.bump || 'auto' }}
+      skip-optimize: ${{ inputs.skip-optimize || '' }}
+      release-unoptimized: ${{ inputs.release-unoptimized || '' }}
+      optimize-tier: ${{ inputs.optimize-tier || '' }}
+      test-tier: ${{ inputs.test-tier || 'core' }}
+    secrets:
+      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      ALERT_BRIDGE_TOKEN: ${{ secrets.ALERT_BRIDGE_TOKEN }}
+      GITLEAKS_GH_ACTIONS_KEY: ${{ secrets.GITLEAKS_GH_ACTIONS_KEY }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      CONTAINER_MGT_APP_PRIVATE_KEY: ${{ secrets.CONTAINER_MGT_APP_PRIVATE_KEY }}
+      GH_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}

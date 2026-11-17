@@ -1,0 +1,32 @@
+# L2 patterns: slots in path order, each filled with L1 objects by the caller,
+# and the edges between slots. A slot holding several objects becomes a group.
+# An edge's `if` and `unless` name slots that must be filled or empty.
+patterns:
+  data-path:
+    slots:
+      - {name: senders, title: Senders}
+      - {name: intake, title: Intake}
+      - {name: bus, title: Bus}
+      - {name: transform, title: Transform, optional: true}
+      - {name: loader, title: Load}
+      - {name: store, title: Store}
+      - {name: console, title: Console, optional: true}
+    edges:
+      - {source: senders, target: intake, label: events}
+      - {source: intake, target: bus}
+      - {source: bus, target: transform}
+      - {source: transform, target: loader}
+      - {source: bus, target: loader, unless: [transform]}
+      - {source: bus, target: loader, label: bypass, optional: true, if: [transform]}
+      - {source: loader, target: store}
+      - {source: store, target: console}
+  gitops-control:
+    slots:
+      - {name: controller, title: Control}
+      - {name: repo, title: Deploy repo}
+      - {name: sync, title: Sync}
+      - {name: runtime, title: Runtime}
+    edges:
+      - {source: controller, target: repo, label: commits}
+      - {source: repo, target: sync}
+      - {source: sync, target: runtime, label: applies}

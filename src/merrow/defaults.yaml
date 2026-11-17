@@ -1,0 +1,141 @@
+# merrow's base layer. Reference repos listed in `references` override it in
+# that order, and settings.yaml, MERROW_* env vars and CLI flags override all.
+
+# Reference repo directories, base first: an org repo, then a personal one.
+references: []
+
+# The file each reference repo keeps its merrow data in.
+reference_file: merrow.yaml
+
+# Download cache. Empty means scalo's runtime cache dir for merrow.
+cache_dir: ""
+
+# merrow is a CLI, so its dirs follow the user even inside a container (a CI
+# runner). `auto` lets scalo detect a container and use its /app layout.
+runtime_mode: local
+
+# Built icon packs. Empty means `packs` under the cache dir.
+packs_dir: ""
+
+# A font stack every profile and theme draws in, over its own fonts. Set it
+# for a company font, or a standard one such as [Arial, Helvetica, sans-serif]
+# where the reader (Visio, PowerPoint) lacks the profile's. Empty keeps each
+# profile's own.
+font: []
+
+limits:
+  # One file inside a download. A larger one is reported and never read.
+  member_bytes: 5000000
+  # A deck inside a download, such as a PPTX toolkit.
+  deck_bytes: 200000000
+  # One download.
+  download_bytes: 1000000000
+  # Longer text on a groups slide is a caption, not a group name.
+  group_name_chars: 40
+  download_timeout_seconds: 300
+  # The browser install fetches about 150M.
+  install_timeout_seconds: 900
+  detect_timeout_seconds: 300
+
+# Paths in any download that are never content: macOS resource forks.
+ignore: (^|/)(__MACOSX/|\._)
+
+# Options every source of a format starts with. A source overrides any of them.
+formats:
+  svg:
+    files: \.svg$
+  pptx: {}
+  vssx:
+    files: \.vssx$
+    # Matched against `<stencil>/<master>`. The default key is the master's name.
+    names:
+      - match: ^[^/]+/(.+)$
+        key: \1
+    # Samples per NURBS curve, and the margin round each icon, in inches.
+    curve_steps: 24
+    padding_in: 0.02
+
+# Tokens new-release detection may use: nvchecker key name -> env var holding it.
+tokens:
+  github: GITHUB_TOKEN
+
+render:
+  # One SVG per theme. `mermaid` is Mermaid's theme name.
+  themes:
+    light:
+      mermaid: default
+      background: "#FFFFFF"
+    dark:
+      mermaid: dark
+      background: "#1B1B1D"
+      # An icon with a variant of this name drawn for dark, as AWS ships.
+      icon_suffix: "-dark"
+  # Mermaid's initialize() config. useMaxWidth shrinks wide diagrams.
+  mermaid_config:
+    flowchart:
+      useMaxWidth: false
+    architecture:
+      useMaxWidth: false
+    sequence:
+      useMaxWidth: false
+  # The Mermaid bundle: the npm package npm/package-lock.json pins, and the
+  # file in its tarball that runs in the page.
+  bundle:
+    package: mermaid
+    file: package/dist/mermaid.min.js
+
+lint:
+  # Where a diagram names an icon as `prefix:name`, by Mermaid syntax. Group 1
+  # is the full key. Each must resolve in a built pack.
+  icon_refs:
+    - \b(?:service|group|junction)\s+\w+\(([a-z0-9-]+:[a-z0-9-]+)\)
+    - icon:\s*["']([a-z0-9-]+:[a-z0-9-]+)["']
+
+# Where `merrow skill install` puts merrow's agent skill: Claude Code's
+# personal skills dir.
+skill_dir: ~/.claude/skills
+
+# The browser playwright installs for every laid-out page, by playwright's
+# own name for it. The headless shell is the smallest build.
+browser: chromium-headless-shell
+
+# How each diagram reader recognises structure in its format.
+readers:
+  drawio:
+    # Style keys marking a cell as a container, beside cells with children.
+    container: container,swimlane,group
+    # Style key=value pairs marking an edge as optional (drawn dotted).
+    optional: dashed=1
+    # Style keys marking a text cell that titles the container it sits in.
+    title: text
+    # A label matching any of these is not text: a template placeholder.
+    skip_labels: ["%[^%]+%"]
+  pptx:
+    # Line dash styles marking a connector as optional (drawn dotted).
+    optional_dash: dash,sysDash,sysDot,dot,lgDash,dashDot
+    # A label matching any of these is not text: a template placeholder or a
+    # numbered step marker.
+    skip_labels: ["%[^%]+%", "\\d{1,2}"]
+  excalidraw:
+    # Element types that are boxes. Text, arrows and lines are not.
+    shapes: rectangle,ellipse,diamond
+    # Arrow stroke styles marking an optional path (drawn dotted).
+    optional_stroke: dashed,dotted
+    skip_labels: ["%[^%]+%", "\\d{1,2}"]
+  visio:
+    # Master names that are connectors, beside shapes with begin and end points.
+    connector_masters: connector
+    # A floating connector end snaps to a shape this close, in inches.
+    snap_in: 0.15
+    # LinePattern values that draw dashed or dotted: an optional path.
+    optional_patterns: 2,3,4,9,10
+    skip_labels: ["%[^%]+%", "\\d{1,2}"]
+  dot:
+    # A subgraph is a group when its name starts with this, as Graphviz draws it.
+    cluster_prefix: cluster
+    # Edge styles marking an optional path (drawn dotted).
+    optional_styles: dashed,dotted
+    skip_labels: []
+  structurizr:
+    # Relationship tags marking an optional path (drawn dotted).
+    optional_tags: Optional,Async

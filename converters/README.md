@@ -1,5 +1,3 @@
 # converters
 
-Published sources to Mermaid: SVG icon folders to Iconify packs, PPTX decks to group styles, Visio stencils to icons and Visio pages to flowcharts. A converter downloads from the publisher and writes to the ignored `packs/`. It never alters the artwork, never recolours it and never rescales it.
-
-[prototypes/](prototypes/) holds the first working versions. They have paths hard-coded to the machine they were written on, and S2 of the plan turns them into the real converters.
+The converters live in [src/merrow/convert/](../src/merrow/convert/), one per source format (`svg`, `pptx`, `vssx`), all reading their options from config. They never alter the artwork, never recolour it and never rescale it.

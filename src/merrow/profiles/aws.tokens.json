@@ -1,0 +1,13 @@
+{
+  "$description": "merrow aws profile tokens, W3C DTCG format. Group borders come from AWS's own deck through the aws-groups pack, never from here.",
+  "aws": {
+    "ink": { "$type": "color", "$value": "#000000", "$description": "Label and title text" },
+    "paper": { "$type": "color", "$value": "#FFFFFF", "$description": "Edge label background" },
+    "line": { "$type": "color", "$value": "#545B64", "$description": "Edges, and a group with no AWS style" },
+    "font": { "$type": "fontFamily", "$value": ["Inter", "Helvetica", "Arial", "sans-serif"] },
+    "size": {
+      "label": { "$type": "dimension", "$value": "14px" },
+      "detail": { "$type": "dimension", "$value": "12px" }
+    }
+  }
+}

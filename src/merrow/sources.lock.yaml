@@ -1,0 +1,37 @@
+# Written by `merrow source update`. Edit the sources, not this file.
+lock:
+  aws-groups:
+    version: d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Microsoft-PPTx-toolkits_07312026.1c286c4a809a3cf2902c88ff63bf7dd1fa3cd55d.zip
+    url: https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Microsoft-PPTx-toolkits_07312026.1c286c4a809a3cf2902c88ff63bf7dd1fa3cd55d.zip
+    sha256: 49b19b5cc99e813453be67fc2389a8abce115d7a3261c75698e62cefe4918221
+    bytes: 18900782
+  aws-icons:
+    version: d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip
+    url: https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip
+    sha256: d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526
+    bytes: 13988918
+  gcp-category-icons:
+    version: e5bc3abd3527
+    url: https://services.google.com/fh/files/misc/category-icons.zip
+    sha256: e5bc3abd3527dc2500e9bff7f15870783e2c764129c49b7cd4c1b4e105345002
+    bytes: 795968
+  gcp-icons:
+    version: 6531a10f58bc
+    url: https://services.google.com/fh/files/misc/core-products-icons.zip
+    sha256: 6531a10f58bc599c24d9a455d81dd757c1a03c3c43da9cddf639b859c1c1eece
+    bytes: 318678
+  ibm-icons:
+    version: v2.0.0
+    url: https://github.com/IBM-Cloud/architecture-icons/archive/refs/tags/v2.0.0.tar.gz
+    sha256: 2aef1b85837841b38f6a0181a0cc5170e844b89a94a11e1d022459cbd555b3e9
+    bytes: 11092920
+  kubernetes-icons:
+    version: '20260126.015052'
+    url: https://codeload.github.com/kubernetes/community/tar.gz/70a4bb2d8cc35bb0672f221bad9bc60c27a6f94b
+    sha256: c3e6b38bbfd488f551453c5203b403a0094a734d467f067d6842138a9e2c9662
+    bytes: 45064138
+  oci-icons:
+    version: 66301b1e-693098
+    url: https://docs.oracle.com/iaas/Content/Resources/Assets/OCI_Icons_Visio.zip
+    sha256: f3a14ba1fb809507ce8787f6289dcdb3836a153b88aeeec77973321117b899be
+    bytes: 6893720
