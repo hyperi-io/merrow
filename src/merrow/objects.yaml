@@ -1,6 +1,11 @@
 # L1 objects: `label`, and optional `class`, `subtitle`, `icon`, `shape` and
 # `group_style` (a key in the profile's group styles).
 
+# One object per icon a built pack titles, as `<id_prefix><key>` labelled with
+# the publisher's own name. An entry under `objects` wins over one made here.
+generated_objects:
+  - {pack: aws, id_prefix: aws.}
+
 objects:
   aws.cloud: {label: AWS Cloud, icon: "aws:group-aws-cloud-logo", group_style: aws-cloud}
   aws.region: {label: Region, icon: "aws:group-region", group_style: region}

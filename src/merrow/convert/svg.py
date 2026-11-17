@@ -137,9 +137,11 @@ def pack(
     """Return the Iconify pack for a download's files and what was dropped.
 
     `aliases` maps a short name to an icon key. One whose key isn't in the pack
-    is left out and listed in the report, never written.
+    is left out and listed in the report, never written. A rule's `title` goes
+    into the pack's `titles`, by key.
     """
     icons: dict[str, object] = {}
+    titles: dict[str, str] = {}
     report = Report()
     for member in members:
         key = naming.key_for(member.path, rules)
@@ -162,8 +164,12 @@ def pack(
             continue
         for note in notes:
             tally(report.notes, note)
+        if title := naming.title_for(member.path, rules):
+            titles[key] = title
     report.icons = len(icons)
     built: dict[str, object] = {"prefix": prefix, "icons": icons}
+    if titles:
+        built["titles"] = titles
     resolved = {}
     for short, target in (aliases or {}).items():
         if target in icons:
