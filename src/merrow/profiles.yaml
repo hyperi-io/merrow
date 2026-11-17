@@ -60,6 +60,8 @@ profiles:
       cylinder: ["[(", ")]"]
       stadium: ["([", "])"]
     default_shape: rounded
+    # The class of a node with no object, so no box falls back to Mermaid's own fill.
+    default_class: part
     front:
       flowchart: |-
         ---

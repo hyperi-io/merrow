@@ -157,6 +157,8 @@ def house(
             problems += misfits(profile, known)
             styles.setdefault(known.style, []).append(node.id)
             shapes[node.id] = known.shape
+        else:
+            styles.setdefault(profile.default_class, []).append(node.id)
     if problems:
         raise ValueError("; ".join(problems))
 

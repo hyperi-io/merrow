@@ -30,6 +30,7 @@ class Profile:
             `{shape.*}` fields left for the writer.
         shapes: Each shape's opening and closing brackets.
         default_shape: The shape of a node whose object names none.
+        default_class: The class of a node with no object.
         max_ranks: The longest chain drawn left to right before pattern B.
         stage_title: A pattern B stage's title, `{n}` its number.
         limits: Rendered `column`, `max_width` and `max_height`, in px.
@@ -44,6 +45,7 @@ class Profile:
     node_label: Mapping[str, str]
     shapes: Mapping[str, tuple[str, str]]
     default_shape: str
+    default_class: str
     max_ranks: int
     stage_title: str
     limits: Mapping[str, int]
@@ -158,6 +160,7 @@ def load(settings: Any, name: str | None = None) -> Profile:
             for shape, pair in entry["shapes"].items()
         },
         str(entry["default_shape"]),
+        str(entry["default_class"]),
         int(entry["layout"]["max_ranks"]),
         str(entry["layout"]["stage_title"]),
         {key: int(value) for key, value in entry["limits"].items()},

@@ -139,3 +139,12 @@ def test_a_shape_outside_the_profile_is_refused(monkeypatch, tmp_path):
     )
     with pytest.raises(ValueError, match="has shape 'hexagon', not a house shape"):
         written(settings, Graph([Node("x", object="demo.x")]))
+
+
+def test_a_node_with_no_object_takes_the_profile_default_class(monkeypatch, tmp_path):
+    settings = settings_with(monkeypatch, tmp_path, LIBRARY)
+    graph = Graph([Node("repo", "Deploy repo"), Node("web", object="demo.web")])
+    source, problems = written(settings, graph)
+    assert "  class repo part\n" in source
+    assert "  class web ui\n" in source
+    assert problems == []
