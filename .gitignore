@@ -1,0 +1,11 @@
+# Generated icon packs and the download cache. Publisher terms bar redistribution.
+packs/
+.cache/
+*.vssx
+*.vsdx
+*.pptx
+
+# Python
+__pycache__/
+*.pyc
+.venv/
