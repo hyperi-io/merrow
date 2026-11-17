@@ -10,7 +10,6 @@
 
 language: python
 classification: general-oss
-license: Apache-2.0
 project:
   status: experimental
 quality:
