@@ -121,3 +121,6 @@ readers:
     # Edge styles marking an optional path (drawn dotted).
     optional_styles: dashed,dotted
     skip_labels: []
+  structurizr:
+    # Relationship tags marking an optional path (drawn dotted).
+    optional_tags: Optional,Async
