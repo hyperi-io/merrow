@@ -101,3 +101,9 @@ readers:
     # A label matching any of these is not text: a template placeholder or a
     # numbered step marker.
     skip_labels: ["%[^%]+%", "\\d{1,2}"]
+  excalidraw:
+    # Element types that are boxes. Text, arrows and lines are not.
+    shapes: rectangle,ellipse,diamond
+    # Arrow stroke styles marking an optional path (drawn dotted).
+    optional_stroke: dashed,dotted
+    skip_labels: ["%[^%]+%", "\\d{1,2}"]
