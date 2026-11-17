@@ -1,32 +1,31 @@
-# Project:   HyperI AI
-# File:      tests/unit/test_diagram_check.py
-# Purpose:   Unit tests for the source pass, page parsing and verdicts of tools/diagram_check.py
+# Project:   merrow
+# File:      tests/test_diagram_check.py
+# Purpose:   Unit tests for the source pass, page parsing and verdicts of merrow.lint.diagram_check
 #
-# License:   LicenseRef-HyperI-Proprietary
+# License:   Apache-2.0
 # Copyright: (c) 2026 HYPERI PTY LIMITED
 """The diagram checker's source pass, page parsing and layout verdicts.
 
-The render pass needs Chrome and the pinned Mermaid bundle, so it runs by hand
-and from the /docs gate, not here.
+The render pass needs Chrome and the pinned Mermaid bundle, so it runs by hand,
+not here.
 """
 
 import re
-import sys
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "tools"))
+from merrow.lint import diagram_check as dc
 
-import diagram_check as dc
-
-from hyperi_ai import common
-
-STANDARD_PATH = ROOT / "standards" / "universal" / "diagrams.md"
+ROOT = Path(__file__).resolve().parents[1]
+STANDARD_PATH = ROOT / "style" / "diagrams.md"
 STANDARD = STANDARD_PATH.read_text(encoding="utf-8")
 _COLOUR = STANDARD.split("\n## Colour\n", 1)[1].split("\n## ", 1)[0]
-CLASS_LINES = frozenset(line.strip() for line in _COLOUR.splitlines() if line.strip().startswith("classDef "))
+CLASS_LINES = frozenset(
+    line.strip()
+    for line in _COLOUR.splitlines()
+    if line.strip().startswith("classDef ")
+)
 DEFAULT = "classDef default fill:#F8FAFC,stroke:#64748B,stroke-width:1px,color:#0F172A"
 GOOD = f"""flowchart LR
     accTitle: L2 Services -- DFE
@@ -52,8 +51,12 @@ MEASURED = {
 }
 
 
-def _problems(source: str, intro: str | None = None, caption: str | None = None) -> list[str]:
-    return dc.source_problems(dc.Block("page.md:1", source, intro, caption), CLASS_LINES)
+def _problems(
+    source: str, intro: str | None = None, caption: str | None = None
+) -> list[str]:
+    return dc.source_problems(
+        dc.Block("page.md:1", source, intro, caption), CLASS_LINES
+    )
 
 
 def test_the_standard_lists_its_eight_class_lines():
@@ -65,16 +68,13 @@ def test_the_script_carries_the_standards_class_lines():
     assert dc.CLASS_LINES == CLASS_LINES
 
 
-@pytest.mark.parametrize("xdg", ["", "/srv/cache", "relative/cache"], ids=["unset", "absolute", "relative"])
-def test_the_script_caches_where_hyperi_ai_does(monkeypatch, xdg):
-    monkeypatch.setenv("XDG_CACHE_HOME", xdg)
-    assert dc.cache_dir() == common.cache_dir()
-
-
-def test_the_short_form_copies_the_standards_class_lines():
-    digest = (ROOT / "standards" / "rules" / "universal.md").read_text(encoding="utf-8")
-    copied = {line.strip() for line in digest.splitlines() if line.strip().startswith("classDef ")}
-    assert copied == CLASS_LINES
+def test_the_render_bundle_is_the_version_merrows_lock_pins():
+    lock = (ROOT / "src" / "merrow" / "node" / "package-lock.json").read_text(
+        encoding="utf-8"
+    )
+    assert (
+        f'"node_modules/mermaid": {{\n      "version": "{dc.mermaid_version()}"' in lock
+    )
 
 
 def test_every_template_in_the_standard_passes_the_source_pass():
@@ -106,15 +106,29 @@ def test_a_limit_matches_the_standards_layout_table(row, limit):
 
 @pytest.mark.parametrize(
     ("phrase", "limit"),
-    [(r"(\d+) colour classes or fewer", dc.MAX_COLOUR_CLASSES), (r"(\d+) participants or fewer", dc.MAX_PARTICIPANTS)],
+    [
+        (r"(\d+) colour classes or fewer", dc.MAX_COLOUR_CLASSES),
+        (r"(\d+) participants or fewer", dc.MAX_PARTICIPANTS),
+    ],
 )
 def test_a_limit_matches_the_standards_prose(phrase, limit):
     assert int(re.search(phrase, STANDARD).group(1)) == limit
 
 
-@pytest.mark.parametrize("caption", [CAPTION, CAPTION.replace("*", "_")], ids=["asterisk", "prettier-underscore"])
+@pytest.mark.parametrize(
+    "caption",
+    [CAPTION, CAPTION.replace("*", "_")],
+    ids=["asterisk", "prettier-underscore"],
+)
 def test_a_diagram_to_the_standard_has_no_source_problems(caption):
-    assert _problems(GOOD, "Every event reaches DFE's tables through one topic and the loader.", caption) == []
+    assert (
+        _problems(
+            GOOD,
+            "Every event reaches DFE's tables through one topic and the loader.",
+            caption,
+        )
+        == []
+    )
 
 
 @pytest.mark.parametrize(
@@ -128,14 +142,30 @@ def test_a_diagram_to_the_standard_has_no_source_problems(caption):
         ("    accTitle: L2 Services -- DFE\n", "", "R7 no `accTitle`"),
         ("L2 Services -- DFE", "The services of DFE", "R8 `accTitle`"),
         ("L2 Services -- DFE", "L2 Containers -- DFE", "R8 `accTitle`"),
-        ("    accDescr: Sources publish to a topic and the loader writes tables.\n", "", "R7 no `accDescr`"),
-        ("flowchart LR", "%%{init: {'theme': 'forest'}}%%\nflowchart LR", "R9 an init directive"),
+        (
+            "    accDescr: Sources publish to a topic and the loader writes tables.\n",
+            "",
+            "R7 no `accDescr`",
+        ),
+        (
+            "flowchart LR",
+            "%%{init: {'theme': 'forest'}}%%\nflowchart LR",
+            "R9 an init directive",
+        ),
         (DEFAULT, f"style sources fill:#f00\n    {DEFAULT}", "R9 `style`"),
-        (DEFAULT, f'click sources href "https://example.com"\n    {DEFAULT}', "R9 `style`"),
+        (
+            DEFAULT,
+            f'click sources href "https://example.com"\n    {DEFAULT}',
+            "R9 `style`",
+        ),
         ("-->|events|", "==>", "a thick arrow"),
         ("-->|events|", "<-->", "a double-headed arrow"),
         ('sources["Sources"]', 'sources(("Sources"))', "R6 an outline"),
-        ('sources["Sources"]', 'sources@{ shape: hex, label: "Sources" }', "R6 an outline"),
+        (
+            'sources["Sources"]',
+            'sources@{ shape: hex, label: "Sources" }',
+            "R6 an outline",
+        ),
         ('sources["Sources"]', 'sources("Sources")', "R6 an outline"),
         ('sources["Sources"]', "sources(Sources)", "R6 an outline"),
         ('sources["Sources"]', 'sources>"Sources"]', "R6 an outline"),
@@ -162,14 +192,102 @@ def test_quoted_label_text_is_never_read_as_syntax(label):
     assert _problems(GOOD.replace('sources["Sources"]', label)) == []
 
 
-def test_frontmatter_is_one_finding():
-    assert _problems("---\nconfig:\n  theme: dark\n---\n" + GOOD) == ["R9 frontmatter configuration"]
+_HOUSE = STANDARD.split("\n## House style\n", 1)[1].split("\n## ", 1)[0]
+_HOUSE_FENCES = re.findall(
+    r"^```(?:yaml|text)\n(.*?)^```$", _HOUSE, re.MULTILINE | re.DOTALL
+)
+BOUNDARY = f"style edge {dc.HOUSE_BOUNDARY}"
+HOUSE = (
+    dc.HOUSE_FRONT
+    + """
+flowchart LR
+    accTitle: L2 Services -- DFE
+    accDescr: The receiver publishes to a topic and the loader writes tables.
+    subgraph edge["Edge"]
+        receiver("<b>dfe-receiver</b><br/><span>HTTP intake</span>")
+    end
+    receiver -->|events| topic[("<b>Kafka</b>")]
+    class receiver ingest
+    class topic bus
+"""
+    + "".join(f"  {line}\n" for line in sorted(dc.HOUSE_CLASS_LINES))
+    + f"  {BOUNDARY}\n"
+)
+OTHER = (
+    dc.HOUSE_OTHER_FRONT
+    + "\nsequenceDiagram\n    accTitle: L4 Detail -- X\n    accDescr: Y.\n    a->>b: Call\n"
+)
+
+
+def test_the_script_carries_the_standards_house_blocks():
+    flow_front, other_front, classes = _HOUSE_FENCES
+    assert flow_front.rstrip("\n") == dc.HOUSE_FRONT
+    assert other_front.rstrip("\n") == dc.HOUSE_OTHER_FRONT
+    assert (
+        frozenset(line.strip() for line in classes.splitlines()) == dc.HOUSE_CLASS_LINES
+    )
+    assert dc.HOUSE_BOUNDARY in _HOUSE
+
+
+@pytest.mark.parametrize("source", [HOUSE, OTHER], ids=["flowchart", "sequence"])
+def test_a_house_diagram_has_no_source_problems(source):
+    assert _problems(source) == []
 
 
 @pytest.mark.parametrize(
     ("source", "said"),
     [
-        (f"sequenceDiagram\n    accTitle: L4 Detail -- X\n    accDescr: Y.\n    {DEFAULT}\n", "takes no colour"),
+        (
+            "---\nconfig:\n  theme: dark\n---\n" + GOOD,
+            "R9 frontmatter that is not the house block",
+        ),
+        (
+            HOUSE.replace("look: neo", "look: classic"),
+            "R9 frontmatter that is not the house block",
+        ),
+        (
+            OTHER.replace(dc.HOUSE_OTHER_FRONT, dc.HOUSE_FRONT),
+            "R9 frontmatter that is not the house block",
+        ),
+        (
+            HOUSE.replace(dc.HOUSE_FRONT, dc.HOUSE_OTHER_FRONT),
+            "R9 frontmatter that is not the house block",
+        ),
+        (
+            "---\nconfig:\n  theme: base\n" + GOOD,
+            "R9 frontmatter that is not the house block",
+        ),
+        (
+            HOUSE.replace("  classDef part", "  classDef pert"),
+            "R5 the house class lines are incomplete, missing: part",
+        ),
+        (HOUSE.replace("stroke:#334155", "stroke:#334156"), "R5 a class line differs"),
+        (
+            HOUSE.replace(BOUNDARY, BOUNDARY.replace("style edge", "style dfe")),
+            "which is no subgraph",
+        ),
+        (
+            HOUSE.replace(f"  {BOUNDARY}\n", ""),
+            "subgraph `edge` has no house boundary line",
+        ),
+        (HOUSE.replace(BOUNDARY, "style edge fill:#f00"), "R9 `style`"),
+        (HOUSE.replace("-->|events|", "==>"), "a thick arrow"),
+        (HOUSE.replace('topic[("', 'topic{{"').replace('")]', '"}}'), "R6 an outline"),
+        (OTHER + "    classDef x fill:#fff\n", "takes no colour"),
+    ],
+)
+def test_a_house_fault_is_named(source, said):
+    found = _problems(source)
+    assert any(said in problem for problem in found), found
+
+
+@pytest.mark.parametrize(
+    ("source", "said"),
+    [
+        (
+            f"sequenceDiagram\n    accTitle: L4 Detail -- X\n    accDescr: Y.\n    {DEFAULT}\n",
+            "takes no colour",
+        ),
         (
             "sequenceDiagram\n    accTitle: L4 Detail -- X\n    accDescr: Y.\n"
             + "".join(f"    participant p{n}\n" for n in range(7)),
@@ -180,10 +298,22 @@ def test_frontmatter_is_one_finding():
             + "".join(f"    p{n}->>p{n + 1}: Call\n" for n in range(6)),
             "7 participants",
         ),
-        ("sequenceDiagram\n    accTitle: L4 Detail -- X\n    accDescr: Y.\n    box Aqua Loader\n", "a coloured `box`"),
-        ("sequenceDiagram\n    accTitle: L4 Detail -- X\n    accDescr: Y.\n    rect rgb(1, 2, 3)\n", "a coloured `box`"),
+        (
+            "sequenceDiagram\n    accTitle: L4 Detail -- X\n    accDescr: Y.\n    box Aqua Loader\n",
+            "a coloured `box`",
+        ),
+        (
+            "sequenceDiagram\n    accTitle: L4 Detail -- X\n    accDescr: Y.\n    rect rgb(1, 2, 3)\n",
+            "a coloured `box`",
+        ),
     ],
-    ids=["coloured_sequence", "seven_participants", "seven_named_in_messages", "coloured_box", "rect"],
+    ids=[
+        "coloured_sequence",
+        "seven_participants",
+        "seven_named_in_messages",
+        "coloured_box",
+        "rect",
+    ],
 )
 def test_a_sequence_fault_is_named(source, said):
     assert any(said in problem for problem in _problems(source))
@@ -201,14 +331,23 @@ def test_a_sequence_fault_is_named(source, said):
 )
 def test_arrows_both_ways_between_one_pair_are_named(arrows, flagged):
     source = GOOD.replace("flowchart LR", f"flowchart LR\n    {arrows}", 1)
-    assert any("arrows both ways" in problem for problem in _problems(source)) is flagged
+    assert (
+        any("arrows both ways" in problem for problem in _problems(source)) is flagged
+    )
 
 
-@pytest.mark.parametrize(("numbers", "flagged"), [([1, 2], False), ([3, 4], True), ([1, 3], True)], ids=["from_one", "continued", "gap"])
+@pytest.mark.parametrize(
+    ("numbers", "flagged"),
+    [([1, 2], False), ([3, 4], True), ([1, 3], True)],
+    ids=["from_one", "continued", "gap"],
+)
 def test_a_pages_figures_number_from_one(tmp_path, monkeypatch, numbers, flagged):
     monkeypatch.chdir(tmp_path)
     page = Path("page.md")
-    fences = "".join(f"Intro {n}.\n\n```mermaid\nflowchart LR\n```\n\n*Figure {n}. L4 Detail -- X.* Up: top of r.\n\n" for n in numbers)
+    fences = "".join(
+        f"Intro {n}.\n\n```mermaid\nflowchart LR\n```\n\n*Figure {n}. L4 Detail -- X.* Up: top of r.\n\n"
+        for n in numbers
+    )
     page.write_text(fences, encoding="utf-8")
     _, problems = dc.page_blocks(page)
     assert any("figures are numbered" in problem for problem in problems) is flagged
@@ -217,18 +356,32 @@ def test_a_pages_figures_number_from_one(tmp_path, monkeypatch, numbers, flagged
 def test_an_up_or_down_link_to_the_pages_h1_anchor_is_named(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "extractors.md").write_text("# Extractors\n\nBody.\n", encoding="utf-8")
+    (tmp_path / "docs" / "extractors.md").write_text(
+        "# Extractors\n\nBody.\n", encoding="utf-8"
+    )
     page = Path("README.md")
     caption = "*Figure 1. L3 Components -- Fetcher.* Up: top of dfe-fetcher. Down: [L4 Detail -- Extractors](docs/extractors.md#extractors), [Other](docs/extractors.md#body)."
-    page.write_text(f"# Fetcher\n\nThe fetcher pulls from sources.\n\n```mermaid\nflowchart LR\n```\n\n{caption}\n", encoding="utf-8")
+    page.write_text(
+        f"# Fetcher\n\nThe fetcher pulls from sources.\n\n```mermaid\nflowchart LR\n```\n\n{caption}\n",
+        encoding="utf-8",
+    )
     _, problems = dc.page_blocks(page)
-    assert problems == ["README.md:5 R8 a link to the page's H1 anchor `#extractors`: link the page itself"]
+    assert problems == [
+        "README.md:5 R8 a link to the page's H1 anchor `#extractors`: link the page itself"
+    ]
 
 
-@pytest.mark.parametrize(("lines", "flagged"), [(DEFAULT, True), ("", False)], ids=["with_default", "without"])
+@pytest.mark.parametrize(
+    ("lines", "flagged"),
+    [(DEFAULT, True), ("", False)],
+    ids=["with_default", "without"],
+)
 def test_a_state_diagram_takes_no_default_class_line(lines, flagged):
     source = f"stateDiagram-v2\n    direction LR\n    accTitle: L4 Detail -- X\n    accDescr: Y.\n    [*] --> Open\n    {lines}\n"
-    assert any("takes no `default` class line" in problem for problem in _problems(source)) is flagged
+    assert (
+        any("takes no `default` class line" in problem for problem in _problems(source))
+        is flagged
+    )
 
 
 def test_an_uncoloured_box_and_six_participants_are_allowed():
@@ -242,24 +395,36 @@ def test_an_uncoloured_box_and_six_participants_are_allowed():
 @pytest.mark.parametrize(
     ("intro", "caption", "said"),
     [
-        ("", CAPTION, "R7 no intro sentence"),
-        ("## Architecture", CAPTION, "R7 no intro sentence"),
-        ("| Step | Built on |", CAPTION, "R7 no intro sentence"),
-        ("*Figure 1. L1 Context -- DFE.*", CAPTION, "R7 no intro sentence"),
         ("This diagram shows DFE.", CAPTION, "R7 the intro announces the diagram"),
-        ("Below is the flow through DFE.", CAPTION, "R7 the intro announces the diagram"),
-        ("The following diagram maps DFE.", CAPTION, "R7 the intro announces the diagram"),
+        (
+            "Below is the flow through DFE.",
+            CAPTION,
+            "R7 the intro announces the diagram",
+        ),
+        (
+            "The following diagram maps DFE.",
+            CAPTION,
+            "R7 the intro announces the diagram",
+        ),
         ("The diagram below maps DFE.", CAPTION, "R7 the intro announces the diagram"),
-        ("DFE writes every event through one loader.", "The loader then writes rows.", "R7 no caption"),
+        (
+            "DFE writes every event through one loader.",
+            "The loader then writes rows.",
+            "R7 no caption",
+        ),
         ("DFE writes every event through one loader.", "", "R7 no caption"),
-        ("DFE writes every event through one loader.", "*Figure 2. L2 Services -- DFE.*", "R8 the caption's `Up:` names no parent"),
-        ("DFE writes every event through one loader.", "*Figure 2. L2 Services -- DFE.* Up: the overview.", "R8 the caption's `Up:` names no parent"),
+        (
+            "DFE writes every event through one loader.",
+            "*Figure 2. L2 Services -- DFE.*",
+            "R8 the caption's `Up:` names no parent",
+        ),
+        (
+            "DFE writes every event through one loader.",
+            "*Figure 2. L2 Services -- DFE.* Up: the overview.",
+            "R8 the caption's `Up:` names no parent",
+        ),
     ],
     ids=[
-        "no_intro",
-        "heading_as_intro",
-        "table_row_as_intro",
-        "caption_as_intro",
         "intro_announces",
         "intro_below_is",
         "intro_following_diagram",
@@ -277,11 +442,22 @@ def test_a_wrapper_fault_is_named(intro, caption, said):
 
 @pytest.mark.parametrize(
     "up",
-    ["Up: [L1 Context -- DFE](../overview.md).", "Up: top of dfe-infra.", "Up: L1 Context -- DFE."],
+    [
+        "Up: [L1 Context -- DFE](../overview.md).",
+        "Up: top of dfe-infra.",
+        "Up: L1 Context -- DFE.",
+    ],
     ids=["link", "top_of_repo", "parent_title"],
 )
 def test_an_up_that_names_a_parent_passes(up):
-    assert _problems(GOOD, "DFE writes every event through one loader.", f"*Figure 2. L2 Services -- DFE.* {up}") == []
+    assert (
+        _problems(
+            GOOD,
+            "DFE writes every event through one loader.",
+            f"*Figure 2. L2 Services -- DFE.* {up}",
+        )
+        == []
+    )
 
 
 def test_an_intro_that_names_a_chart_as_a_thing_passes():
@@ -289,9 +465,25 @@ def test_an_intro_that_names_a_chart_as_a_thing_passes():
     assert _problems(GOOD, intro, CAPTION) == []
 
 
+@pytest.mark.parametrize(
+    "intro",
+    ["", "## Architecture", "| Step | Built on |"],
+    ids=["none", "heading", "table"],
+)
+def test_a_diagram_needs_no_intro_sentence(intro):
+    assert _problems(GOOD, intro, CAPTION) == []
+
+
 def test_the_top_level_needs_no_up_link():
     top = GOOD.replace("L2 Services", "L0 Landscape")
-    assert _problems(top, "HyperI sells three products on one data plane.", "*Figure 1. L0 Landscape -- HyperI.*") == []
+    assert (
+        _problems(
+            top,
+            "HyperI sells three products on one data plane.",
+            "*Figure 1. L0 Landscape -- HyperI.*",
+        )
+        == []
+    )
 
 
 def test_a_page_gives_its_diagrams_and_one_finding_a_text_box(tmp_path, monkeypatch):
@@ -331,10 +523,16 @@ def test_a_page_gives_its_diagrams_and_one_finding_a_text_box(tmp_path, monkeypa
     page.write_text("\n".join(lines), encoding="utf-8")
     blocks, problems = dc.page_blocks(page)
     assert [(block.name, block.intro, block.caption) for block in blocks] == [
-        ("page.md:11", "DFE writes every event through one loader.", "*Figure 1. L2 Services -- DFE.*")
+        (
+            "page.md:11",
+            "DFE writes every event through one loader.",
+            "*Figure 1. L2 Services -- DFE.*",
+        )
     ]
     assert blocks[0].source == 'flowchart LR\n    a["A"]'
-    assert problems == ["page.md:18 R1 a text diagram: draw it in Mermaid, or a numbered list when it has no branches"]
+    assert problems == [
+        "page.md:18 R1 a text diagram: draw it in Mermaid, or a numbered list when it has no branches"
+    ]
 
 
 @pytest.mark.parametrize(
@@ -352,7 +550,11 @@ def test_a_page_gives_its_diagrams_and_one_finding_a_text_box(tmp_path, monkeypa
         ("```text\n\u256d\u2500\u2500\u256e\n\u2570\u2500\u2500\u256f\n```\n", [], 1),
         ("```text\n\u2554\u2550\u2557\n\u255a\u2550\u255d\n```\n", [], 1),
         ("```text\n.-----.\n| box |\n'-----'\n```\n", [], 1),
-        ("```text\nsrc/\n\u251c\u2500\u2500 a.py\n\u2514\u2500\u2500 b.py\n```\n", [], 0),
+        (
+            "```text\nsrc/\n\u251c\u2500\u2500 a.py\n\u2514\u2500\u2500 b.py\n```\n",
+            [],
+            0,
+        ),
         ("```text\nclient -> stunnel -> openvpn\n```\n", [], 1),
         ("```\nreceiver --> topic --> loader\n```\n", [], 1),
         ("```text\nread \u2192 route \u2192 write\n```\n", [], 1),
@@ -380,7 +582,9 @@ def test_a_page_gives_its_diagrams_and_one_finding_a_text_box(tmp_path, monkeypa
         "one_arrow_is_no_diagram",
     ],
 )
-def test_a_fence_is_read_as_markdown_reads_it(tmp_path, monkeypatch, page, names, problems):
+def test_a_fence_is_read_as_markdown_reads_it(
+    tmp_path, monkeypatch, page, names, problems
+):
     monkeypatch.chdir(tmp_path)
     path = Path("page.md")
     path.write_text(page, encoding="utf-8")
@@ -398,20 +602,27 @@ FENCE = "```mermaid\nflowchart LR\n```\n"
     [
         pytest.param(
             f"Intro.\n\n<!-- gen:begin x -->\n{FENCE}<!-- gen:end x -->\n\n*Figure 1. T.*\n",
-            "Intro.", "*Figure 1. T.*", id="a_generators_marker_is_neither",
+            "Intro.",
+            "*Figure 1. T.*",
+            id="a_generators_marker_is_neither",
         ),
         pytest.param(
             f"Every event reaches\nthe loader.\n\n{FENCE}\n_Figure 1. L2 Services -- DFE._\nUp: [L1](a.md).\n\nNext paragraph.\n",
-            "Every event reaches the loader.", "_Figure 1. L2 Services -- DFE._ Up: [L1](a.md).",
+            "Every event reaches the loader.",
+            "_Figure 1. L2 Services -- DFE._ Up: [L1](a.md).",
             id="a_formatter_wrapped_both",
         ),
         pytest.param(
             f"## Heading\nIntro.\n\n{FENCE}\n*Figure 1. T.*\n| a | b |\n",
-            "Intro.", "*Figure 1. T.*", id="a_heading_and_a_table_end_it",
+            "Intro.",
+            "*Figure 1. T.*",
+            id="a_heading_and_a_table_end_it",
         ),
         pytest.param(
             f"- item one\n- item two\n\n{FENCE}\n<!-- prettier-ignore -->\n*Figure 1. T.*\n\n*Figure 2. U.*\n",
-            "- item two", "*Figure 1. T.*", id="a_list_item_and_a_comment",
+            "- item two",
+            "*Figure 1. T.*",
+            id="a_list_item_and_a_comment",
         ),
     ],
 )
@@ -428,7 +639,9 @@ def test_a_mermaid_file_is_one_diagram_with_no_wrapper(tmp_path, monkeypatch):
     path.write_text(GOOD, encoding="utf-8")
     blocks, problems = dc.page_blocks(path)
     assert problems == []
-    assert [(block.name, block.intro, block.caption) for block in blocks] == [("flow.mmd", None, None)]
+    assert [(block.name, block.intro, block.caption) for block in blocks] == [
+        ("flow.mmd", None, None)
+    ]
 
 
 def test_a_diagram_inside_the_limits_has_no_layout_problems():
@@ -437,13 +650,19 @@ def test_a_diagram_inside_the_limits_has_no_layout_problems():
     # 1240 px is scaled to the 860 px column, so its 620 px shows as 430.
     assert dc.layout_problems(MEASURED | {"width": 1240, "height": 620}) == []
     # A sequence, ER or class diagram is not held to the proportion.
-    assert dc.layout_problems(MEASURED | {"width": 389, "height": 300}, landscape=False) == []
+    assert (
+        dc.layout_problems(MEASURED | {"width": 389, "height": 300}, landscape=False)
+        == []
+    )
 
 
 @pytest.mark.parametrize(
     ("measured", "said"),
     [
-        ({"ok": False, "error": "Parse error on line 3"}, "R10 does not parse: Parse error on line 3"),
+        (
+            {"ok": False, "error": "Parse error on line 3"},
+            "R10 does not parse: Parse error on line 3",
+        ),
         ({"width": 1251}, "1251 px wide"),
         ({"height": 601, "width": 800}, "601 px tall on the page"),
         ({"width": 389, "height": 300}, "R2 not landscape"),
@@ -455,8 +674,14 @@ def test_a_diagram_inside_the_limits_has_no_layout_problems():
         ({"through": ["A -> C  through  B"]}, "R4 line through a box"),
         ({"overlaps": ['label "yes"  on box  B']}, "R4 overlap"),
         ({"skips": ["Read -> Write"]}, "skip arrow"),
-        ({"backward": ["Write -> Read", "Route -> Read"]}, "more than one arrow against the flow"),
-        ({"backward": ["Write -> Read"], "solid_back": ["Write -> Read"]}, "a solid arrow against the flow"),
+        (
+            {"backward": ["Write -> Read", "Route -> Read"]},
+            "more than one arrow against the flow",
+        ),
+        (
+            {"backward": ["Write -> Read"], "solid_back": ["Write -> Read"]},
+            "a solid arrow against the flow",
+        ),
         ({"orphans": ["Stray"]}, "an orphan box, no arrow and no subgraph: Stray"),
         (
             {"wrapped": ["schema-registry-checker (1 written, 3 shown)"]},
@@ -471,10 +696,15 @@ def test_a_layout_fault_is_named(measured, said):
 
 @pytest.mark.parametrize(
     ("source", "code", "verdict"),
-    [(GOOD, 0, "ok    docs/flow.mmd"), (GOOD.replace("flowchart LR", "graph TD"), 1, "FAIL  docs/flow.mmd")],
+    [
+        (GOOD, 0, "ok    docs/flow.mmd"),
+        (GOOD.replace("flowchart LR", "graph TD"), 1, "FAIL  docs/flow.mmd"),
+    ],
     ids=["clean", "faulty"],
 )
-def test_the_source_pass_runs_without_a_browser(tmp_path, monkeypatch, capsys, source, code, verdict):
+def test_the_source_pass_runs_without_a_browser(
+    tmp_path, monkeypatch, capsys, source, code, verdict
+):
     """The verdict names the page by the path as given, so two README.md pages stay apart."""
     monkeypatch.chdir(tmp_path)
     path = Path("docs") / "flow.mmd"

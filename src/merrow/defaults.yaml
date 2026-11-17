@@ -1,0 +1,78 @@
+# merrow's base layer. Reference repos listed in `references` override it in
+# that order, and settings.yaml, MERROW_* env vars and CLI flags override all.
+
+# Reference repo directories, base first: an org repo, then a personal one.
+references: []
+
+# The file each reference repo keeps its merrow data in.
+reference_file: merrow.yaml
+
+# Download cache. Empty means scalo's runtime cache dir for merrow.
+cache_dir: ""
+
+# Built icon packs. Empty means `packs` under the cache dir.
+packs_dir: ""
+
+limits:
+  # One file inside a download. A larger one is reported and never read.
+  member_bytes: 5000000
+  # A deck inside a download, such as a PPTX toolkit.
+  deck_bytes: 200000000
+  # One download.
+  download_bytes: 1000000000
+  # Longer text on a groups slide is a caption, not a group name.
+  group_name_chars: 40
+  download_timeout_seconds: 300
+  # A cold `npm ci` fetches about 200 tarballs and the browser about 150M.
+  npm_timeout_seconds: 900
+  detect_timeout_seconds: 300
+
+# Paths in any download that are never content: macOS resource forks.
+ignore: (^|/)(__MACOSX/|\._)
+
+# Options every source of a format starts with. A source overrides any of them.
+formats:
+  svg:
+    files: \.svg$
+  pptx: {}
+  vssx:
+    files: \.vssx$
+    # Matched against `<stencil>/<master>`. The default key is the master's name.
+    names:
+      - match: ^[^/]+/(.+)$
+        key: \1
+    # Samples per NURBS curve, and the margin round each icon, in inches.
+    curve_steps: 24
+    padding_in: 0.02
+
+# Tokens new-release detection may use: nvchecker key name -> env var holding it.
+tokens:
+  github: GITHUB_TOKEN
+
+render:
+  # One SVG per theme. `mermaid` is mermaid-cli's theme name.
+  themes:
+    light:
+      mermaid: default
+      background: "#FFFFFF"
+    dark:
+      mermaid: dark
+      background: "#1B1B1D"
+  # Passed to mermaid-cli as its config file. useMaxWidth shrinks wide diagrams.
+  mermaid_config:
+    flowchart:
+      useMaxWidth: false
+    architecture:
+      useMaxWidth: false
+    sequence:
+      useMaxWidth: false
+
+lint:
+  # Where a diagram names an icon as `prefix:name`, by Mermaid syntax. Group 1
+  # is the full key. Each must resolve in a built pack.
+  icon_refs:
+    - \b(?:service|group|junction)\s+\w+\(([a-z0-9-]+:[a-z0-9-]+)\)
+    - icon:\s*["']([a-z0-9-]+:[a-z0-9-]+)["']
+
+# The browser puppeteer fetches for render, by puppeteer's own name for it.
+browser: chrome-headless-shell

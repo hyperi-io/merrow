@@ -1,0 +1,71 @@
+[project]
+name = "merrow"
+version = "0.1.0"
+description = "Diagram automation on Mermaid: house style, vendor icon packs, SVG render and lint"
+readme = "README.md"
+requires-python = ">=3.14"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "HyperI Team", email = "dev@hyperi.io" }]
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Environment :: Console",
+]
+dependencies = [
+    "filelock>=4.2",
+    "nvchecker>=2.22",
+    "playwright>=1.64.1",
+    "pyyaml>=6.0",
+    "scalo[http]>=2.32.7",
+    "tomli-w>=1.2.0",
+    "typer>=0.27",
+]
+
+[project.scripts]
+merrow = "merrow.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=9",
+    "pytest-cov>=6",
+    "pytest-xdist>=3.6",
+]
+
+[tool.uv]
+# The supply-chain release cooldown: never resolve a release under 7 days old.
+exclude-newer = "7 days"
+# Our own package is exempt: we ship it, so we take its fixes the day they land.
+exclude-newer-package = { scalo = false }
+
+[build-system]
+requires = ["hatchling>=1.32.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/merrow"]
+
+[tool.ruff]
+line-length = 88
+# The remaining prototypes are reference code, deleted as each is replaced.
+extend-exclude = ["converters/prototypes"]
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "W", "D", "S", "TID"]
+ignore = ["E501", "D203", "D213"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D", "S101"]
+
+[tool.ty.src]
+# The remaining prototypes are reference code, deleted as each is replaced.
+exclude = ["converters/prototypes"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

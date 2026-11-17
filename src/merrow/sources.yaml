@@ -1,0 +1,154 @@
+# Vendor sources, part of merrow's base layer. A reference repo adds or
+# overrides one under the same `sources:` key.
+#
+# `names` maps a file's path in the download to an icon key. First match wins.
+# `key: null` skips the file. A file no rule matches shows as unmatched in the
+# build report.
+
+sources:
+  aws-icons:
+    format: svg
+    prefix: aws
+    # The page links each release by full path, with a content hash in the name.
+    check:
+      source: regex
+      url: https://aws.amazon.com/architecture/icons/
+      regex: //(d1\.awsstatic\.com/[^"']*/Icon-package_\d{8}\.[0-9a-f]+\.zip)
+    url: https://{version}
+    names:
+      - match: /Arch-Category_([^/]+)_64\.svg$
+        key: category-\1
+      - match: /Arch-Category_[^/]+_(16|32|48)\.svg$
+        key: null
+      # Service icons ship at 16, 32, 48 and 64. The pack carries the 64 artwork.
+      - match: /Arch_([^/]+)_64\.svg$
+        key: \1
+      - match: /Arch_[^/]+_(16|32|48)\.svg$
+        key: null
+      - match: /Res_([^/]+)_48_Dark\.svg$
+        key: res-\1-dark
+      - match: /Res_([^/]+)_48(_Light)?\.svg$
+        key: res-\1
+      - match: Architecture-Group-Icons[^/]*/(.*/)?([^/]+)_32_Dark\.svg$
+        key: group-\2-dark
+      - match: Architecture-Group-Icons[^/]*/(.*/)?([^/]+)_32\.svg$
+        key: group-\2
+    # Short names architects use, written into the pack as Iconify aliases.
+    aliases:
+      apigw: amazon-api-gateway
+      acm: aws-certificate-manager
+      cfn: aws-cloudformation
+      cloudfront: amazon-cloudfront
+      cloudwatch: amazon-cloudwatch
+      dynamodb: amazon-dynamodb
+      ec2: amazon-ec2
+      ecr: amazon-elastic-container-registry
+      ecs: amazon-elastic-container-service
+      eks: amazon-elastic-kubernetes-service
+      elasticache: amazon-elasticache
+      eventbridge: amazon-eventbridge
+      fargate: aws-fargate
+      glue: aws-glue
+      iam: aws-identity-and-access-management
+      kms: aws-key-management-service
+      lambda: aws-lambda
+      msk: amazon-managed-streaming-for-apache-kafka
+      opensearch: amazon-opensearch-service
+      rds: amazon-rds
+      route53: amazon-route-53
+      s3: amazon-simple-storage-service
+      secrets-manager: aws-secrets-manager
+      sns: amazon-simple-notification-service
+      sqs: amazon-simple-queue-service
+      ssm: aws-systems-manager
+      step-functions: aws-step-functions
+      transit-gateway: aws-transit-gateway
+      vpc: amazon-virtual-private-cloud
+
+  # Group boxes (Cloud, Region, VPC, subnets ...) from AWS's PPTX toolkit.
+  aws-groups:
+    format: pptx
+    prefix: aws
+    check:
+      source: regex
+      url: https://aws.amazon.com/architecture/icons/
+      regex: //(d1\.awsstatic\.com/[^"']*/Microsoft-PPTx-toolkits_\d{8}\.[0-9a-f]+\.zip)
+    url: https://{version}
+    decks:
+      light: For-Light-BG_\d+\.pptx$
+      dark: For-Dark-BG_\d+\.pptx$
+    # The section's first page, titled "Groups 1/5". Contents slides list "Groups" too.
+    slide_title: ^Groups\s+1/\d+
+
+  kubernetes-icons:
+    format: svg
+    prefix: k8s
+    # The newest commit touching icons/. Version is its date, revision its sha.
+    check:
+      source: github
+      github: kubernetes/community
+      path: icons
+    url: https://codeload.github.com/kubernetes/community/tar.gz/{revision}
+    names:
+      - match: /icons/svg/.+/labeled/([^/]+)\.svg$
+        key: \1
+      - match: /icons/svg/.+/unlabeled/([^/]+)\.svg$
+        key: \1-unlabeled
+      # The download is the whole kubernetes/community repo.
+      - match: .
+        key: null
+
+  # Google Cloud publishes stable URLs with no version signal, so the content
+  # hash is the version. No terms published: local-only, never committed.
+  gcp-icons:
+    format: svg
+    prefix: gcp
+    check:
+      source: content
+    url: https://services.google.com/fh/files/misc/core-products-icons.zip
+    names:
+      - match: ^Unique Icons/([^/]+)/SVG/[^/]+\.svg$
+        key: \1
+
+  gcp-category-icons:
+    format: svg
+    prefix: gcp-category
+    check:
+      source: content
+    url: https://services.google.com/fh/files/misc/category-icons.zip
+    names:
+      - match: ^Category Icons/([^/]+)/SVG/[^/]+\.svg$
+        key: \1
+
+  # Oracle serves a fixed URL behind a redirect, with an ETag that changes per release.
+  oci-icons:
+    format: vssx
+    prefix: oci
+    check:
+      source: httpheader
+      url: https://docs.oracle.com/iaas/Content/Resources/Assets/OCI_Icons_Visio.zip
+      header: ETag
+      follow_redirects: true
+      regex: '"(.+)"'
+    url: https://docs.oracle.com/iaas/Content/Resources/Assets/OCI_Icons_Visio.zip
+    names:
+      # Every stencil carries copies of its colour-theme master: not an icon.
+      - match: /Oracle Redwood(\.\d+)?$
+        key: null
+      - match: ^[^/]+/(.+)$
+        key: \1
+
+  ibm-icons:
+    format: svg
+    prefix: ibm
+    check:
+      source: github
+      github: IBM-Cloud/architecture-icons
+      use_latest_release: true
+    url: https://github.com/IBM-Cloud/architecture-icons/archive/refs/tags/{version}.tar.gz
+    names:
+      - match: /svg/(?:[^/]+/)*([^/]+)\.svg$
+        key: \1
+      # Whole template diagrams, not icons.
+      - match: /images/
+        key: null

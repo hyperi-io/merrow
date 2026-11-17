@@ -1,18 +1,11 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.14"
-# dependencies = [
-#   "playwright==1.64.1",
-# ]
-# ///
-# Project:   HyperI AI
-# File:      tools/diagram_check.py
+# Project:   merrow
+# File:      src/merrow/lint/diagram_check.py
 # Purpose:   Check Mermaid diagrams against the diagrams standard, as source and as rendered
 # Language:  Python
 #
-# License:   LicenseRef-HyperI-Proprietary
+# License:   Apache-2.0
 # Copyright: (c) 2026 HYPERI PTY LIMITED
-"""Check Mermaid diagrams against ``standards/universal/diagrams.md``.
+"""Check Mermaid diagrams against ``style/diagrams.md``.
 
 Nobody writing Mermaid can see the layout from the source, so each diagram gets
 two passes. The source pass reads the text: type, direction, class lines, the
@@ -23,30 +16,29 @@ through boxes, overlapping labels, skip arrows, orphan boxes and labels that wra
 past 2 lines. A state diagram gets the same line checks, less the back-arrow
 limit, and a sequence diagram's autonumber badges are checked against its labels.
 
-    uv run tools/diagram_check.py FILE... [--no-render] [--png DIR] [--json]
-                                  [--mermaid PATH]
+    python -m merrow.lint.diagram_check FILE... [--no-render] [--png DIR] [--json]
+                                            [--mermaid PATH]
 
 FILE is a Markdown page or a ``.mmd`` file. A page has every ``mermaid`` fence
 checked, apart from fences nested inside another fence, and its ``text`` and
 untagged fences read for a text-box diagram. Exit 1 when a diagram fails.
 
-The Mermaid bundle is pinned by version and SHA-256, because layout differs
-between releases. It is fetched once into the hyperi-ai cache. ``--mermaid``
-takes a local bundle, for a host with no network or a site on another version.
+Layout differs between Mermaid releases, so the bundle is the one merrow renders
+with, pinned by its npm lock and installed into the cache. ``--mermaid`` takes a
+local bundle, for a host with no network or a site on another version.
 """
 
 import argparse
-import hashlib
 import json
-import os
 import re
 import sys
-import urllib.request
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-# The standard's Colour section, byte for byte. tests/unit/test_diagram_check.py holds the two in step,
-# so the script runs in a repo with no hyperi-ai clone.
+from merrow import config, node
+from merrow.lint import icons
+
+# The standard's Colour section, byte for byte. tests/test_diagram_check.py holds the two in step.
 CLASS_LINES = frozenset(
     {
         "classDef default fill:#F8FAFC,stroke:#64748B,stroke-width:1px,color:#0F172A",
@@ -60,11 +52,87 @@ CLASS_LINES = frozenset(
     }
 )
 
-MERMAID_VERSION = "12.3.0"
-MERMAID_SHA256 = "336df803d87a38b70a01e736e666c8f7601d2ce42f5e47c8fafe5d721074b9a3"
-MERMAID_URL = "https://cdn.jsdelivr.net/npm/mermaid@{version}/dist/mermaid.min.js"
+# The standard's "House style" blocks, byte for byte. lint/tests/test_diagram_check.py holds them in step.
+HOUSE_FRONT = """---
+config:
+  theme: base
+  look: neo
+  fontFamily: Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif
+  flowchart:
+    curve: linear
+    nodeSpacing: 40
+    rankSpacing: 64
+    padding: 18
+    wrappingWidth: 280
+    htmlLabels: true
+  elk:
+    preset: modelOrder
+  themeVariables:
+    fontSize: 15px
+    lineColor: "#64748B"
+    primaryTextColor: "#0F172A"
+    clusterBorder: "#0072B2"
+    edgeLabelBackground: "#FFFFFF"
+  themeCSS: >-
+    p{margin:0}
+    .node[data-look] rect,.node[data-look] path,.node[data-look] polygon,.node[data-look] .outer-path{filter:drop-shadow(0 1px 2px rgba(15,23,42,.10)) drop-shadow(0 6px 14px rgba(15,23,42,.10))}
+    .node rect{rx:10px;ry:10px}
+    .cluster rect{rx:16px;ry:16px}
+    .node .label div{min-width:150px}
+    .node.decision .label div{min-width:0}
+    .cluster[data-look] rect{filter:none}
+    .nodeLabel{line-height:1.35}
+    .nodeLabel b{font-weight:600;font-size:15px;letter-spacing:-0.01em}
+    .nodeLabel span{font-size:12.5px;font-weight:400;color:#334155}
+    .cluster-label span.nodeLabel{display:inline-block;background:#FFFFFF;color:#0B2A3F;border:1.5px solid #0072B2;border-radius:999px;padding:2px 12px;font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+    .flowchart-link{stroke-width:1.75px}
+    .labelBkg{background:transparent!important}
+    span.edgeLabel{display:inline-block;background:#FFFFFF!important;color:#1E293B;border:1px solid #94A3B8;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:500}
+    span.edgeLabel p{background:transparent!important}
+    .label-icon{width:20px;height:20px;vertical-align:-4px;margin-right:6px}
+    .ingest .label-icon{color:#0E8A7D}
+    .xform .label-icon{color:#7B4FB0}
+    .load .label-icon{color:#0072B2}
+    .bus .label-icon{color:#A8517F}
+    .store .label-icon{color:#00785A}
+    .ui .label-icon{color:#D9480F}
+    .ext .label-icon{color:#64748B}
+---"""
+HOUSE_OTHER_FRONT = """---
+config:
+  theme: base
+  fontFamily: Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif
+  themeVariables:
+    fontSize: 15px
+    lineColor: "#64748B"
+    primaryTextColor: "#0F172A"
+    actorBkg: "#FFFFFF"
+    actorBorder: "#94A3B8"
+    actorTextColor: "#0F172A"
+    actorLineColor: "#64748B"
+    signalColor: "#64748B"
+    signalTextColor: "#0F172A"
+  themeCSS: >-
+    .messageText{paint-order:stroke;stroke:#FFFFFF;stroke-width:3px;stroke-linejoin:round}
+---"""
+HOUSE_CLASS_LINES = frozenset(
+    {
+        "classDef ext fill:#F4F6F8,stroke:#94A3B8,stroke-width:1.5px,stroke-dasharray:5 4,color:#0F172A",
+        "classDef ingest fill:#FFFFFF,stroke:#0E8A7D,stroke-width:3px,color:#0F172A",
+        "classDef xform fill:#FFFFFF,stroke:#7B4FB0,stroke-width:3px,color:#0F172A",
+        "classDef load fill:#FFFFFF,stroke:#0072B2,stroke-width:3px,color:#0F172A",
+        "classDef bus fill:#FFFFFF,stroke:#A8517F,stroke-width:3px,color:#0F172A",
+        "classDef store fill:#FFFFFF,stroke:#00785A,stroke-width:3px,color:#0F172A",
+        "classDef ui fill:#FFFFFF,stroke:#D9480F,stroke-width:3px,color:#0F172A",
+        "classDef decision fill:#FFFFFF,stroke:#9A6700,stroke-width:3px,color:#0F172A",
+        "classDef error fill:#FFFFFF,stroke:#C2410C,stroke-width:3px,color:#0F172A",
+        "classDef control fill:#FFFFFF,stroke:#334155,stroke-width:3px,color:#0F172A",
+        "classDef part fill:#FFFFFF,stroke:#94A3B8,stroke-width:1.5px,color:#0F172A",
+    }
+)
+HOUSE_BOUNDARY = "fill:none,stroke:#0072B2,stroke-width:1.5px,stroke-dasharray:6 4"
 
-# The standard's limits. tests/unit/test_diagram_check.py holds the two in step.
+# The standard's limits. tests/test_diagram_check.py holds the two in step.
 MAX_WIDTH = 1250
 MAX_HEIGHT = 600
 MIN_RATIO = 1.3
@@ -97,13 +165,13 @@ _UP = re.compile(r"Up: (?:\[|top of \S|L[0-4] )")
 # A markdown link with an anchor: the file part (empty for this page) and the anchor.
 _LINK_ANCHOR = re.compile(r"\]\(([^)#\s]*)#([^)\s]+)\)")
 # One arrow in a flowchart line: its source id, the arrow and its target id.
-_EDGE = re.compile(r"^\s*([A-Za-z_]\w*)\s*[\[\](){}>]*\s*(?:-->|-\.->|---|-\.-|==>)(?:\|[^|]*\|)?\s*([A-Za-z_]\w*)")
+_EDGE = re.compile(
+    r"^\s*([A-Za-z_]\w*)\s*[\[\](){}>]*\s*(?:-->|-\.->|---|-\.-|==>)(?:\|[^|]*\|)?\s*([A-Za-z_]\w*)"
+)
 _COMMENT = re.compile(r"^\s*<!--.*-->\s*$")
 # A line that opens its own markdown block, so a wrapped paragraph never runs into it.
 _BLOCK = ("#", "|", "```", "~~~", "- ", "* ", "> ", "*Figure", "_Figure")
-# What the line before a diagram starts with when it is no intro sentence.
-_NOT_PROSE = ("#", "*Figure", "_Figure", "|", "```", "~~~")
-# An intro that announces the diagram instead of stating its claim.
+# An intro that announces the diagram instead of adding what it cannot show.
 _ANNOUNCES = re.compile(
     r"\b(?:this|the following) (?:diagram|figure|chart)\b|\b(?:diagram|figure|chart) below\b|^below\b|^here is\b",
     re.IGNORECASE,
@@ -118,11 +186,21 @@ _BANNED = (
 )
 # Read after quoted labels are emptied: a rounded box is `id(` with no `[` or `(` after it, a flag is `id>...]`.
 _FLOW_BANNED = (
-    (re.compile(r"^(?:class|end)\s*[\[\({]"), "a reserved word as a node id (`class`, `end`): it fails to parse"),
+    (
+        re.compile(r"^(?:class|end)\s*[\[\({]"),
+        "a reserved word as a node id (`class`, `end`): it fails to parse",
+    ),
     (re.compile(r"={2,}>?"), "a thick arrow"),
     (re.compile(r"<-[-.]*>"), "a double-headed arrow"),
-    (re.compile(r"@\{|\(\(|\{\{|\[/|\[\\|\w\((?![\[(])|\w>[^\]\n]*\]"), "R6 an outline outside the five"),
+    (
+        re.compile(r"@\{|\(\(|\{\{|\[/|\[\\|\w\((?![\[(])|\w>[^\]\n]*\]"),
+        "R6 an outline outside the five",
+    ),
 )
+# A house flowchart's rounded `id("...")` label, read after quoted labels are emptied.
+_ROUNDED = re.compile(r'\w\(""\)')
+_SUBGRAPH = re.compile(r"^subgraph\s+([A-Za-z_]\w*)")
+_STYLE = re.compile(r"^style\s+(\S+)\s+(.*)$")
 _ENTITY = re.compile(r"&#?\w+;")
 _FIGURE = re.compile(r"[*_]Figure (\d+)\.")
 _SEQUENCE_COLOUR = re.compile(
@@ -162,15 +240,6 @@ class Verdict:
         return f"{'FAIL' if self.problems else 'ok  '}  {self.name}{shape}"
 
 
-def cache_dir() -> Path:
-    """Return hyperi-ai's machine cache, the path ``hyperi_ai.common.cache_dir`` gives, which a test holds equal."""
-    if sys.platform == "win32":
-        local = os.environ.get("LOCALAPPDATA") or ""
-        return (Path(local) if os.path.isabs(local) else Path.home() / "AppData" / "Local") / "hyperi-ai" / "Cache"
-    xdg = os.environ.get("XDG_CACHE_HOME") or ""
-    return (Path(xdg) if os.path.isabs(xdg) else Path.home() / ".cache") / "hyperi-ai"
-
-
 def page_blocks(path: Path) -> tuple[list[Block], list[str]]:
     """Return the diagrams on ``path`` and the page-level problems: box art in a text fence.
 
@@ -191,14 +260,21 @@ def page_blocks(path: Path) -> tuple[list[Block], list[str]]:
         if not opener:
             fence = _FENCE.match(line) if line is not None else None
             if fence:
-                opener, kind, start, boxed = fence.group(1), fence.group(2).strip("{}.").lower(), number, False
+                opener, kind, start, boxed = (
+                    fence.group(1),
+                    fence.group(2).strip("{}.").lower(),
+                    number,
+                    False,
+                )
             continue
         closer = line.strip() if line is not None else opener
         if set(closer) != {opener[0]} or len(closer) < len(opener):
             drawn = _BOX_ART.search(line or "") or len(_ARROW.findall(line or "")) > 1
             if kind in _SCANNED and not boxed and drawn:
                 boxed = True
-                problems.append(f"{path}:{start} R1 a text diagram: draw it in Mermaid, or a numbered list when it has no branches")
+                problems.append(
+                    f"{path}:{start} R1 a text diagram: draw it in Mermaid, or a numbered list when it has no branches"
+                )
             continue
         if kind == "mermaid":
             # A generator's marker comment is not on the rendered page, so it is neither intro nor caption.
@@ -213,10 +289,20 @@ def page_blocks(path: Path) -> tuple[list[Block], list[str]]:
                 )
             )
         opener = ""
-    problems += [f"{block.name} {problem}" for block in blocks for problem in _title_anchors(path, block.caption)]
-    numbers = [int(found[1]) for block in blocks if (found := _FIGURE.match(block.caption or ""))]
+    problems += [
+        f"{block.name} {problem}"
+        for block in blocks
+        for problem in _title_anchors(path, block.caption)
+    ]
+    numbers = [
+        int(found[1])
+        for block in blocks
+        if (found := _FIGURE.match(block.caption or ""))
+    ]
     if numbers and numbers != list(range(1, len(numbers) + 1)):
-        problems.append(f"{path} R7 figures are numbered {numbers}: number a page's figures from 1")
+        problems.append(
+            f"{path} R7 figures are numbered {numbers}: number a page's figures from 1"
+        )
     return blocks, problems
 
 
@@ -260,7 +346,9 @@ def _title_anchors(path: Path, caption: str | None) -> list[str]:
         except OSError:
             continue
         if slug and anchor == slug:
-            found.append(f"R8 a link to the page's H1 anchor `#{anchor}`: link the page itself")
+            found.append(
+                f"R8 a link to the page's H1 anchor `#{anchor}`: link the page itself"
+            )
     return found
 
 
@@ -273,16 +361,63 @@ def diagram_type(source: str) -> tuple[str, str]:
     return "", ""
 
 
+def split_front(source: str) -> tuple[str | None, str]:
+    """Return the diagram's frontmatter, from its opening ``---`` to its closing one, and the source after it."""
+    if not source.startswith("---\n"):
+        return None, source
+    end = source.find("\n---", 3)
+    if end < 0 or source[end + 4 : end + 5] not in ("", "\n"):
+        return source, ""
+    return source[: end + 4], source[end + 5 :]
+
+
+def _house_style_problems(lines: list[str]) -> tuple[list[str], set[str]]:
+    """Return a house flowchart's boundary-line problems and the `style` lines that are house boundaries."""
+    subgraphs = [match.group(1) for line in lines if (match := _SUBGRAPH.match(line))]
+    allowed: set[str] = set()
+    problems: list[str] = []
+    styled: list[str] = []
+    for line in lines:
+        match = _STYLE.match(line)
+        if match and match.group(2) == HOUSE_BOUNDARY:
+            styled.append(match.group(1))
+            if match.group(1) in subgraphs:
+                allowed.add(line)
+            else:
+                problems.append(
+                    f"R9 a boundary line for `{match.group(1)}`, which is no subgraph: it draws a phantom node"
+                )
+    problems += [
+        f"R9 subgraph `{name}` has no house boundary line"
+        for name in subgraphs
+        if name not in styled
+    ]
+    return problems, allowed
+
+
 def source_problems(block: Block, class_lines: frozenset[str]) -> list[str]:
     """Return what the diagram's text breaks in the standard, without rendering it."""
-    lines = [line.strip() for line in block.source.splitlines() if line.strip()]
-    kind, direction = diagram_type(block.source)
-    if kind == "---":
-        return ["R9 frontmatter configuration"]
-    problems: list[str] = []
+    front, body = split_front(block.source)
+    lines = [line.strip() for line in body.splitlines() if line.strip()]
+    kind, direction = diagram_type(body)
     flow = kind in ("flowchart", "graph")
+    house = front is not None
+    if house and front != (HOUSE_FRONT if flow else HOUSE_OTHER_FRONT):
+        return [
+            'R9 frontmatter that is not the house block in "House style", byte for byte'
+        ]
+    problems: list[str] = []
+    house_lines: set[str] = set()
+    if house and flow:
+        class_lines = HOUSE_CLASS_LINES
+        found, house_lines = _house_style_problems(lines)
+        problems += found
     if flow:
-        pairs = {match.groups() for line in lines if (match := _EDGE.match(_QUOTED.sub("", line)))}
+        pairs = {
+            match.groups()
+            for line in lines
+            if (match := _EDGE.match(_QUOTED.sub("", line)))
+        }
         problems += [
             f"R4 arrows both ways between `{a}` and `{b}` lie on top of each other: split one box into an intake and a return box"
             for a, b in sorted(pairs)
@@ -293,9 +428,13 @@ def source_problems(block: Block, class_lines: frozenset[str]) -> list[str]:
     elif kind not in TYPES:
         problems.append(f"`{kind}` is not one of the five diagram types")
     if flow and direction not in ("LR", "TB"):
-        problems.append(f"R2 direction `{direction}`: `flowchart LR`, or `TB` for the stacked forms")
+        problems.append(
+            f"R2 direction `{direction}`: `flowchart LR`, or `TB` for the stacked forms"
+        )
     if flow and direction == "TB" and "direction LR" not in lines:
-        problems.append("R2 a vertical chain: `flowchart LR`, or stage subgraphs with `direction LR`")
+        problems.append(
+            "R2 a vertical chain: `flowchart LR`, or stage subgraphs with `direction LR`"
+        )
     if kind == "stateDiagram-v2" and "direction LR" not in lines:
         problems.append("R2 a state diagram needs `direction LR`")
 
@@ -308,7 +447,13 @@ def source_problems(block: Block, class_lines: frozenset[str]) -> list[str]:
     if not any(line.startswith("accDescr:") for line in lines):
         problems.append("R7 no `accDescr`")
 
-    bare = [_QUOTED.sub('""', line) for line in lines if not line.startswith(("accTitle:", "accDescr:"))]
+    bare = [
+        _QUOTED.sub('""', line)
+        for line in lines
+        if not line.startswith(("accTitle:", "accDescr:")) and line not in house_lines
+    ]
+    if house and flow:
+        bare = [_ROUNDED.sub('_[""]', line) for line in bare]
     for pattern, what in _BANNED + (_FLOW_BANNED if flow else ()):
         if any(pattern.search(line) for line in bare):
             problems.append(f"{what} is not allowed")
@@ -318,35 +463,65 @@ def source_problems(block: Block, class_lines: frozenset[str]) -> list[str]:
     defined = [line for line in lines if line.startswith("classDef ")]
     if defined and kind in UNCOLOURED:
         problems.append(f"R5 a `{kind}` takes no colour")
-    problems += [f"R5 a class line differs from the standard: `{line}`" for line in defined if line not in class_lines]
+    problems += [
+        f"R5 a class line differs from the standard: `{line}`"
+        for line in defined
+        if line not in class_lines
+    ]
     names = {line.split()[1] for line in defined}
-    if flow and "default" not in names:
+    if house and flow:
+        missing = sorted(line.split()[1] for line in HOUSE_CLASS_LINES - set(defined))
+        if missing:
+            problems.append(
+                f"R5 the house class lines are incomplete, missing: {', '.join(missing)}"
+            )
+    elif flow and "default" not in names:
         problems.append("R5 the `default` class line is missing")
     if kind == "stateDiagram-v2" and "default" in names:
-        problems.append("R5 a `stateDiagram-v2` takes no `default` class line: it fails to parse")
+        problems.append(
+            "R5 a `stateDiagram-v2` takes no `default` class line: it fails to parse"
+        )
     colours = names - {"default", "group"}
-    if len(colours) > MAX_COLOUR_CLASSES:
+    if len(colours) > MAX_COLOUR_CLASSES and not (house and flow):
         problems.append(f"R5 {len(colours)} colour classes, limit {MAX_COLOUR_CLASSES}")
     if flow or kind == "stateDiagram-v2":
-        applied = {words[2] for line in lines if (words := line.split())[0] == "class" and len(words) == 3}
-        problems += [f"R5 class `{name}` is applied and its class line is missing" for name in sorted(applied - names)]
+        applied = {
+            words[2]
+            for line in lines
+            if (words := line.split())[0] == "class" and len(words) == 3
+        }
+        problems += [
+            f"R5 class `{name}` is applied and its class line is missing"
+            for name in sorted(applied - names)
+        ]
     if kind == "sequenceDiagram":
         if any(_SEQUENCE_COLOUR.match(line) for line in lines):
-            problems.append("R5 a coloured `box` or `rect`: write `box Title` with no colour")
-        people = {match.group(1) for line in lines if (match := _PARTICIPANT.match(line))}
-        people |= {name for line in lines if (match := _MESSAGE.match(line)) for name in match.groups()}
+            problems.append(
+                "R5 a coloured `box` or `rect`: write `box Title` with no colour"
+            )
+        people = {
+            match.group(1) for line in lines if (match := _PARTICIPANT.match(line))
+        }
+        people |= {
+            name
+            for line in lines
+            if (match := _MESSAGE.match(line))
+            for name in match.groups()
+        }
         if len(people) > MAX_PARTICIPANTS:
             problems.append(f"{len(people)} participants, limit {MAX_PARTICIPANTS}")
 
-    if block.intro is not None and (not block.intro or block.intro.startswith(_NOT_PROSE)):
-        problems.append("R7 no intro sentence before the diagram")
-    elif block.intro and _ANNOUNCES.search(block.intro):
-        problems.append("R7 the intro announces the diagram: state what the reader takes from it")
+    if block.intro and _ANNOUNCES.search(block.intro):
+        problems.append(
+            "R7 the intro announces the diagram: say what the picture cannot show"
+        )
     if block.caption is not None:
         if not _CAPTION.match(block.caption):
             problems.append("R7 no caption `*Figure N. <title>.*` under the diagram")
         elif level and level.group(1) != LEVELS[0] and not _UP.search(block.caption):
-            problems.append("R8 the caption's `Up:` names no parent: a link, `top of <repo>.` or the parent's title")
+            problems.append(
+                "R8 the caption's `Up:` names no parent: a link, `top of <repo>.` or the parent's title"
+            )
     return problems
 
 
@@ -366,26 +541,43 @@ def layout_problems(result: dict, landscape: bool = True) -> list[str]:
     if shown > MAX_HEIGHT:
         problems.append(f"{shown} px tall on the page, limit {MAX_HEIGHT}")
     if landscape and width < MIN_RATIO * height:
-        problems.append(f"R2 not landscape: width is {width / max(height, 1):.2f} x height, minimum {MIN_RATIO}")
+        problems.append(
+            f"R2 not landscape: width is {width / max(height, 1):.2f} x height, minimum {MIN_RATIO}"
+        )
     if result["nodes"] > MAX_NODES:
         problems.append(f"R3 {result['nodes']} nodes, limit {MAX_NODES}")
     if result["groups"] > MAX_SUBGRAPHS:
         problems.append(f"{result['groups']} subgraphs, limit {MAX_SUBGRAPHS}")
     if result["edges"] > result["nodes"] + EXTRA_ARROWS:
-        problems.append(f"{result['edges']} arrows on {result['nodes']} nodes, limit is nodes plus {EXTRA_ARROWS}")
+        problems.append(
+            f"{result['edges']} arrows on {result['nodes']} nodes, limit is nodes plus {EXTRA_ARROWS}"
+        )
     if result["busiest"] > MAX_NODE_ARROWS:
-        problems.append(f"{result['busiest']} arrows on `{result['busiest_name']}`, limit {MAX_NODE_ARROWS}")
+        problems.append(
+            f"{result['busiest']} arrows on `{result['busiest_name']}`, limit {MAX_NODE_ARROWS}"
+        )
     problems += [f"R4 crossing: {line}" for line in result["crossings"]]
     problems += [f"R4 line through a box: {line}" for line in result["through"]]
     problems += [f"R4 overlap: {line}" for line in result["overlaps"]]
-    problems += [f"skip arrow, it jumps a box between its ends: {line}" for line in result["skips"]]
-    if len(result["backward"]) > 1:
-        problems.append("more than one arrow against the flow: " + ", ".join(result["backward"]))
-    elif result.get("solid_back"):
-        problems.append(f"a solid arrow against the flow, the one feedback arrow is dotted: {result['solid_back'][0]}")
-    problems += [f"an orphan box, no arrow and no subgraph: {name}" for name in result.get("orphans", [])]
     problems += [
-        f"a label wraps past 2 lines or breaks a name mid-word: {name}" for name in result.get("wrapped", [])
+        f"skip arrow, it jumps a box between its ends: {line}"
+        for line in result["skips"]
+    ]
+    if len(result["backward"]) > 1:
+        problems.append(
+            "more than one arrow against the flow: " + ", ".join(result["backward"])
+        )
+    elif result.get("solid_back"):
+        problems.append(
+            f"a solid arrow against the flow, the one feedback arrow is dotted: {result['solid_back'][0]}"
+        )
+    problems += [
+        f"an orphan box, no arrow and no subgraph: {name}"
+        for name in result.get("orphans", [])
+    ]
+    problems += [
+        f"a label wraps past 2 lines or breaks a name mid-word: {name}"
+        for name in result.get("wrapped", [])
     ]
     return problems
 
@@ -519,28 +711,29 @@ window.measure = async (src, cfg, id, dir) => {
 
 
 def bundle(path: Path | None = None) -> Path:
-    """Return the Mermaid bundle to render with: ``path``, else the pinned release from the cache."""
+    """Return the Mermaid bundle to render with: ``path``, else the one merrow's npm lock pins."""
     if path is not None:
         return path
-    cached = cache_dir() / "mermaid" / f"mermaid-{MERMAID_VERSION}.min.js"
-    if not cached.exists():
-        url = MERMAID_URL.format(version=MERMAID_VERSION)
-        # An https URL built from two constants, and the bytes are checked against a pinned hash.
-        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
-        with urllib.request.urlopen(url, timeout=60) as response:  # nosec B310
-            data = response.read()
-        cached.parent.mkdir(parents=True, exist_ok=True)
-        cached.write_bytes(data)
-    if hashlib.sha256(cached.read_bytes()).hexdigest() != MERMAID_SHA256:
-        cached.unlink()
-        raise SystemExit(f"mermaid {MERMAID_VERSION}: the fetched bundle does not match its pinned SHA-256")
-    return cached
+    return (
+        node.installed(config.load())
+        / "node_modules"
+        / "mermaid"
+        / "dist"
+        / "mermaid.min.js"
+    )
+
+
+def mermaid_version() -> str:
+    """Return the Mermaid version merrow's npm lock pins."""
+    return json.loads(node.MANIFEST.read_text(encoding="utf-8"))["dependencies"][
+        "mermaid"
+    ]
 
 
 def render(blocks: list[Block], library: Path, png: Path | None = None) -> list[dict]:
     """Lay each diagram out in Chrome and return its measurements, with screenshots under ``png``."""
     # Imported here so the source pass runs on a host without playwright.
-    from playwright.sync_api import Error, sync_playwright  # ty: ignore[unresolved-import]
+    from playwright.sync_api import Error, sync_playwright
 
     results: list[dict] = []
     with sync_playwright() as driver:
@@ -550,21 +743,31 @@ def render(blocks: list[Block], library: Path, png: Path | None = None) -> list[
             try:
                 browser = driver.chromium.launch()
             except Error as failure:
-                raise SystemExit(f"no Chrome or Chromium to render with: {failure}") from failure
+                raise SystemExit(
+                    f"no Chrome or Chromium to render with: {failure}"
+                ) from failure
         page = browser.new_page(viewport={"width": COLUMN + 40, "height": 700})
-        page.set_content(f'<!doctype html><div id="o" style="width:{COLUMN}px;padding:16px"></div>')
+        page.set_content(
+            f'<!doctype html><div id="o" style="width:{COLUMN}px;padding:16px"></div>'
+        )
         page.add_script_tag(path=str(library))
         page.add_script_tag(content=_MEASURE)
         for number, block in enumerate(blocks):
             direction = diagram_type(block.source)[1]
-            for canvas, (theme, background) in CANVASES.items() if png else [("light", CANVASES["light"])]:
-                page.evaluate("colour => { document.body.style.background = colour; }", background)
+            for canvas, (theme, background) in (
+                CANVASES.items() if png else [("light", CANVASES["light"])]
+            ):
+                page.evaluate(
+                    "colour => { document.body.style.background = colour; }", background
+                )
                 call = [block.source, {"theme": theme}, f"d{number}{canvas}", direction]
                 result = page.evaluate("args => window.measure(...args)", call)
                 if png and result["ok"]:
                     png.mkdir(parents=True, exist_ok=True)
                     stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", block.name)
-                    page.locator("#o").screenshot(path=str(png / f"{stem}-{canvas}.png"))
+                    page.locator("#o").screenshot(
+                        path=str(png / f"{stem}-{canvas}.png")
+                    )
             results.append(result)
         browser.close()
     return results
@@ -572,11 +775,23 @@ def render(blocks: list[Block], library: Path, png: Path | None = None) -> list[
 
 def main(argv: list[str] | None = None) -> int:
     """Check every diagram in the files named, print one verdict a diagram, and return the exit code."""
-    parser = argparse.ArgumentParser(description="Check Mermaid diagrams against the diagrams standard.")
+    parser = argparse.ArgumentParser(
+        description="Check Mermaid diagrams against the diagrams standard."
+    )
     parser.add_argument("files", nargs="+", type=Path)
-    parser.add_argument("--no-render", action="store_true", help="source pass only, no browser")
-    parser.add_argument("--png", type=Path, help="save a light and a dark screenshot of each diagram here")
-    parser.add_argument("--mermaid", type=Path, help=f"a local mermaid.min.js (default: {MERMAID_VERSION}, pinned)")
+    parser.add_argument(
+        "--no-render", action="store_true", help="source pass only, no browser"
+    )
+    parser.add_argument(
+        "--png",
+        type=Path,
+        help="save a light and a dark screenshot of each diagram here",
+    )
+    parser.add_argument(
+        "--mermaid",
+        type=Path,
+        help="a local mermaid.min.js (default: the version merrow pins)",
+    )
     parser.add_argument("--json", action="store_true", help="print the results as JSON")
     args = parser.parse_args(argv)
 
@@ -590,16 +805,38 @@ def main(argv: list[str] | None = None) -> int:
     how = "source only, not rendered"
     if not args.no_render:
         measured = list(render(blocks, bundle(args.mermaid), args.png))
-        how = f"rendered with {args.mermaid.name}" if args.mermaid else f"rendered with Mermaid {MERMAID_VERSION}"
+        how = (
+            f"rendered with {args.mermaid.name}"
+            if args.mermaid
+            else f"rendered with Mermaid {mermaid_version()}"
+        )
 
+    settings = config.load()
+    patterns = [re.compile(p) for p in settings.get("lint")["icon_refs"]]
+    known = icons.known_keys(config.packs_dir(settings))
     report: list[Verdict] = []
     for block, result in zip(blocks, measured, strict=True):
         problems = source_problems(block, CLASS_LINES)
+        problems += [
+            f"icon {key} is in no built pack: run `merrow pack build` for its source"
+            for key in icons.unresolved(block.source, patterns, known)
+        ]
         if result:
-            problems += layout_problems(result, diagram_type(block.source)[0] in _LANDSCAPE)
+            problems += layout_problems(
+                result, diagram_type(block.source)[0] in _LANDSCAPE
+            )
         report.append(Verdict(block.name, problems, result))
     if args.json:
-        print(json.dumps({"how": how, "page": page_level, "diagrams": [asdict(entry) for entry in report]}, indent=1))
+        print(
+            json.dumps(
+                {
+                    "how": how,
+                    "page": page_level,
+                    "diagrams": [asdict(entry) for entry in report],
+                },
+                indent=1,
+            )
+        )
     else:
         for line in page_level:
             print(f"FAIL  {line}")
@@ -608,7 +845,9 @@ def main(argv: list[str] | None = None) -> int:
             for problem in entry.problems:
                 print(f"        {problem}")
         failed = sum(bool(entry.problems) for entry in report)
-        print(f"{len(report)} diagram(s), {failed} failing, {len(page_level)} page finding(s) ({how})")
+        print(
+            f"{len(report)} diagram(s), {failed} failing, {len(page_level)} page finding(s) ({how})"
+        )
     return 1 if page_level or any(entry.problems for entry in report) else 0
 
 

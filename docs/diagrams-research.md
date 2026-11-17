@@ -1,6 +1,6 @@
 # Diagram standard research
 
-Why [`standards/universal/diagrams.md`](../../standards/universal/diagrams.md) says what it says: the sources, the decisions, the test evidence and what is still unverified. Nobody needs this page to follow the standard.
+Why [`style/diagrams.md`](../style/diagrams.md) says what it says: the sources, the decisions, the test evidence and what is still unverified. Nobody needs this page to follow the standard.
 
 ## Problem
 

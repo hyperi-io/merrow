@@ -5,7 +5,7 @@ description: The one standard for diagrams and charts -- when to draw one, the M
 
 # Diagrams
 
-A picture beats a paragraph: if relating components takes more than two sentences, draw one. Put it next to the prose it illustrates, never in an appendix. Diagrams live in `docs/` `.md` files, never in source comments or file headers. The carve-out for a published root README is in [documentation-structure.md](documentation-structure.md).
+A picture beats a paragraph: if relating components takes more than two sentences, draw one. Put it next to the prose it illustrates, never in an appendix. Diagrams live in `docs/` `.md` files, never in source comments or file headers. The carve-out for a published root README is in hyperi-ai's `standards/universal/documentation-structure.md`.
 
 One look across every HyperI project. The same kind of content uses the same diagram type, direction, node outlines and colours in every doc, so a reader who learned one diagram has learned them all. An improvement is a change to THIS file, never a private style for one doc.
 
@@ -13,16 +13,18 @@ This file is self-contained. Why each rule exists, with sources and test evidenc
 
 ## The rules
 
-- **R1** Diagrams are Mermaid, in a fenced `mermaid` block. No ASCII boxes, no box-drawing characters, no image of a diagram.
-- **R2** Diagrams are landscape and read top-left to bottom-right: `flowchart LR`.
-- **R3** 12 nodes or fewer, 5 columns or fewer, one idea, one level.
-- **R4** Zero crossed lines, zero lines through boxes, zero overlapping labels.
-- **R5** Colour comes from the class lines in "Colour", byte for byte. No other colour.
-- **R6** Five node outlines ("Node outlines"). Nothing else.
-- **R7** Every diagram has an intro sentence that states its claim, `accTitle`, `accDescr` and a caption.
-- **R8** Every diagram has a level, L0 to L4, and links up to its parent.
-- **R9** No per-diagram configuration: no `%%{init}%%`, frontmatter, `style`, `linkStyle` or `click`.
-- **R10** Every diagram passes the checker ("Checking"), and its light and dark screenshots are looked at before merge.
+| Rule | What it says |
+|---|---|
+| R1 | Diagrams are Mermaid, in a fenced `mermaid` block. No ASCII boxes, no box-drawing characters, no image of a diagram. |
+| R2 | Diagrams are landscape and read top-left to bottom-right: `flowchart LR`. |
+| R3 | 12 nodes or fewer, 5 columns or fewer, one idea, one level. |
+| R4 | Zero crossed lines, zero lines through boxes, zero overlapping labels. |
+| R5 | Colour comes from the class lines in "Colour", or in "House style", byte for byte. No other colour. |
+| R6 | Five node outlines ("Node outlines"), plus the rounded label a house flowchart uses. Nothing else. |
+| R7 | Every diagram has `accTitle`, `accDescr` and a caption. The prose beside it carries only what the picture cannot show: why, the limits, what is optional. No sentence restates what the diagram shows, and none announces it. |
+| R8 | Every diagram has a level, L0 to L4, and links up to its parent. |
+| R9 | No per-diagram configuration: no `%%{init}%%`, frontmatter, `style`, `linkStyle` or `click`. The one exception is the house block in "House style", byte for byte. |
+| R10 | Every diagram passes the checker ("Checking"), and its light and dark screenshots are looked at before merge. |
 
 When a diagram cannot meet a rule, split the diagram. An exception is made by changing this file.
 
@@ -135,6 +137,8 @@ Expand a box only where the docs explain it. Not every box gets a child.
 
 A subgraph's `direction` stops working the moment a node inside it links to a node outside it. Link the subgraphs themselves.
 
+An optional path that skips a stage goes in the prose, not on the diagram. A bypass arrow across stage groups staggers the rows and widens the diagram.
+
 ## Lines
 
 Clean lines come from where the boxes are. Fix the boxes, never the lines.
@@ -231,6 +235,104 @@ Copy the lines a diagram uses to the end of the flowchart, byte for byte. A flow
 - `stateDiagram-v2` copies the `classDef` lines it uses. `sequenceDiagram`, `erDiagram` and `classDiagram` take no colour at all: `box Title` with no colour value.
 
 Every node carries its own fill, border and text colour, so it reads the same on the three canvases a diagram is published to: white, GitHub dark `#0D1117` and the docs site dark `#1B1B1D`. Every border is 3:1 or better against all three, and every text colour is 11:1 or better on its fill.
+
+## House style
+
+A diagram may carry the house block in place of the role palette: the frontmatter, the class lines and the boundary lines below, copied byte for byte. A block that differs by one character fails R9. Colour is hybrid. A DFE component takes its identity class (`ingest`, `xform`, `load`, `bus`, `store`, `ui`), and everything else takes a role class (`control`, `part`, `decision`, `error`, `ext`).
+
+A house flowchart opens with this frontmatter:
+
+```yaml
+---
+config:
+  theme: base
+  look: neo
+  fontFamily: Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif
+  flowchart:
+    curve: linear
+    nodeSpacing: 40
+    rankSpacing: 64
+    padding: 18
+    wrappingWidth: 280
+    htmlLabels: true
+  elk:
+    preset: modelOrder
+  themeVariables:
+    fontSize: 15px
+    lineColor: "#64748B"
+    primaryTextColor: "#0F172A"
+    clusterBorder: "#0072B2"
+    edgeLabelBackground: "#FFFFFF"
+  themeCSS: >-
+    p{margin:0}
+    .node[data-look] rect,.node[data-look] path,.node[data-look] polygon,.node[data-look] .outer-path{filter:drop-shadow(0 1px 2px rgba(15,23,42,.10)) drop-shadow(0 6px 14px rgba(15,23,42,.10))}
+    .node rect{rx:10px;ry:10px}
+    .cluster rect{rx:16px;ry:16px}
+    .node .label div{min-width:150px}
+    .node.decision .label div{min-width:0}
+    .cluster[data-look] rect{filter:none}
+    .nodeLabel{line-height:1.35}
+    .nodeLabel b{font-weight:600;font-size:15px;letter-spacing:-0.01em}
+    .nodeLabel span{font-size:12.5px;font-weight:400;color:#334155}
+    .cluster-label span.nodeLabel{display:inline-block;background:#FFFFFF;color:#0B2A3F;border:1.5px solid #0072B2;border-radius:999px;padding:2px 12px;font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+    .flowchart-link{stroke-width:1.75px}
+    .labelBkg{background:transparent!important}
+    span.edgeLabel{display:inline-block;background:#FFFFFF!important;color:#1E293B;border:1px solid #94A3B8;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:500}
+    span.edgeLabel p{background:transparent!important}
+    .label-icon{width:20px;height:20px;vertical-align:-4px;margin-right:6px}
+    .ingest .label-icon{color:#0E8A7D}
+    .xform .label-icon{color:#7B4FB0}
+    .load .label-icon{color:#0072B2}
+    .bus .label-icon{color:#A8517F}
+    .store .label-icon{color:#00785A}
+    .ui .label-icon{color:#D9480F}
+    .ext .label-icon{color:#64748B}
+---
+```
+
+A house sequence, state or ER diagram opens with this one:
+
+```yaml
+---
+config:
+  theme: base
+  fontFamily: Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif
+  themeVariables:
+    fontSize: 15px
+    lineColor: "#64748B"
+    primaryTextColor: "#0F172A"
+    actorBkg: "#FFFFFF"
+    actorBorder: "#94A3B8"
+    actorTextColor: "#0F172A"
+    actorLineColor: "#64748B"
+    signalColor: "#64748B"
+    signalTextColor: "#0F172A"
+  themeCSS: >-
+    .messageText{paint-order:stroke;stroke:#FFFFFF;stroke-width:3px;stroke-linejoin:round}
+---
+```
+
+A house flowchart ends with all eleven class lines:
+
+```text
+  classDef ext fill:#F4F6F8,stroke:#94A3B8,stroke-width:1.5px,stroke-dasharray:5 4,color:#0F172A
+  classDef ingest fill:#FFFFFF,stroke:#0E8A7D,stroke-width:3px,color:#0F172A
+  classDef xform fill:#FFFFFF,stroke:#7B4FB0,stroke-width:3px,color:#0F172A
+  classDef load fill:#FFFFFF,stroke:#0072B2,stroke-width:3px,color:#0F172A
+  classDef bus fill:#FFFFFF,stroke:#A8517F,stroke-width:3px,color:#0F172A
+  classDef store fill:#FFFFFF,stroke:#00785A,stroke-width:3px,color:#0F172A
+  classDef ui fill:#FFFFFF,stroke:#D9480F,stroke-width:3px,color:#0F172A
+  classDef decision fill:#FFFFFF,stroke:#9A6700,stroke-width:3px,color:#0F172A
+  classDef error fill:#FFFFFF,stroke:#C2410C,stroke-width:3px,color:#0F172A
+  classDef control fill:#FFFFFF,stroke:#334155,stroke-width:3px,color:#0F172A
+  classDef part fill:#FFFFFF,stroke:#94A3B8,stroke-width:1.5px,color:#0F172A
+```
+
+- Each subgraph takes one boundary line with its own id: `style <subgraph-id> fill:none,stroke:#0072B2,stroke-width:1.5px,stroke-dasharray:6 4`. A boundary line naming no subgraph draws a phantom node.
+- Labels take the HTML form `id("<b>name</b><br/><span>subtitle</span>")`. That rounded box is allowed only in a house flowchart.
+- A house flowchart takes no `default` class line, and the 4-class limit does not apply.
+- A house state diagram takes its class lines from "Colour". Sequence and ER diagrams still take no colour.
+- `#7B4FB0` is 2.9:1 on `#1B1B1D`, under the 3:1 border floor. It reads because the white fill sits inside it.
 
 ## Text
 
@@ -544,7 +646,7 @@ Mermaid draws flows and structure. Anything plotted from data or from a function
 - Alt text is required. State what the chart shows and the conclusion, not "a chart".
 - Under 100 KB per SVG. Over it, thin the points or `rasterized=True` the dense layer. Relative paths on GitHub, absolute URLs for a README that leaves GitHub.
 - Colour encodes a category and never stands alone, as in a diagram.
-- The chart palette is this table, and a script copies its values. Categories run in order, 4 at most ([colour.md](colour.md) rule 6). Lines meet 3:1 and ink meets 4.5:1 on their canvas.
+- The chart palette is this table, and a script copies its values. Categories run in order, 4 at most (hyperi-ai's `standards/universal/colour.md` rule 6). Lines meet 3:1 and ink meets 4.5:1 on their canvas.
 
 | Value | Light | Dark |
 |---|---|---|
@@ -669,7 +771,7 @@ Everything above is the standard. These sections are how an agent complies.
 | Coloured `box` or `rect` in a sequence diagram | `box Title`, no colour |
 | Node IDs `A`, `B`, `C` | `loader`, `dlq` |
 | Sentences inside nodes | 1 to 4 words, detail goes in prose |
-| Unlabelled decision branches | `-->|yes|` and `-->|no|` |
+| Unlabelled decision branches | `-->\|yes\|` and `-->\|no\|` |
 | Labels on every arrow | Branches and boundary arrows |
 | Notes as extra nodes | Caption |
 | Double-headed arrows | One arrow, the direction data moves |
