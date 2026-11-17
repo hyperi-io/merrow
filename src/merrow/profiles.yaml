@@ -141,6 +141,10 @@ profiles:
       theme: light
       stroke_width: "{stroke.boundary}"
       dash: {solid: "", sysDash: "3 3", dash: "8 6"}
+      # AWS's custom group for one service (deck slide 26): its border is the
+      # service icon's category colour.
+      service: service
+      service_label: "{aws.ink}"
     # A node whose object has an icon is drawn as the icon, its label under it.
     # Icons draw at their own artwork size, which AWS's terms require, read
     # from these built packs.

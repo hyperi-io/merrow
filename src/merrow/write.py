@@ -147,6 +147,8 @@ def _group_style(profile: Profile, known: L1Object | None, problems: list[str]) 
     name = known.group_style if known else None
     if known is None or not name or not profile.group_boundaries:
         return profile.boundary
+    if name == profile.service_group and known.icon:
+        name = f"{name}:{profile.icon_fills.get(known.icon, '')}"
     if name not in profile.group_boundaries:
         problems.append(
             f"{known.id} has group style {name!r}, not a {profile.name} one"

@@ -11,6 +11,8 @@ from merrow import config
 # A DTCG alias: a dotted token path in braces. A CSS rule's braces never hold one.
 _ALIAS = re.compile(r"\{([A-Za-z][\w-]*(?:\.[\w-]+)+)\}")
 _MAX_DEPTH = 8
+# An icon's first fill colour: an AWS service icon's category colour.
+_FILL = re.compile(r'fill="(#[0-9A-Fa-f]{6})"')
 
 
 class ProfileError(ValueError):
@@ -43,6 +45,8 @@ class Profile:
         group_icons: Put each group's icon in its corner after render.
         icon_sizes: Each built icon's artwork height by `prefix:name`, from the
             packs the profile names.
+        icon_fills: Each built icon's first fill colour by `prefix:name`.
+        service_group: The `group_style` that takes its icon's colour, if any.
     """
 
     name: str
@@ -63,6 +67,8 @@ class Profile:
     group_boundaries: Mapping[str, str] = field(default_factory=dict)
     group_icons: bool = False
     icon_sizes: Mapping[str, int] = field(default_factory=dict)
+    icon_fills: Mapping[str, str] = field(default_factory=dict)
+    service_group: str = ""
 
     @property
     def classes(self) -> frozenset[str]:
@@ -142,8 +148,10 @@ def _partial(text: str, scope: Mapping[str, str]) -> str:
     raise ProfileError(f"aliases nest deeper than {_MAX_DEPTH}: {text}")
 
 
-def _icon_sizes(settings: Any, packs: Sequence[str]) -> dict[str, int]:
-    """Return each icon's height in the named built packs, aliases included.
+def _icon_facts(settings: Any, packs: Sequence[str]) -> dict[str, tuple[int, str]]:
+    """Return each icon's height and first fill colour in the named built packs.
+
+    Aliases are included. An icon with no fill colour has an empty one.
 
     Raises:
         FileNotFoundError: A pack isn't built.
@@ -157,13 +165,14 @@ def _icon_sizes(settings: Any, packs: Sequence[str]) -> dict[str, int]:
             )
         pack = json.loads(path.read_text(encoding="utf-8"))
         default = pack.get("height", 16)
-        sizes = {
-            key: int(icon.get("height", default)) for key, icon in pack["icons"].items()
-        }
+        facts = {}
+        for key, icon in pack["icons"].items():
+            colour = _FILL.search(icon["body"])
+            facts[key] = (int(icon.get("height", default)), colour[1] if colour else "")
         for alias, target in (pack.get("aliases") or {}).items():
-            if target.get("parent") in sizes:
-                sizes[alias] = sizes[target["parent"]]
-        found |= {f"{pack['prefix']}:{key}": size for key, size in sizes.items()}
+            if target.get("parent") in facts:
+                facts[alias] = facts[target["parent"]]
+        found |= {f"{pack['prefix']}:{key}": fact for key, fact in facts.items()}
     return found
 
 
@@ -172,8 +181,12 @@ def _group_boundaries(
     styles: Mapping[str, Any],
     order: Sequence[str],
     scope: Mapping[str, str],
+    fills: frozenset[str],
 ) -> dict[str, str]:
     """Return each group style in a built pack by its key, as boundary properties.
+
+    A `service` style adds one style a service colour, keyed `<service>:<colour>`:
+    AWS's custom group for one service takes that service's category colour.
 
     Raises:
         FileNotFoundError: The pack isn't built.
@@ -194,6 +207,14 @@ def _group_boundaries(
         if dash := styles["dash"].get(group["dash"]):
             fields["stroke-dasharray"] = dash
         found[group["key"]] = _properties(fields, order, scope)
+    if service := styles.get("service"):
+        for colour in sorted(fills - {""}):
+            fields = {"fill": "none", "stroke": colour}
+            fields |= {
+                "stroke-width": styles["stroke_width"],
+                "color": styles["service_label"],
+            }
+            found[f"{service}:{colour}"] = _properties(fields, order, scope)
     return found
 
 
@@ -231,6 +252,8 @@ def load(settings: Any, name: str | None = None) -> Profile:
             each = {**scope, "class.name": class_name, "class.icon": icon}
             icon_lines.append(resolve(entry["icon_css"], each))
     scope["profile.icon_css"] = "\n".join(icon_lines)
+    facts = _icon_facts(settings, entry.get("icon_packs") or [])
+    fills = frozenset(fill for _, fill in facts.values())
     return Profile(
         name,
         {family: _expand(text, scope) for family, text in entry["front"].items()},
@@ -252,9 +275,11 @@ def load(settings: Any, name: str | None = None) -> Profile:
         re.compile(str(entry["lint"]["layout_waive"]))
         if entry["lint"].get("layout_waive")
         else None,
-        _group_boundaries(settings, entry["group_styles"], order, scope)
+        _group_boundaries(settings, entry["group_styles"], order, scope, fills)
         if entry.get("group_styles")
         else {},
         bool(entry.get("group_icons")),
-        _icon_sizes(settings, entry.get("icon_packs") or []),
+        {key: size for key, (size, _) in facts.items()},
+        {key: fill for key, (_, fill) in facts.items()},
+        str((entry.get("group_styles") or {}).get("service", "")),
     )

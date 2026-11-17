@@ -18,6 +18,9 @@ AWS = {
         "res-users": ICON,
         "res-users-dark": {"body": '<rect width="10" height="10" fill="#FEDCBA"/>'},
         "amazon-simple-storage-service": ICON,
+        "amazon-elastic-kubernetes-service-32": {
+            "body": '<rect width="10" height="10" fill="#ED7100"/>'
+        },
     },
 }
 GROUPS = {
@@ -137,3 +140,22 @@ def test_an_icon_in_no_built_pack_is_refused(settings):
         ValueError, match="aws:amazon-simple-queue-service is in no built pack"
     ):
         write.diagram(graph, shown, objects.library(settings), "L2 Services -- X", "X.")
+
+
+def test_a_service_group_takes_its_icon_colour(settings):
+    graph = Graph(
+        [Node("app", "App", group="eks")],
+        [],
+        [Group("eks", "", object="aws.eks-cluster")],
+    )
+    shown = profile.load(settings, "aws")
+    source = write.diagram(
+        graph, shown, objects.library(settings), "L2 Services -- X", "X."
+    )
+    assert (
+        "  style eks fill:none,stroke:#ED7100,stroke-width:1.5px,color:#000000\n"
+        in source
+    )
+    assert f"{write.GROUP_ICON} eks aws:amazon-elastic-kubernetes-service-32" in source
+    block = dc.Block("x.mmd", source, None, None)
+    assert dc.source_problems(block, frozenset(), shown) == []

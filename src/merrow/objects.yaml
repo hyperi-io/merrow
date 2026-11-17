@@ -11,6 +11,7 @@ objects:
   aws.users: {label: Users, icon: "aws:res-users"}
   aws.user: {label: User, icon: "aws:res-user"}
   aws.eks: {label: Amazon EKS, icon: "aws:amazon-elastic-kubernetes-service"}
+  aws.eks-cluster: {label: Amazon EKS cluster, icon: "aws:amazon-elastic-kubernetes-service-32", group_style: service}
   aws.msk: {label: Amazon MSK, icon: "aws:amazon-managed-streaming-for-apache-kafka"}
   aws.s3: {label: Amazon S3, icon: "aws:amazon-simple-storage-service"}
   aws.route53: {label: Amazon Route 53, icon: "aws:amazon-route-53"}

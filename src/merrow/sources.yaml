@@ -20,10 +20,13 @@ sources:
         key: category-\1
       - match: /Arch-Category_[^/]+_(16|32|48)\.svg$
         key: null
-      # Service icons ship at 16, 32, 48 and 64. The pack carries the 64 artwork.
+      # Service icons ship at 16, 32, 48 and 64. The pack carries the 64 artwork,
+      # and the 32 one for a custom service group (deck slide 26) as `<name>-32`.
       - match: /Arch_([^/]+)_64\.svg$
         key: \1
-      - match: /Arch_[^/]+_(16|32|48)\.svg$
+      - match: /Arch_([^/]+)_32\.svg$
+        key: \1-32
+      - match: /Arch_[^/]+_(16|48)\.svg$
         key: null
       - match: /Res_([^/]+)_48_Dark\.svg$
         key: res-\1-dark
