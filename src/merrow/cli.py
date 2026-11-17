@@ -9,7 +9,7 @@ from scalo.cli import Argument, Option, Typer
 from scalo.cli.version import version_option
 from typer import BadParameter, Exit
 
-from merrow import config, node, proc, profile, render
+from merrow import apply, config, node, objects, proc, profile, render
 from merrow.convert import CONVERTERS
 from merrow.lint import diagram_check
 from merrow.model import Limits
@@ -206,6 +206,23 @@ def source_list(
                 }
             )
         )
+
+
+@diagram_app.command("apply")
+def diagram_apply(
+    files: list[Path] = Argument(help="`.mmd` files, or Markdown with mermaid fences"),
+    name: str = Option("", "--profile", help="Profile, default the configured one"),
+) -> None:
+    """Set each diagram's frontmatter and class block from the profile, in place."""
+    settings = config.load()
+    shown = profile.load(settings, name or None)
+    by_ref = objects.by_class_name(objects.library(settings))
+    for path in files:
+        try:
+            changed = apply.apply_file(path, shown, by_ref)
+        except ValueError as error:
+            raise BadParameter(f"{path}: {error}") from error
+        print(f"{'changed' if changed else 'unchanged'}  {path}")
 
 
 @diagram_app.command("lint")

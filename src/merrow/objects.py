@@ -66,3 +66,18 @@ def bind(graph: Graph, objects: Mapping[str, L1Object]) -> tuple[Graph, list[str
             problems.append(f"node {node.id!r} has no label and no object")
         nodes.append(node)
     return Graph(nodes, list(graph.edges), list(graph.groups)), problems
+
+
+def by_class_name(library: Mapping[str, L1Object]) -> dict[str, L1Object]:
+    """Return each object by the class name a diagram gives it: dots as hyphens.
+
+    Raises:
+        ValueError: Two objects read as the same name.
+    """
+    found: dict[str, L1Object] = {}
+    for known in library.values():
+        name = known.id.replace(".", "-")
+        if name in found:
+            raise ValueError(f"{found[name].id} and {known.id} both read as :::{name}")
+        found[name] = known
+    return found

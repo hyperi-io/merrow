@@ -14,7 +14,7 @@ from typing import Any
 
 from merrow import config, node, proc
 
-_FENCE = re.compile(r"^```mermaid[^\n]*\n(.*?)^```", re.MULTILINE | re.DOTALL)
+FENCE = re.compile(r"^```mermaid[^\n]*\n(.*?)^```", re.MULTILINE | re.DOTALL)
 
 
 class RenderError(RuntimeError):
@@ -40,7 +40,7 @@ def diagrams(path: Path) -> Iterator[Diagram]:
     if path.suffix != ".md":
         yield Diagram(path.stem, text)
         return
-    for number, fence in enumerate(_FENCE.finditer(text), 1):
+    for number, fence in enumerate(FENCE.finditer(text), 1):
         yield Diagram(f"{path.stem}-{number}", fence.group(1))
 
 

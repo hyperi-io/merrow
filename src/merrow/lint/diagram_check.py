@@ -38,6 +38,7 @@ from pathlib import Path
 
 from merrow import config, node
 from merrow.lint import icons
+from merrow.objects import by_class_name, library
 from merrow.profile import Profile, load
 
 # The standard's Colour section, byte for byte. tests/test_diagram_check.py holds the two in step.
@@ -320,9 +321,15 @@ def _house_style_problems(
 
 
 def source_problems(
-    block: Block, class_lines: frozenset[str], profile: Profile
+    block: Block,
+    class_lines: frozenset[str],
+    profile: Profile,
+    object_names: frozenset[str] = frozenset(),
 ) -> list[str]:
     """Return what the diagram's text breaks in the standard, without rendering it.
+
+    `object_names` are the L1 objects' class names, which a `:::` may apply
+    with no class line of their own.
 
     A diagram with frontmatter is held to `profile`'s generated blocks instead
     of `class_lines`.
@@ -429,7 +436,7 @@ def source_problems(
         applied |= {name for line in bare for name in _SHORTHAND.findall(line)}
         problems += [
             f"R5 class `{name}` is applied and its class line is missing"
-            for name in sorted(applied - names)
+            for name in sorted(applied - names - object_names)
         ]
     if kind == "sequenceDiagram":
         if any(_SEQUENCE_COLOUR.match(line) for line in lines):
@@ -762,9 +769,10 @@ def main(argv: list[str] | None = None) -> int:
 
     patterns = [re.compile(p) for p in settings.get("lint")["icon_refs"]]
     known = icons.known_keys(config.packs_dir(settings))
+    object_names = frozenset(by_class_name(library(settings)))
     report: list[Verdict] = []
     for block, result in zip(blocks, measured, strict=True):
-        problems = source_problems(block, CLASS_LINES, profile)
+        problems = source_problems(block, CLASS_LINES, profile, object_names)
         problems += [
             f"icon {key} is in no built pack: run `merrow pack build` for its source"
             for key in icons.unresolved(block.source, patterns, known)

@@ -109,6 +109,14 @@ def flowchart(
     return "\n".join(lines) + "\n"
 
 
+def profile_label(profile: Profile, node: Node) -> str:
+    """Return a node's shape and label in the profile's label form."""
+    form = profile.node_label["subtitle" if node.subtitle else "plain"]
+    fields = {"node.label": _quoted(node.label)}
+    fields["node.subtitle"] = _quoted(node.subtitle or "")
+    return fill(form, fields)
+
+
 def house(
     graph: Graph,
     profile: Profile,
@@ -139,16 +147,17 @@ def house(
     if problems:
         raise ValueError("; ".join(problems))
 
-    def label(node: Node) -> str:
-        form = profile.node_label["subtitle" if node.subtitle else "plain"]
-        fields = {"node.label": _quoted(node.label)}
-        fields["node.subtitle"] = _quoted(node.subtitle or "")
-        return fill(form, fields)
-
     ids: dict[str, str] = {}
     head = [f"accTitle: {title}", f"accDescr: {description}"]
     layout = stages(bound, profile.max_ranks, profile.stage_title)
-    body = flowchart(layout.graph, layout.direction, label, head, ids, layout.inner)
+    body = flowchart(
+        layout.graph,
+        layout.direction,
+        lambda node: profile_label(profile, node),
+        head,
+        ids,
+        layout.inner,
+    )
     order = [line.split()[1] for line in profile.class_lines]
     tail = [
         f"class {','.join(mermaid_id(n, ids) for n in styles[name])} {name}"
