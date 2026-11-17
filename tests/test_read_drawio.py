@@ -9,7 +9,7 @@ RULES = {
     "container": "container,swimlane,group",
     "optional": "dashed=1",
     "title": "text",
-    "placeholder": "%[^%]+%",
+    "skip_labels": ["%[^%]+%"],
 }
 
 

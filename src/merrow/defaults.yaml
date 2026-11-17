@@ -93,5 +93,11 @@ readers:
     optional: dashed=1
     # Style keys marking a text cell that titles the container it sits in.
     title: text
-    # A label matching this is a template placeholder, not text.
-    placeholder: "%[^%]+%"
+    # A label matching any of these is not text: a template placeholder.
+    skip_labels: ["%[^%]+%"]
+  pptx:
+    # Line dash styles marking a connector as optional (drawn dotted).
+    optional_dash: dash,sysDash,sysDot,dot,lgDash,dashDot
+    # A label matching any of these is not text: a template placeholder or a
+    # numbered step marker.
+    skip_labels: ["%[^%]+%", "\\d{1,2}"]

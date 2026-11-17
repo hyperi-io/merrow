@@ -17,6 +17,7 @@ from html.parser import HTMLParser
 from urllib.parse import unquote
 
 from merrow.graph import Box, Edge, Graph, Group, Node, nest_by_bounds
+from merrow.read import skipper
 
 
 @dataclass(slots=True)
@@ -73,7 +74,7 @@ def _model(diagram: ET.Element) -> ET.Element | None:
     return ET.fromstring(xml)  # noqa: S314 -- expat refuses entity expansion attacks
 
 
-def pages(data: bytes, rules: Mapping[str, str]) -> list[Page]:
+def pages(data: bytes, rules: Mapping[str, object]) -> list[Page]:
     """Return every page in a draw.io file as a Graph.
 
     `rules` holds the `readers.drawio` config: `container` (style keys marking a
@@ -106,8 +107,8 @@ def _cells(model: ET.Element) -> dict[str, ET.Element]:
     return cells
 
 
-def _keys(rules: Mapping[str, str], name: str) -> set[str]:
-    return {k.strip() for k in rules.get(name, "").split(",") if k.strip()}
+def _keys(rules: Mapping[str, object], name: str) -> set[str]:
+    return {k.strip() for k in str(rules.get(name, "")).split(",") if k.strip()}
 
 
 def _boxes(cells: Mapping[str, ET.Element]) -> dict[str, Box]:
@@ -131,14 +132,14 @@ def _boxes(cells: Mapping[str, ET.Element]) -> dict[str, Box]:
     return {cell_id: absolute(cell_id) for cell_id in local}
 
 
-def _page(name: str, model: ET.Element, rules: Mapping[str, str]) -> Page:
+def _page(name: str, model: ET.Element, rules: Mapping[str, object]) -> Page:
     cells = _cells(model)
     container_keys = _keys(rules, "container")
     title_keys = _keys(rules, "title")
-    placeholder = re.compile(rules["placeholder"]) if rules.get("placeholder") else None
+    placeholder = skipper(rules.get("skip_labels"))
     optional = dict(
         pair.split("=", 1)
-        for pair in rules.get("optional", "").split(",")
+        for pair in str(rules.get("optional", "")).split(",")
         if "=" in pair
     )
     page = Page(name, Graph())
