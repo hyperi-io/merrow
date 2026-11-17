@@ -15,8 +15,12 @@ from pathlib import Path
 
 import pytest
 
+from merrow import config, profile
 from merrow.lint import diagram_check as dc
 
+PROFILE = profile.load(config.load(), "house")
+FLOW_FRONT = PROFILE.fronts["flowchart"]
+OTHER_FRONT = PROFILE.fronts["other"]
 ROOT = Path(__file__).resolve().parents[1]
 STANDARD_PATH = ROOT / "style" / "diagrams.md"
 STANDARD = STANDARD_PATH.read_text(encoding="utf-8")
@@ -55,7 +59,7 @@ def _problems(
     source: str, intro: str | None = None, caption: str | None = None
 ) -> list[str]:
     return dc.source_problems(
-        dc.Block("page.md:1", source, intro, caption), CLASS_LINES
+        dc.Block("page.md:1", source, intro, caption), CLASS_LINES, PROFILE
     )
 
 
@@ -81,9 +85,9 @@ def test_every_template_in_the_standard_passes_the_source_pass():
     blocks, page = dc.page_blocks(STANDARD_PATH)
     assert page == []
     assert len(blocks) == 8
-    assert {block.name: dc.source_problems(block, CLASS_LINES) for block in blocks} == {
-        block.name: [] for block in blocks
-    }
+    assert {
+        block.name: dc.source_problems(block, CLASS_LINES, PROFILE) for block in blocks
+    } == {block.name: [] for block in blocks}
 
 
 @pytest.mark.parametrize(
@@ -196,9 +200,9 @@ _HOUSE = STANDARD.split("\n## House style\n", 1)[1].split("\n## ", 1)[0]
 _HOUSE_FENCES = re.findall(
     r"^```(?:yaml|text)\n(.*?)^```$", _HOUSE, re.MULTILINE | re.DOTALL
 )
-BOUNDARY = f"style edge {dc.HOUSE_BOUNDARY}"
+BOUNDARY = f"style edge {PROFILE.boundary}"
 HOUSE = (
-    dc.HOUSE_FRONT
+    FLOW_FRONT
     + """
 flowchart LR
     accTitle: L2 Services -- DFE
@@ -210,23 +214,23 @@ flowchart LR
     class receiver ingest
     class topic bus
 """
-    + "".join(f"  {line}\n" for line in sorted(dc.HOUSE_CLASS_LINES))
+    + "".join(f"  {line}\n" for line in PROFILE.class_lines)
     + f"  {BOUNDARY}\n"
 )
 OTHER = (
-    dc.HOUSE_OTHER_FRONT
+    OTHER_FRONT
     + "\nsequenceDiagram\n    accTitle: L4 Detail -- X\n    accDescr: Y.\n    a->>b: Call\n"
 )
 
 
-def test_the_script_carries_the_standards_house_blocks():
+def test_the_standard_shows_the_house_profiles_generated_blocks():
     flow_front, other_front, classes = _HOUSE_FENCES
-    assert flow_front.rstrip("\n") == dc.HOUSE_FRONT
-    assert other_front.rstrip("\n") == dc.HOUSE_OTHER_FRONT
-    assert (
-        frozenset(line.strip() for line in classes.splitlines()) == dc.HOUSE_CLASS_LINES
+    assert flow_front.rstrip("\n") == FLOW_FRONT
+    assert other_front.rstrip("\n") == OTHER_FRONT
+    assert frozenset(line.strip() for line in classes.splitlines()) == frozenset(
+        PROFILE.class_lines
     )
-    assert dc.HOUSE_BOUNDARY in _HOUSE
+    assert PROFILE.boundary in _HOUSE
 
 
 @pytest.mark.parametrize("source", [HOUSE, OTHER], ids=["flowchart", "sequence"])
@@ -246,11 +250,11 @@ def test_a_house_diagram_has_no_source_problems(source):
             "R9 frontmatter that is not the house block",
         ),
         (
-            OTHER.replace(dc.HOUSE_OTHER_FRONT, dc.HOUSE_FRONT),
+            OTHER.replace(OTHER_FRONT, FLOW_FRONT),
             "R9 frontmatter that is not the house block",
         ),
         (
-            HOUSE.replace(dc.HOUSE_FRONT, dc.HOUSE_OTHER_FRONT),
+            HOUSE.replace(FLOW_FRONT, OTHER_FRONT),
             "R9 frontmatter that is not the house block",
         ),
         (

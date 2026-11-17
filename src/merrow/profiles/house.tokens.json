@@ -1,0 +1,49 @@
+{
+  "$description": "merrow house profile tokens, W3C DTCG format. A realm overrides any of them by listing its own file after this one.",
+  "color": {
+    "ink": { "$type": "color", "$value": "#0F172A", "$description": "Label text" },
+    "ink-muted": { "$type": "color", "$value": "#334155", "$description": "Second label line" },
+    "ink-edge": { "$type": "color", "$value": "#1E293B", "$description": "Edge label text" },
+    "ink-group": { "$type": "color", "$value": "#0B2A3F", "$description": "Group title text" },
+    "paper": { "$type": "color", "$value": "#FFFFFF", "$description": "Node fill and label backgrounds" },
+    "line": { "$type": "color", "$value": "#64748B", "$description": "Edges and lifelines" },
+    "rule": { "$type": "color", "$value": "#94A3B8", "$description": "Thin borders: parts, external systems, pills" },
+    "wash": { "$type": "color", "$value": "#F4F6F8", "$description": "External system fill" },
+    "shadow": { "$type": "color", "$value": "rgba(15,23,42,.10)", "$description": "Node drop shadow" },
+    "group": { "$type": "color", "$value": "{color.role.load}", "$description": "Group boundary and title pill" },
+    "role": {
+      "ingest": { "$type": "color", "$value": "#0E8A7D" },
+      "xform": { "$type": "color", "$value": "#7B4FB0" },
+      "load": { "$type": "color", "$value": "#0072B2" },
+      "bus": { "$type": "color", "$value": "#A8517F" },
+      "store": { "$type": "color", "$value": "#00785A" },
+      "ui": { "$type": "color", "$value": "#D9480F" },
+      "decision": { "$type": "color", "$value": "#9A6700" },
+      "error": { "$type": "color", "$value": "#C2410C" },
+      "control": { "$type": "color", "$value": "{color.ink-muted}" },
+      "part": { "$type": "color", "$value": "{color.rule}" },
+      "ext": { "$type": "color", "$value": "{color.rule}" }
+    }
+  },
+  "font": {
+    "family": { "$type": "fontFamily", "$value": ["Inter", "-apple-system", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"] },
+    "size": {
+      "label": { "$type": "dimension", "$value": "15px" },
+      "detail": { "$type": "dimension", "$value": "12.5px" },
+      "edge": { "$type": "dimension", "$value": "12px" },
+      "group": { "$type": "dimension", "$value": "11.5px" }
+    }
+  },
+  "stroke": {
+    "role": { "$type": "dimension", "$value": "3px" },
+    "part": { "$type": "dimension", "$value": "1.5px" },
+    "boundary": { "$type": "dimension", "$value": "1.5px" },
+    "link": { "$type": "dimension", "$value": "1.75px" },
+    "pill": { "$type": "dimension", "$value": "1px" }
+  },
+  "dash": {
+    "$description": "SVG stroke-dasharray values: dash then gap, in px",
+    "ext": { "$value": "5 4" },
+    "boundary": { "$value": "6 4" }
+  }
+}

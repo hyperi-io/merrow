@@ -14,6 +14,7 @@ BASE_LAYERS = [
     Path(str(files("merrow") / "defaults.yaml")),
     Path(str(files("merrow") / "sources.yaml")),
     Path(str(files("merrow") / "sources.lock.yaml")),
+    Path(str(files("merrow") / "profiles.yaml")),
 ]
 
 
@@ -31,6 +32,19 @@ def reference_layers(settings: Any) -> list[Path]:
             raise FileNotFoundError(f"reference repo {repo} has no {name}")
         layers.append(layer)
     return layers
+
+
+def data_file(settings: Any, relative: str) -> Path:
+    """Return a data file from the last reference repo that has it, else merrow's.
+
+    Raises:
+        FileNotFoundError: No reference repo and not merrow has it.
+    """
+    repos = [Path(r).expanduser().resolve() for r in settings.get("references", [])]
+    for root in [*reversed(repos), Path(str(files("merrow")))]:
+        if (root / relative).is_file():
+            return root / relative
+    raise FileNotFoundError(f"{relative} is in no reference repo and not in merrow")
 
 
 def cache_dir(settings: Any) -> Path:

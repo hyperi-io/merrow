@@ -9,7 +9,7 @@ from scalo.cli import Argument, Option, Typer
 from scalo.cli.version import version_option
 from typer import BadParameter, Exit
 
-from merrow import config, node, proc, render
+from merrow import config, node, proc, profile, render
 from merrow.convert import CONVERTERS
 from merrow.lint import diagram_check
 from merrow.model import Limits
@@ -23,11 +23,13 @@ source_app = Typer(
 )
 diagram_app = Typer(help="Diagrams: render to SVG and lint.", no_args_is_help=True)
 pack_app = Typer(help="Icon packs built from vendor sources.", no_args_is_help=True)
+profile_app = Typer(help="Profiles: the look a diagram takes.", no_args_is_help=True)
 app.add_typer(config_app, name="config")
 app.add_typer(tools_app, name="tools")
 app.add_typer(source_app, name="source")
 app.add_typer(pack_app, name="pack")
 app.add_typer(diagram_app, name="diagram")
+app.add_typer(profile_app, name="profile")
 
 
 @app.callback()
@@ -40,6 +42,26 @@ def config_get() -> None:
     """Print the resolved settings, every layer merged, as JSON on stdout."""
     settings = config.load().as_dict()
     print(json.dumps({key.lower(): value for key, value in settings.items()}))
+
+
+@profile_app.command("show")
+def profile_show(
+    name: str = Argument("", help="Profile name, default the configured one"),
+    family: str = Option(
+        "flowchart", help="Diagram family: flowchart, or other for the rest"
+    ),
+) -> None:
+    """Print a profile's frontmatter, class lines and subgraph boundary style."""
+    shown = profile.load(config.load(), name or None)
+    if family not in shown.fronts:
+        raise BadParameter(f"{family}: one of {', '.join(shown.fronts)}")
+    print(shown.fronts[family])
+    if family == "flowchart":
+        print(
+            "\n".join(
+                ["", *shown.class_lines, "", f"style <subgraph> {shown.boundary}"]
+            )
+        )
 
 
 @tools_app.command("ensure")

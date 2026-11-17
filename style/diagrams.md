@@ -238,7 +238,7 @@ Every node carries its own fill, border and text colour, so it reads the same on
 
 ## House style
 
-A diagram may carry the house block in place of the role palette: the frontmatter, the class lines and the boundary lines below, copied byte for byte. A block that differs by one character fails R9. Colour is hybrid. A DFE component takes its identity class (`ingest`, `xform`, `load`, `bus`, `store`, `ui`), and everything else takes a role class (`control`, `part`, `decision`, `error`, `ext`).
+A diagram may carry the house block in place of the role palette: the frontmatter, the class lines and the boundary lines below, copied byte for byte. A block that differs by one character fails R9. merrow generates the block from the house profile's tokens, and `merrow profile show house` prints it. Colour is hybrid. A DFE component takes its identity class (`ingest`, `xform`, `load`, `bus`, `store`, `ui`), and everything else takes a role class (`control`, `part`, `decision`, `error`, `ext`).
 
 A house flowchart opens with this frontmatter:
 

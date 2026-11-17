@@ -37,6 +37,7 @@ from pathlib import Path
 
 from merrow import config, node
 from merrow.lint import icons
+from merrow.profile import Profile, load
 
 # The standard's Colour section, byte for byte. tests/test_diagram_check.py holds the two in step.
 CLASS_LINES = frozenset(
@@ -51,86 +52,6 @@ CLASS_LINES = frozenset(
         "classDef group fill:none,stroke:#64748B,stroke-width:1px,stroke-dasharray:2 4",
     }
 )
-
-# The standard's "House style" blocks, byte for byte. lint/tests/test_diagram_check.py holds them in step.
-HOUSE_FRONT = """---
-config:
-  theme: base
-  look: neo
-  fontFamily: Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif
-  flowchart:
-    curve: linear
-    nodeSpacing: 40
-    rankSpacing: 64
-    padding: 18
-    wrappingWidth: 280
-    htmlLabels: true
-  elk:
-    preset: modelOrder
-  themeVariables:
-    fontSize: 15px
-    lineColor: "#64748B"
-    primaryTextColor: "#0F172A"
-    clusterBorder: "#0072B2"
-    edgeLabelBackground: "#FFFFFF"
-  themeCSS: >-
-    p{margin:0}
-    .node[data-look] rect,.node[data-look] path,.node[data-look] polygon,.node[data-look] .outer-path{filter:drop-shadow(0 1px 2px rgba(15,23,42,.10)) drop-shadow(0 6px 14px rgba(15,23,42,.10))}
-    .node rect{rx:10px;ry:10px}
-    .cluster rect{rx:16px;ry:16px}
-    .node .label div{min-width:150px}
-    .node.decision .label div{min-width:0}
-    .cluster[data-look] rect{filter:none}
-    .nodeLabel{line-height:1.35}
-    .nodeLabel b{font-weight:600;font-size:15px;letter-spacing:-0.01em}
-    .nodeLabel span{font-size:12.5px;font-weight:400;color:#334155}
-    .cluster-label span.nodeLabel{display:inline-block;background:#FFFFFF;color:#0B2A3F;border:1.5px solid #0072B2;border-radius:999px;padding:2px 12px;font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
-    .flowchart-link{stroke-width:1.75px}
-    .labelBkg{background:transparent!important}
-    span.edgeLabel{display:inline-block;background:#FFFFFF!important;color:#1E293B;border:1px solid #94A3B8;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:500}
-    span.edgeLabel p{background:transparent!important}
-    .label-icon{width:20px;height:20px;vertical-align:-4px;margin-right:6px}
-    .ingest .label-icon{color:#0E8A7D}
-    .xform .label-icon{color:#7B4FB0}
-    .load .label-icon{color:#0072B2}
-    .bus .label-icon{color:#A8517F}
-    .store .label-icon{color:#00785A}
-    .ui .label-icon{color:#D9480F}
-    .ext .label-icon{color:#64748B}
----"""
-HOUSE_OTHER_FRONT = """---
-config:
-  theme: base
-  fontFamily: Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif
-  themeVariables:
-    fontSize: 15px
-    lineColor: "#64748B"
-    primaryTextColor: "#0F172A"
-    actorBkg: "#FFFFFF"
-    actorBorder: "#94A3B8"
-    actorTextColor: "#0F172A"
-    actorLineColor: "#64748B"
-    signalColor: "#64748B"
-    signalTextColor: "#0F172A"
-  themeCSS: >-
-    .messageText{paint-order:stroke;stroke:#FFFFFF;stroke-width:3px;stroke-linejoin:round}
----"""
-HOUSE_CLASS_LINES = frozenset(
-    {
-        "classDef ext fill:#F4F6F8,stroke:#94A3B8,stroke-width:1.5px,stroke-dasharray:5 4,color:#0F172A",
-        "classDef ingest fill:#FFFFFF,stroke:#0E8A7D,stroke-width:3px,color:#0F172A",
-        "classDef xform fill:#FFFFFF,stroke:#7B4FB0,stroke-width:3px,color:#0F172A",
-        "classDef load fill:#FFFFFF,stroke:#0072B2,stroke-width:3px,color:#0F172A",
-        "classDef bus fill:#FFFFFF,stroke:#A8517F,stroke-width:3px,color:#0F172A",
-        "classDef store fill:#FFFFFF,stroke:#00785A,stroke-width:3px,color:#0F172A",
-        "classDef ui fill:#FFFFFF,stroke:#D9480F,stroke-width:3px,color:#0F172A",
-        "classDef decision fill:#FFFFFF,stroke:#9A6700,stroke-width:3px,color:#0F172A",
-        "classDef error fill:#FFFFFF,stroke:#C2410C,stroke-width:3px,color:#0F172A",
-        "classDef control fill:#FFFFFF,stroke:#334155,stroke-width:3px,color:#0F172A",
-        "classDef part fill:#FFFFFF,stroke:#94A3B8,stroke-width:1.5px,color:#0F172A",
-    }
-)
-HOUSE_BOUNDARY = "fill:none,stroke:#0072B2,stroke-width:1.5px,stroke-dasharray:6 4"
 
 # The standard's limits. tests/test_diagram_check.py holds the two in step.
 MAX_WIDTH = 1250
@@ -371,7 +292,9 @@ def split_front(source: str) -> tuple[str | None, str]:
     return source[: end + 4], source[end + 5 :]
 
 
-def _house_style_problems(lines: list[str]) -> tuple[list[str], set[str]]:
+def _house_style_problems(
+    lines: list[str], boundary: str
+) -> tuple[list[str], set[str]]:
     """Return a house flowchart's boundary-line problems and the `style` lines that are house boundaries."""
     subgraphs = [match.group(1) for line in lines if (match := _SUBGRAPH.match(line))]
     allowed: set[str] = set()
@@ -379,7 +302,7 @@ def _house_style_problems(lines: list[str]) -> tuple[list[str], set[str]]:
     styled: list[str] = []
     for line in lines:
         match = _STYLE.match(line)
-        if match and match.group(2) == HOUSE_BOUNDARY:
+        if match and match.group(2) == boundary:
             styled.append(match.group(1))
             if match.group(1) in subgraphs:
                 allowed.add(line)
@@ -395,22 +318,29 @@ def _house_style_problems(lines: list[str]) -> tuple[list[str], set[str]]:
     return problems, allowed
 
 
-def source_problems(block: Block, class_lines: frozenset[str]) -> list[str]:
-    """Return what the diagram's text breaks in the standard, without rendering it."""
+def source_problems(
+    block: Block, class_lines: frozenset[str], profile: Profile
+) -> list[str]:
+    """Return what the diagram's text breaks in the standard, without rendering it.
+
+    A diagram with frontmatter is held to `profile`'s generated blocks instead
+    of `class_lines`.
+    """
     front, body = split_front(block.source)
     lines = [line.strip() for line in body.splitlines() if line.strip()]
     kind, direction = diagram_type(body)
     flow = kind in ("flowchart", "graph")
     house = front is not None
-    if house and front != (HOUSE_FRONT if flow else HOUSE_OTHER_FRONT):
+    if house and front != profile.fronts["flowchart" if flow else "other"]:
         return [
-            'R9 frontmatter that is not the house block in "House style", byte for byte'
+            f"R9 frontmatter that is not the {profile.name} block, byte for byte: `merrow profile show {profile.name}` prints it"
         ]
     problems: list[str] = []
     house_lines: set[str] = set()
+    house_classes = frozenset(profile.class_lines)
     if house and flow:
-        class_lines = HOUSE_CLASS_LINES
-        found, house_lines = _house_style_problems(lines)
+        class_lines = house_classes
+        found, house_lines = _house_style_problems(lines, profile.boundary)
         problems += found
     if flow:
         pairs = {
@@ -470,7 +400,7 @@ def source_problems(block: Block, class_lines: frozenset[str]) -> list[str]:
     ]
     names = {line.split()[1] for line in defined}
     if house and flow:
-        missing = sorted(line.split()[1] for line in HOUSE_CLASS_LINES - set(defined))
+        missing = sorted(line.split()[1] for line in house_classes - set(defined))
         if missing:
             problems.append(
                 f"R5 the house class lines are incomplete, missing: {', '.join(missing)}"
@@ -814,9 +744,10 @@ def main(argv: list[str] | None = None) -> int:
     settings = config.load()
     patterns = [re.compile(p) for p in settings.get("lint")["icon_refs"]]
     known = icons.known_keys(config.packs_dir(settings))
+    profile = load(settings)
     report: list[Verdict] = []
     for block, result in zip(blocks, measured, strict=True):
-        problems = source_problems(block, CLASS_LINES)
+        problems = source_problems(block, CLASS_LINES, profile)
         problems += [
             f"icon {key} is in no built pack: run `merrow pack build` for its source"
             for key in icons.unresolved(block.source, patterns, known)
