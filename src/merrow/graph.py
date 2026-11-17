@@ -23,7 +23,7 @@ class Node:
         id: Unique in the graph.
         label: The name a reader sees. Empty takes its object's label.
         subtitle: A second line, such as what the thing does.
-        object: The L1 object it is, such as `dfe.loader` or `aws.eks`.
+        object: The L1 object it is, such as `aws.msk` or `aws.eks`.
         group: The id of the group it sits in, if any.
     """
 

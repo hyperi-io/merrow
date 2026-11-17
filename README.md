@@ -44,6 +44,8 @@ A later layer overrides an earlier one. Config lists the reference repos in laye
 
 Sources, icon naming rules, aliases, size limits, themes and pinned versions are config: `defaults.yaml`, `sources.yaml` and `sources.lock.yaml` in [src/merrow/](src/merrow/). A reference repo adds or overrides any of them. A new publisher in a known format is a config entry. A new release from one arrives as a PR the weekly Sources workflow opens.
 
+`font` forces one font stack onto every profile, for a company font or a standard one a reader such as PowerPoint has: `font: [Arial, Helvetica, sans-serif]` in settings.yaml, or `MERROW_FONT=Arial,sans-serif`.
+
 ## Icon packs are never committed
 
 Icon packs are fetched from their publisher at build time and cached outside the repo. Most publishers allow diagrams drawn with their icons but grant no right to redistribute the icons. A rendered diagram is fine to commit. The pack is not. Terms per publisher: [docs/icon-sources.md](docs/icon-sources.md).
@@ -54,7 +56,6 @@ Icon packs are fetched from their publisher at build time and cached outside the
 |---|---|
 | [src/merrow/](src/merrow/) | The CLI and its config: sources, converters, render, lint |
 | [style/](style/) | The diagram standard and house style |
-| [converters/prototypes/](converters/prototypes/) | The first working versions the converters came from |
 | [reference/](reference/) | How a reference repo plugs in |
 | [docs/](docs/) | Design notes and the icon licence verdicts |
 | [tests/](tests/) | pytest, run with `hyperi-ci check` |

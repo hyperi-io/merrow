@@ -4,51 +4,51 @@ One template a level and form, each a whole page block: intro, Mermaid and capti
 
 ## L1 Context
 
-DFE takes events from agents and cloud APIs and returns results to analysts and downstream tools.
+The pipeline takes events from agents and cloud APIs and returns results to analysts and downstream tools.
 
 ```mermaid
 flowchart LR
-    accTitle: L1 Context -- DFE
-    accDescr: Agents and cloud APIs send events to DFE. DFE returns results to analysts and downstream tools.
+    accTitle: L1 Context -- Pipeline
+    accDescr: Agents and cloud APIs send events to the pipeline. The pipeline returns results to analysts and downstream tools.
 
     subgraph sources["Sources"]
         agents["Agents"]
         apis["Cloud APIs"]
     end
 
-    dfe[["DFE"]]
+    pipeline[["Pipeline"]]
 
     subgraph consumers["Consumers"]
         analysts["Analysts"]
         tools["Downstream<br/>tools"]
     end
 
-    sources -->|events| dfe
-    dfe -->|results| consumers
+    sources -->|events| pipeline
+    pipeline -->|results| consumers
 
     classDef default fill:#F8FAFC,stroke:#64748B,stroke-width:1px,color:#0F172A
     classDef core fill:#DCEBF7,stroke:#0072B2,stroke-width:2px,color:#0B2A3F
     classDef ext fill:#EEF0F2,stroke:#6B7280,stroke-width:1px,stroke-dasharray:4 3,color:#1F2937
     classDef group fill:none,stroke:#64748B,stroke-width:1px,stroke-dasharray:2 4
     class agents,apis,analysts,tools ext
-    class dfe core
+    class pipeline core
     class sources,consumers group
 ```
 
-*Figure 1. L1 Context -- DFE. Sources and consumers sit outside DFE.* Up: L0 Landscape. Down: L2 Services -- DFE.
+*Figure 1. L1 Context -- Pipeline. Sources and consumers sit outside the pipeline.* Up: L0 Landscape. Down: L2 Services -- Pipeline.
 
 ## L2 Services, straight boundary
 
-Every event reaches DFE's tables through one topic and the loader.
+Every event reaches the pipeline's tables through one topic and the loader.
 
 ```mermaid
 flowchart LR
-    accTitle: L2 Services -- DFE
-    accDescr: Inside DFE, sources publish events to the ingest topic. The loader reads the topic, writes rows to tables and sends rejected events to the dead letter topic. Consumers get results from the tables.
+    accTitle: L2 Services -- Pipeline
+    accDescr: Inside the pipeline, sources publish events to the ingest topic. The loader reads the topic, writes rows to tables and sends rejected events to the dead letter topic. Consumers get results from the tables.
 
     sources["Sources"]
 
-    subgraph dfe["DFE"]
+    subgraph pipeline["Pipeline"]
         topic[("Ingest<br/>topic")]
         loader[["Loader"]]
         tables[("Tables")]
@@ -73,10 +73,10 @@ flowchart LR
     class topic async
     class tables store
     class dlq error
-    class dfe group
+    class pipeline group
 ```
 
-*Figure 2. L2 Services -- DFE. The loader takes the dead letter path only for rejected events.* Up: L1 Context -- DFE. Down: L3 Components -- Loader.
+*Figure 2. L2 Services -- Pipeline. The loader takes the dead letter path only for rejected events.* Up: L1 Context -- Pipeline. Down: L3 Components -- Loader.
 
 ## L3 Components, stacked boundary
 
@@ -112,7 +112,7 @@ flowchart TB
     class loader group
 ```
 
-*Figure 3. L3 Components -- Loader. Rejected events leave from the validate step.* Up: L2 Services -- DFE. Down: L4 Detail -- Loader routing decision.
+*Figure 3. L3 Components -- Loader. Rejected events leave from the validate step.* Up: L2 Services -- Pipeline. Down: L4 Detail -- Loader routing decision.
 
 ## L4 Detail, stacked stages (pattern B)
 
@@ -146,19 +146,19 @@ flowchart TB
 
 ## L4 Detail, decision flow
 
-An auth event goes to `dfe.auth`, any other valid event to `dfe.main`, and an invalid one to the dead letter topic.
+An auth event goes to `events.auth`, any other valid event to `events.main`, and an invalid one to the dead letter topic.
 
 ```mermaid
 flowchart LR
     accTitle: L4 Detail -- Loader routing decision
-    accDescr: An event is read and checked. Invalid events go to the dead letter topic. Valid auth events are written to dfe.auth and all other valid events are written to dfe.main.
+    accDescr: An event is read and checked. Invalid events go to the dead letter topic. Valid auth events are written to events.auth and all other valid events are written to events.main.
 
     read(["Event read"])
     valid{"Valid?"}
     kind{"Auth event?"}
     dead(["To dead letter"])
-    auth(["To dfe.auth"])
-    main(["To dfe.main"])
+    auth(["To events.auth"])
+    main(["To events.main"])
 
     read --> valid
     valid -->|yes| kind
@@ -184,13 +184,13 @@ Every table carries the same common header, and only the non-landing tables add 
 ```mermaid
 flowchart LR
     accTitle: L4 Detail -- Common header against a complete table schema
-    accDescr: The landing table dfe.main holds the common header alone. Every other table, such as dfe.auth, holds the same common header plus its data columns.
+    accDescr: The landing table events.main holds the common header alone. Every other table, such as events.auth, holds the same common header plus its data columns.
 
-    subgraph landing["Landing table dfe.main"]
+    subgraph landing["Landing table events.main"]
         h1["Common header<br/>_timestamp ..."]
     end
 
-    subgraph other["Non-default table dfe.auth"]
+    subgraph other["Non-default table events.auth"]
         direction LR
         h2["Common header<br/>_timestamp ..."]
         d2["Data columns<br/>user_id ..."]
@@ -208,7 +208,7 @@ flowchart LR
     class landing,other group
 ```
 
-*Figure 6. L4 Detail -- Common header against a complete table schema. The common header (blue) is identical in every table, and non-default tables add data columns (green).* Up: L3 Components -- Loader.
+*Figure 6. L4 Detail -- Common header against a complete table schema. The common header is identical in every table, and non-default tables add data columns.* Up: L3 Components -- Loader.
 
 ## L4 Detail, sequence
 

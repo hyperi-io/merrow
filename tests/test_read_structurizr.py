@@ -5,7 +5,7 @@ from merrow.read import structurizr
 
 RULES = {"optional_tags": "Optional"}
 WORKSPACE = {
-    "name": "DFE",
+    "name": "Pipeline",
     "model": {
         "people": [
             {
@@ -24,7 +24,7 @@ WORKSPACE = {
         "softwareSystems": [
             {
                 "id": "2",
-                "name": "DFE",
+                "name": "Pipeline",
                 "containers": [
                     {
                         "id": "3",
@@ -65,7 +65,7 @@ def test_a_workspace_reads_with_systems_and_containers_as_groups():
     graph = drawing.graph
     nodes = {n.id: n for n in graph.nodes}
     groups = {g.id: g for g in graph.groups}
-    assert drawing.name == "DFE"
+    assert drawing.name == "Pipeline"
     assert set(groups) == {"2", "6"}
     assert groups["6"].parent == "2"
     assert nodes["3"].subtitle == "Rust"

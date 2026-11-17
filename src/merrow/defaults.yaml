@@ -17,6 +17,12 @@ runtime_mode: local
 # Built icon packs. Empty means `packs` under the cache dir.
 packs_dir: ""
 
+# A font stack every profile and theme draws in, over its own fonts. Set it
+# for a company font, or a standard one such as [Arial, Helvetica, sans-serif]
+# where the reader (Visio, PowerPoint) lacks the profile's. Empty keeps each
+# profile's own.
+font: []
+
 limits:
   # One file inside a download. A larger one is reported and never read.
   member_bytes: 5000000

@@ -33,7 +33,7 @@ def test_every_full_weight_class_border_reads_at_3_to_1_on_paper(monkeypatch, tm
     house = profile.load(config.load(), "house")
     paper = luminance("#FFFFFF")
     full = [ln for ln in house.class_lines if "stroke-width:3px" in ln]
-    assert len(full) == 9, "six identity classes and three role classes"
+    assert len(full) == 9, "six data-flow classes and three role classes"
     for line in full:
         stroke = line.split("stroke:")[1][:7]
         ratio = (paper + 0.05) / (luminance(stroke) + 0.05)
@@ -53,6 +53,32 @@ def test_a_realm_token_file_restyles_every_alias_to_it(monkeypatch, tmp_path):
     assert 'clusterBorder: "#123456"' in house.fronts["flowchart"]
     assert ".load .label-icon{color:#123456}" in house.fronts["flowchart"]
     assert "#0072B2" not in house.fronts["flowchart"]
+
+
+@pytest.mark.parametrize(
+    ("merrow_yaml", "env", "family"),
+    [
+        ("{}\n", None, "Inter, -apple-system"),
+        (
+            "font: [Arial, Helvetica, sans-serif]\n",
+            None,
+            "Arial, Helvetica, sans-serif",
+        ),
+        ("{}\n", "Verdana, sans-serif", "Verdana, sans-serif"),
+        ("font: Arial\n", "", "Inter, -apple-system"),
+    ],
+    ids=["profile_font", "forced_list", "forced_by_env", "empty_env_unforces"],
+)
+def test_a_forced_font_replaces_every_font_family(
+    monkeypatch, tmp_path, merrow_yaml, env, family
+):
+    if env is not None:
+        monkeypatch.setenv("MERROW_FONT", env)
+    house = profile.load(realm(monkeypatch, tmp_path, merrow_yaml))
+    for front in house.fronts.values():
+        assert f"fontFamily: {family}" in front
+    if family != "Inter, -apple-system":
+        assert all("Inter" not in front for front in house.fronts.values())
 
 
 @pytest.mark.parametrize(

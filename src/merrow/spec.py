@@ -1,4 +1,4 @@
-"""A diagram file: its title and a Graph, an L2 pattern with fills, or both (DESIGN D9).
+"""A diagram file: its title and a Graph, an L2 pattern with fills, or both.
 
 The JSON Schema comes from these types, so it can't drift from what merrow reads.
 """

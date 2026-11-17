@@ -12,7 +12,7 @@ class L1Object:
     """One `objects` entry.
 
     Attributes:
-        id: Its key, such as `dfe.loader` or `aws.eks`.
+        id: Its key, such as `aws.msk` or `aws.eks`.
         style: The profile class it is drawn with, such as `load` or `ext`.
         label: The name a node takes when it gives none.
         subtitle: The second line a node takes when it gives none.

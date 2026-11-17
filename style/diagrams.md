@@ -5,11 +5,11 @@ description: The one standard for diagrams and charts -- when to draw one, the M
 
 # Diagrams
 
-A picture beats a paragraph: if relating components takes more than two sentences, draw one. Put it next to the prose it illustrates, never in an appendix. Diagrams live in `docs/` `.md` files, never in source comments or file headers. The carve-out for a published root README is in hyperi-ai's `standards/universal/documentation-structure.md`.
+A picture beats a paragraph: if relating components takes more than two sentences, draw one. Put it next to the prose it illustrates, never in an appendix. Diagrams live in `docs/` `.md` files, never in source comments or file headers.
 
-One look across every HyperI project. The same kind of content uses the same diagram type, direction, node outlines and colours in every doc, so a reader who learned one diagram has learned them all. An improvement is a change to THIS file, never a private style for one doc.
+One look across every project that takes this standard. The same kind of content uses the same diagram type, direction, node outlines and colours in every doc, so a reader who learned one diagram has learned them all. An improvement is a change to this file, or to your own reference repo's, never a private style for one doc.
 
-This file is self-contained. Why each rule exists, with sources and test evidence, is in [`docs/reference/diagrams-research.md`](https://github.com/hyperi-io/hyperi-ai/blob/main/docs/reference/diagrams-research.md).
+This file is self-contained. Why each rule exists, with sources and test evidence, is in [docs/diagrams-research.md](../docs/diagrams-research.md).
 
 ## The rules
 
@@ -75,10 +75,10 @@ Every diagram sits at one level. A set of diagrams zooms in one level at a time.
 - A repo's top diagram has no parent to link, so its caption says so: `Up: top of <repo>.`
 - `L0` to `L4` name these levels only. A project that numbers its own layers writes `Layer 1`, never `L1`, so the two never read as one scheme.
 
-Title format is `L<n> <Level name> -- <scope>`, for example `L2 Services -- DFE`. `accTitle` and the caption both start with it. The caption carries the links:
+Title format is `L<n> <Level name> -- <scope>`, for example `L2 Services -- Pipeline`. `accTitle` and the caption both start with it. The caption carries the links:
 
 ```text
-*Figure 2. L2 Services -- DFE.* Up: [L1 Context -- DFE](../overview.md). Down: [L3 Components -- Loader](../dfe-loader/overview.md).
+*Figure 2. L2 Services -- Pipeline.* Up: [L1 Context -- Pipeline](../overview.md). Down: [L3 Components -- Loader](../loader/overview.md).
 ```
 
 `Up` is mandatory for L1 to L4, and `Down` lists every child diagram. The product architecture page carries a diagram map, a nested bullet list linking every L0 to L3 diagram.
@@ -238,7 +238,7 @@ Every node carries its own fill, border and text colour, so it reads the same on
 
 ## House style
 
-A diagram may carry the house block in place of the role palette: the frontmatter, the class lines and the boundary lines below, copied byte for byte. A block that differs by one character fails R9. merrow generates the block from the house profile's tokens, and `merrow profile show house` prints it. Colour is hybrid. A DFE component takes its identity class (`ingest`, `xform`, `load`, `bus`, `store`, `ui`), and everything else takes a role class (`control`, `part`, `decision`, `error`, `ext`).
+A diagram may carry the house block in place of the role palette: the frontmatter, the class lines and the boundary lines below, copied byte for byte. A block that differs by one character fails R9. merrow generates the block from the house profile's tokens, and `merrow profile show house` prints it. A main part of the data flow takes its class by what it does: `ingest` takes data in, `xform` changes it, `load` writes it, `bus` carries it, `store` keeps it and `ui` shows it. Everything else takes a role class (`control`, `part`, `decision`, `error`, `ext`). A reference repo maps its own components onto these classes as objects.
 
 A house flowchart opens with this frontmatter:
 
@@ -336,7 +336,7 @@ A house flowchart ends with all eleven class lines:
 
 ## Text
 
-- Node labels are 1 to 4 words, sentence case, 2 lines at most with `<br/>`, and always quoted: `id["Label"]`. An identifier (`dfe.main`) is allowed when the identifier is the point.
+- Node labels are 1 to 4 words, sentence case, 2 lines at most with `<br/>`, and always quoted: `id["Label"]`. An identifier (`events.main`) is allowed when the identifier is the point.
 - Mermaid wraps a line again when it runs past the box's width, often at about 15 characters, so a 2-line label can show on 3. A name with no space breaks mid-word, often at a hyphen. Shorten the line, and let the checker confirm it.
 - Node IDs are meaningful and lowercase: `loader`, `dlq`. Never `A`, `B`, `C`. A generated ID is the name with `-` and `.` replaced by `_`. In a state diagram the state's name is its label, so it takes sentence case: `Open`.
 - Arrow labels are 1 to 2 words, with no parentheses or quotes. Every branch out of a decision is labelled. An arrow that crosses the diagram's boundary or touches the `core` box is labelled with what moves. No other arrow is labelled. A split chosen by configuration or by when it runs (local path or object store, every run or on release) is a decision: draw the diamond and label its branches.
@@ -348,16 +348,16 @@ A house flowchart ends with all eleven class lines:
 Every diagram is written like this.
 
 ````markdown
-Every event reaches DFE's tables through one topic and the loader.
+Every event reaches the pipeline's tables through one topic and the loader.
 
 ```mermaid
 flowchart LR
-    accTitle: L2 Services -- DFE
+    accTitle: L2 Services -- Pipeline
     accDescr: One or two sentences that give the same information as the diagram.
     ...
 ```
 
-*Figure 2. L2 Services -- DFE. Senders and consumers sit outside DFE.* Up: [L1 Context -- DFE](../overview.md). Down: [L3 Components -- Loader](../dfe-loader/overview.md).
+*Figure 2. L2 Services -- Pipeline. Sources and consumers sit outside the pipeline.* Up: [L1 Context -- Pipeline](../overview.md). Down: [L3 Components -- Loader](../loader/overview.md).
 ````
 
 - An intro sentence before, a caption after.
@@ -384,12 +384,12 @@ Mermaid draws flows and structure. Anything plotted from data or from a function
 - Alt text is required. State what the chart shows and the conclusion, not "a chart".
 - Under 100 KB per SVG. Over it, thin the points or `rasterized=True` the dense layer. Relative paths on GitHub, absolute URLs for a README that leaves GitHub.
 - Colour encodes a category and never stands alone, as in a diagram.
-- The chart palette is this table, and a script copies its values. Categories run in order, 4 at most (hyperi-ai's `standards/universal/colour.md` rule 6). Lines meet 3:1 and ink meets 4.5:1 on their canvas.
+- The chart palette is this table, and a script copies its values. Categories run in order, 4 at most. Lines meet 3:1 and ink meets 4.5:1 on their canvas.
 
 | Value | Light | Dark |
 |---|---|---|
 | Canvas | `#FFFFFF` | `#0D1117` |
-| Ink: text, axes, ticks | `#000647` | `#E6EDF3` |
+| Ink: text, axes, ticks | `#0F172A` | `#E6EDF3` |
 | Category 1 | `#0072B2` | `#56B4E9` |
 | Category 2 | `#009E73` | `#009E73` |
 | Category 3 | `#CC79A7` | `#CC79A7` |
@@ -407,14 +407,27 @@ Mermaid draws flows and structure. Anything plotted from data or from a function
 # dependencies = ["matplotlib==3.11.2", "numpy==2.5.4"]
 # ///
 """Run: uv run docs/img/sigmoid.py"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 
-THEMES = {"light": ("#FFFFFF", "#000647", "#0072B2"), "dark": ("#0D1117", "#E6EDF3", "#56B4E9")}
+THEMES = {
+    "light": ("#FFFFFF", "#0F172A", "#0072B2"),
+    "dark": ("#0D1117", "#E6EDF3", "#56B4E9"),
+}
 x = np.linspace(-6, 6, 200)
 for name, (bg, ink, line) in THEMES.items():
-    rc = {"svg.hashsalt": "hyperi-docs", "figure.facecolor": bg, "axes.facecolor": bg}
-    rc |= {k: ink for k in ("text.color", "axes.labelcolor", "axes.edgecolor", "xtick.color", "ytick.color")}
+    rc = {"svg.hashsalt": "docs", "figure.facecolor": bg, "axes.facecolor": bg}
+    rc |= {
+        k: ink
+        for k in (
+            "text.color",
+            "axes.labelcolor",
+            "axes.edgecolor",
+            "xtick.color",
+            "ytick.color",
+        )
+    }
     with plt.rc_context(rc):
         fig, ax = plt.subplots(figsize=(6, 3))
         ax.plot(x, 1 / (1 + np.exp(-x)), color=line, linewidth=2)
@@ -427,7 +440,7 @@ for name, (bg, ink, line) in THEMES.items():
 Nobody writing Mermaid can see the layout from the source. The checker renders each diagram with Mermaid in Chrome and reports what a reader would see.
 
 ```text
-uv run ~/.local/share/hyperi-ai/tools/diagram_check.py docs/page.md --png .hyperi-ai/tmp/diagrams
+merrow diagram lint docs/page.md
 ```
 
 | Pass | Reads | Reports |
@@ -437,8 +450,8 @@ uv run ~/.local/share/hyperi-ai/tools/diagram_check.py docs/page.md --png .hyper
 
 - A page has every `mermaid` fence checked. A `.mmd` file is one diagram with no wrapper.
 - Sequence, state, ER and class diagrams get the source pass and the size checks. Their lines are not measured.
-- `--png DIR` saves a light and a dark screenshot of each diagram. `--no-render` runs the source pass alone, on a host with no Chrome.
-- Each verdict line gives a diagram's size and counts, and the last line names the Mermaid release they were laid out with. Layout differs between Mermaid releases, so the release is pinned in the checker, and `--mermaid PATH` checks against another one.
+- `merrow graph render` writes a light and a dark SVG of each diagram to look at. `--no-render` runs the source pass alone, on a host with no Chrome.
+- Each verdict line gives a diagram's size and counts, and the last line names the Mermaid release they were laid out with. Layout differs between Mermaid releases, so merrow pins the release in its npm lock file.
 - It does not see lines that run on top of each other, contrast, or whether a node exists in the code. Those stay with the reviewer.
 
 ## Review checklist

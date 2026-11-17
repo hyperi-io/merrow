@@ -19,11 +19,11 @@ def pipeline() -> Graph:
             Edge("opt", "out", "enriched", optional=True),
         ],
         groups=[
-            Group("dfe", "DFE"),
-            Group("in", "Ingest", "dfe"),
-            Group("bus", "Bus", "dfe"),
-            Group("out", "Load", "dfe"),
-            Group("opt", "Optional", "dfe"),
+            Group("pipe", "Pipeline"),
+            Group("in", "Ingest", "pipe"),
+            Group("bus", "Bus", "pipe"),
+            Group("out", "Load", "pipe"),
+            Group("opt", "Optional", "pipe"),
         ],
     )
 
@@ -31,7 +31,7 @@ def pipeline() -> Graph:
 def test_writer_nests_groups_quotes_labels_and_keeps_optional_paths_dotted():
     text = write.flowchart(pipeline(), "TB")
     assert text.startswith("flowchart TB\n")
-    assert 'subgraph dfe["DFE"]' in text
+    assert 'subgraph pipe["Pipeline"]' in text
     assert 'topic["Topic #quot;raw#quot;"]' in text
     assert 'rx["Receiver<br/>takes events"]' in text
     assert "n_end[" in text, "a reserved word never becomes an id"
@@ -83,7 +83,7 @@ def test_score_counts_what_a_reader_recovered():
     expected = {
         "nodes": ["Receiver", "Loader", "Missing"],
         "edges": [["Ingest", "Bus"], ["Bus", "Nowhere"]],
-        "contains": [["Ingest", "Receiver"], ["DFE", "Bus"]],
+        "contains": [["Ingest", "Receiver"], ["Pipeline", "Bus"]],
     }
     assert write.score(found, expected) == {
         "nodes": 2 / 3,

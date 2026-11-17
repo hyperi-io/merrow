@@ -123,8 +123,8 @@ profiles:
             .messageText{paint-order:stroke;stroke:{color.paper};stroke-width:3px;stroke-linejoin:round}
         ---
   aws:
-    # AWS's look: icon nodes and AWS group borders. DFE boxes inside an AWS
-    # diagram keep the house identity classes.
+    # AWS's look: icon nodes and AWS group borders. Your own boxes inside an
+    # AWS diagram keep the house classes.
     tokens: [profiles/house.tokens.json, profiles/aws.tokens.json]
     class_properties: *class_properties
     class_defaults: *class_defaults

@@ -1,6 +1,6 @@
-"""Hand-written Mermaid in a profile's look: its two managed regions (DESIGN D5).
+"""Hand-written Mermaid in a profile's look: its two managed regions.
 
-An author writes the body, naming an object as `id:::dfe-loader` (the object id
+An author writes the body, naming an object as `id:::aws-msk` (the object id
 with dots as hyphens). apply sets the frontmatter, expands a bare object node
 into the profile's label form, and rewrites the class block between the
 markers. Each `:::` stays, so re-running is a no-op and picks up object edits.

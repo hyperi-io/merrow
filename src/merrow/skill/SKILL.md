@@ -8,19 +8,19 @@ description: Draw, render and lint a diagram with merrow, from a diagram file or
 An agent writes a diagram file, never Mermaid styling. merrow turns the file into Mermaid in the profile's look, renders it and lints it. The rules are style/diagrams.md in the merrow repo (https://github.com/hyperi-io/merrow/blob/main/style/diagrams.md), and lint holds a diagram to them. This page is the loop.
 
 1. Pick the level (L0 to L4) and a pattern. `merrow config get | jq '.patterns | keys'` lists them. A path through several components is `data-path`, and config flowing to a runtime is `gitops-control`. Nothing fits: write the graph yourself.
-2. Pick the objects. `merrow config get | jq '.objects | keys'` lists them, such as `dfe.loader`. An object brings its label, subtitle, class and shape. A thing with no object is a fill or node with a `label` alone, drawn in the profile's plain `part` class.
+2. Pick the objects. `merrow config get | jq '.objects | keys'` lists them, such as `aws.msk`, and a reference repo adds its own. An object brings its label, subtitle, class and shape. A thing with no object is a fill or node with a `label` alone, drawn in the profile's plain `part` class.
 3. Write the file. `merrow graph schema` prints its JSON Schema. A file takes a pattern, its own `nodes`, `edges` and `groups`, or both: add nodes and edges beside a pattern when it lacks a box you need.
 
    ```yaml
-   title: L2 Services -- DFE data path
-   description: Senders reach dfe-receiver, which produces to Kafka. dfe-loader writes ClickHouse.
+   title: L2 Services -- Log pipeline
+   description: Log shippers reach the collector through a Network Load Balancer. The collector produces to Amazon MSK, and the archiver writes Amazon S3.
    pattern: data-path
    fills:
-     senders: [{label: Push clients, object: dfe.proxy}]
-     intake: [dfe.receiver]
-     bus: [dfe.kafka]
-     loader: [dfe.loader]
-     store: [dfe.clickhouse]
+     senders: [{label: Log shippers}]
+     intake: [aws.nlb, {label: Collector}]
+     bus: [aws.msk]
+     loader: [{label: Archiver}]
+     store: [aws.s3]
    ```
 
 4. `merrow graph validate file.yaml`. Fix every line it prints and run it again.
@@ -31,7 +31,7 @@ An agent writes a diagram file, never Mermaid styling. merrow turns the file int
 
 No Chrome on the host: `merrow diagram lint --no-render` runs the source pass alone. Say "not rendered" when you report it.
 
-Hand-written Mermaid works too. Write the body with its `accTitle` and `accDescr` lines, and name each object as `loader:::dfe-loader`, the object id with dots as hyphens, after a shape if you want your own label (`topics[("Raw topics")]:::dfe-kafka`). `merrow diagram apply page.md` adds the frontmatter and the class block, and fills in a bare object's label. A label you wrote stays. Never type frontmatter, `classDef` or `style` lines.
+Hand-written Mermaid works too. Write the body with its `accTitle` and `accDescr` lines, and name each object as `bus:::aws-msk`, the object id with dots as hyphens, after a shape if you want your own label (`topics[("Raw topics")]:::aws-msk`). `merrow diagram apply page.md` adds the frontmatter and the class block, and fills in a bare object's label. A label you wrote stays. Never type frontmatter, `classDef` or `style` lines.
 
 ## What goes wrong
 

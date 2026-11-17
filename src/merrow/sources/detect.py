@@ -86,6 +86,8 @@ def detect(
         config.write_bytes(
             tomli_w.dumps({"__config__": settings, **entries}).encode("utf-8")
         )
+        # nvchecker's run loop lives only in its CLI, and it configures structlog
+        # globally, so it runs in its own process from this same interpreter.
         argv = [
             sys.executable,
             "-m",

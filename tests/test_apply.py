@@ -8,18 +8,18 @@ from merrow.cli import app
 from merrow.lint import diagram_check as dc
 
 LIBRARY = """objects:
-  dfe.receiver: {class: ingest, label: dfe-receiver, subtitle: every protocol}
-  dfe.loader: {class: load, label: dfe-loader, subtitle: schema-free insert}
-  dfe.kafka: {class: bus, label: Kafka}
+  demo.receiver: {class: ingest, label: demo-receiver, subtitle: every protocol}
+  demo.loader: {class: load, label: demo-loader, subtitle: schema-free insert}
+  demo.kafka: {class: bus, label: Kafka}
 """
 HAND = """flowchart LR
-    accTitle: L2 Services -- DFE
+    accTitle: L2 Services -- Pipeline
     accDescr: The receiver publishes to Kafka and the loader reads it.
     subgraph core["Core"]
-        receiver:::dfe-receiver
-        topic:::dfe-kafka
+        receiver:::demo-receiver
+        topic:::demo-kafka
     end
-    loader("<b>Loader</b><br/><span>our own words</span>"):::dfe-loader
+    loader("<b>Loader</b><br/><span>our own words</span>"):::demo-loader
     receiver -->|events| topic
     topic --> loader
 """
@@ -45,10 +45,10 @@ def test_apply_sets_both_regions_and_lints_clean(settings):
     out, house, by_ref = applied(settings, HAND)
     assert out.startswith(house.fronts["flowchart"] + "\nflowchart LR\n")
     assert (
-        'receiver("<b>dfe-receiver</b><br/><span>every protocol</span>"):::dfe-receiver'
+        'receiver("<b>demo-receiver</b><br/><span>every protocol</span>"):::demo-receiver'
         in out
     )
-    assert '<span>our own words</span>"):::dfe-loader' in out, "an own label stays"
+    assert '<span>our own words</span>"):::demo-loader' in out, "an own label stays"
     assert "    class receiver ingest\n" in out
     assert "    class topic bus\n" in out
     assert "    class loader load\n" in out
@@ -69,7 +69,7 @@ def test_an_object_edit_restyles_on_the_next_apply(settings, tmp_path):
         LIBRARY.replace("{class: load,", "{class: xform,"), encoding="utf-8"
     )
     restyled = config.load()
-    assert objects.library(restyled)["dfe.loader"].style == "xform"
+    assert objects.library(restyled)["demo.loader"].style == "xform"
     again, _, _ = applied(restyled, once)
     assert "    class loader xform\n" in again
     assert "class loader load" not in again

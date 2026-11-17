@@ -1,4 +1,4 @@
-"""Pattern B: a long chain recomposed as LR stage groups stacked TB (DESIGN D10)."""
+"""Pattern B: a long chain recomposed as LR stage groups stacked TB."""
 
 import graphlib
 import math

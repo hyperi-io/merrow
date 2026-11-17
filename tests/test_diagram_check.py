@@ -32,12 +32,14 @@ CLASS_LINES = frozenset(
 )
 DEFAULT = "classDef default fill:#F8FAFC,stroke:#64748B,stroke-width:1px,color:#0F172A"
 GOOD = f"""flowchart LR
-    accTitle: L2 Services -- DFE
+    accTitle: L2 Services -- Pipeline
     accDescr: Sources publish to a topic and the loader writes tables.
     sources["Sources"] -->|events| topic[("Topic")]
     {DEFAULT}
 """
-CAPTION = "*Figure 2. L2 Services -- DFE.* Up: [L1 Context -- DFE](../overview.md)."
+CAPTION = (
+    "*Figure 2. L2 Services -- Pipeline.* Up: [L1 Context -- Pipeline](../overview.md)."
+)
 MEASURED = {
     "ok": True,
     "width": 900,
@@ -132,7 +134,7 @@ def test_a_diagram_to_the_standard_has_no_source_problems(caption):
     assert (
         _problems(
             GOOD,
-            "Every event reaches DFE's tables through one topic and the loader.",
+            "Every event reaches the pipeline's tables through one topic and the loader.",
             caption,
         )
         == []
@@ -147,9 +149,9 @@ def test_a_diagram_to_the_standard_has_no_source_problems(caption):
         ("flowchart LR", "flowchart TB", "a vertical chain"),
         ("flowchart LR", "gantt", "`gantt` is not one of the five"),
         ("flowchart LR", "stateDiagram-v2", "needs `direction LR`"),
-        ("    accTitle: L2 Services -- DFE\n", "", "R7 no `accTitle`"),
-        ("L2 Services -- DFE", "The services of DFE", "R8 `accTitle`"),
-        ("L2 Services -- DFE", "L2 Containers -- DFE", "R8 `accTitle`"),
+        ("    accTitle: L2 Services -- Pipeline\n", "", "R7 no `accTitle`"),
+        ("L2 Services -- Pipeline", "The services of Pipeline", "R8 `accTitle`"),
+        ("L2 Services -- Pipeline", "L2 Containers -- Pipeline", "R8 `accTitle`"),
         (
             "    accDescr: Sources publish to a topic and the loader writes tables.\n",
             "",
@@ -209,10 +211,10 @@ HOUSE = (
     FLOW_FRONT
     + """
 flowchart LR
-    accTitle: L2 Services -- DFE
+    accTitle: L2 Services -- Pipeline
     accDescr: The receiver publishes to a topic and the loader writes tables.
     subgraph edge["Edge"]
-        receiver("<b>dfe-receiver</b><br/><span>HTTP intake</span>")
+        receiver("<b>demo-receiver</b><br/><span>HTTP intake</span>")
     end
     receiver -->|events| topic[("<b>Kafka</b>")]
     class receiver ingest
@@ -271,7 +273,7 @@ def test_a_house_diagram_has_no_source_problems(source):
         ),
         (HOUSE.replace("stroke:#334155", "stroke:#334156"), "R5 a class line differs"),
         (
-            HOUSE.replace(BOUNDARY, BOUNDARY.replace("style edge", "style dfe")),
+            HOUSE.replace(BOUNDARY, BOUNDARY.replace("style edge", "style demo")),
             "which is no subgraph",
         ),
         (
@@ -289,7 +291,7 @@ def test_a_house_fault_is_named(source, said):
     assert any(said in problem for problem in found), found
 
 
-CAPTION = "*Figure 1. L2 Services -- DFE.* Up: [Context](context.md)."
+CAPTION = "*Figure 1. L2 Services -- Pipeline.* Up: [Context](context.md)."
 
 
 @pytest.mark.parametrize(
@@ -304,7 +306,7 @@ CAPTION = "*Figure 1. L2 Services -- DFE.* Up: [Context](context.md)."
         ),
         (
             HOUSE.replace(
-                "<b>dfe-receiver</b>", "<font color='red'>dfe-receiver</font>"
+                "<b>demo-receiver</b>", "<font color='red'>demo-receiver</font>"
             ),
             CAPTION,
             "R5 styling inside a label",
@@ -316,12 +318,12 @@ CAPTION = "*Figure 1. L2 Services -- DFE.* Up: [Context](context.md)."
         ),
         (
             HOUSE,
-            CAPTION.replace("DFE.*", "DFE.* The blue boxes are ours."),
+            CAPTION.replace("Pipeline.*", "Pipeline.* The blue boxes are ours."),
             "the caption names styling (`blue boxes`)",
         ),
         (
             HOUSE,
-            CAPTION.replace("DFE.*", "DFE.* Dashed arrows are optional."),
+            CAPTION.replace("Pipeline.*", "Pipeline.* Dashed arrows are optional."),
             "the caption names styling (`Dashed`)",
         ),
     ],
@@ -334,7 +336,10 @@ def test_styling_outside_the_profile_is_named(source, caption, said):
 
 @pytest.mark.parametrize(
     "caption",
-    [CAPTION, CAPTION.replace("DFE.*", "DFE.* Blue/green rollout keeps one live.")],
+    [
+        CAPTION,
+        CAPTION.replace("Pipeline.*", "Pipeline.* Blue/green rollout keeps one live."),
+    ],
     ids=["plain", "blue_green_is_no_styling"],
 )
 def test_a_caption_without_styling_passes(caption):
@@ -385,7 +390,7 @@ def test_a_sequence_fault_is_named(source, said):
         ('bridge["Bridge"] --> vec["Vector"]\n    vec -.-> bridge', True),
         ("bridge --> vec\n    vec -->|ack| bridge", True),
         ('intake["Intake"] --> vec["Vector"]\n    vec -.-> reply["Return"]', False),
-        ('read["dfe.main-x"] --> write["Write"]', False),
+        ('read["demo.main-x"] --> write["Write"]', False),
     ],
     ids=["dotted_back", "labelled_back", "split_boxes", "dots_in_a_label"],
 )
@@ -420,7 +425,7 @@ def test_an_up_or_down_link_to_the_pages_h1_anchor_is_named(tmp_path, monkeypatc
         "# Extractors\n\nBody.\n", encoding="utf-8"
     )
     page = Path("README.md")
-    caption = "*Figure 1. L3 Components -- Fetcher.* Up: top of dfe-fetcher. Down: [L4 Detail -- Extractors](docs/extractors.md#extractors), [Other](docs/extractors.md#body)."
+    caption = "*Figure 1. L3 Components -- Fetcher.* Up: top of demo-fetcher. Down: [L4 Detail -- Extractors](docs/extractors.md#extractors), [Other](docs/extractors.md#body)."
     page.write_text(
         f"# Fetcher\n\nThe fetcher pulls from sources.\n\n```mermaid\nflowchart LR\n```\n\n{caption}\n",
         encoding="utf-8",
@@ -455,32 +460,36 @@ def test_an_uncoloured_box_and_six_participants_are_allowed():
 @pytest.mark.parametrize(
     ("intro", "caption", "said"),
     [
-        ("This diagram shows DFE.", CAPTION, "R7 the intro announces the diagram"),
+        ("This diagram shows Pipeline.", CAPTION, "R7 the intro announces the diagram"),
         (
-            "Below is the flow through DFE.",
+            "Below is the flow through Pipeline.",
             CAPTION,
             "R7 the intro announces the diagram",
         ),
         (
-            "The following diagram maps DFE.",
+            "The following diagram maps Pipeline.",
             CAPTION,
             "R7 the intro announces the diagram",
         ),
-        ("The diagram below maps DFE.", CAPTION, "R7 the intro announces the diagram"),
         (
-            "DFE writes every event through one loader.",
+            "The diagram below maps Pipeline.",
+            CAPTION,
+            "R7 the intro announces the diagram",
+        ),
+        (
+            "Pipeline writes every event through one loader.",
             "The loader then writes rows.",
             "R7 no caption",
         ),
-        ("DFE writes every event through one loader.", "", "R7 no caption"),
+        ("Pipeline writes every event through one loader.", "", "R7 no caption"),
         (
-            "DFE writes every event through one loader.",
-            "*Figure 2. L2 Services -- DFE.*",
+            "Pipeline writes every event through one loader.",
+            "*Figure 2. L2 Services -- Pipeline.*",
             "R8 the caption's `Up:` names no parent",
         ),
         (
-            "DFE writes every event through one loader.",
-            "*Figure 2. L2 Services -- DFE.* Up: the overview.",
+            "Pipeline writes every event through one loader.",
+            "*Figure 2. L2 Services -- Pipeline.* Up: the overview.",
             "R8 the caption's `Up:` names no parent",
         ),
     ],
@@ -503,9 +512,9 @@ def test_a_wrapper_fault_is_named(intro, caption, said):
 @pytest.mark.parametrize(
     "up",
     [
-        "Up: [L1 Context -- DFE](../overview.md).",
-        "Up: top of dfe-infra.",
-        "Up: L1 Context -- DFE.",
+        "Up: [L1 Context -- Pipeline](../overview.md).",
+        "Up: top of demo-infra.",
+        "Up: L1 Context -- Pipeline.",
     ],
     ids=["link", "top_of_repo", "parent_title"],
 )
@@ -513,8 +522,8 @@ def test_an_up_that_names_a_parent_passes(up):
     assert (
         _problems(
             GOOD,
-            "DFE writes every event through one loader.",
-            f"*Figure 2. L2 Services -- DFE.* {up}",
+            "Pipeline writes every event through one loader.",
+            f"*Figure 2. L2 Services -- Pipeline.* {up}",
         )
         == []
     )
@@ -539,8 +548,8 @@ def test_the_top_level_needs_no_up_link():
     assert (
         _problems(
             top,
-            "HyperI sells three products on one data plane.",
-            "*Figure 1. L0 Landscape -- HyperI.*",
+            "Acme sells three products on one data plane.",
+            "*Figure 1. L0 Landscape -- Acme.*",
         )
         == []
     )
@@ -559,14 +568,14 @@ def test_a_page_gives_its_diagrams_and_one_finding_a_text_box(tmp_path, monkeypa
         "```",
         "````",
         "",
-        "DFE writes every event through one loader.",
+        "Pipeline writes every event through one loader.",
         "",
         "```mermaid",
         "flowchart LR",
         '    a["A"]',
         "```",
         "",
-        "*Figure 1. L2 Services -- DFE.*",
+        "*Figure 1. L2 Services -- Pipeline.*",
         "",
         "```text",
         corner,
@@ -585,8 +594,8 @@ def test_a_page_gives_its_diagrams_and_one_finding_a_text_box(tmp_path, monkeypa
     assert [(block.name, block.intro, block.caption) for block in blocks] == [
         (
             "page.md:11",
-            "DFE writes every event through one loader.",
-            "*Figure 1. L2 Services -- DFE.*",
+            "Pipeline writes every event through one loader.",
+            "*Figure 1. L2 Services -- Pipeline.*",
         )
     ]
     assert blocks[0].source == 'flowchart LR\n    a["A"]'
@@ -667,9 +676,9 @@ FENCE = "```mermaid\nflowchart LR\n```\n"
             id="a_generators_marker_is_neither",
         ),
         pytest.param(
-            f"Every event reaches\nthe loader.\n\n{FENCE}\n_Figure 1. L2 Services -- DFE._\nUp: [L1](a.md).\n\nNext paragraph.\n",
+            f"Every event reaches\nthe loader.\n\n{FENCE}\n_Figure 1. L2 Services -- Pipeline._\nUp: [L1](a.md).\n\nNext paragraph.\n",
             "Every event reaches the loader.",
-            "_Figure 1. L2 Services -- DFE._ Up: [L1](a.md).",
+            "_Figure 1. L2 Services -- Pipeline._ Up: [L1](a.md).",
             id="a_formatter_wrapped_both",
         ),
         pytest.param(

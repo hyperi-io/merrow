@@ -81,19 +81,30 @@ class Profile:
         return frozenset({self.boundary, *self.group_boundaries.values()})
 
 
-def tokens(tree: Mapping[str, Any], prefix: str = "") -> Iterator[tuple[str, str]]:
+def tokens(
+    tree: Mapping[str, Any], prefix: str = "", kind: str | None = None
+) -> Iterator[tuple[str, str]]:
     """Yield each DTCG token as its dotted path and value, aliases unresolved.
 
-    A list value, such as a font family, is joined with commas.
+    A list value, such as a font family, is joined with commas. A `kind`
+    yields only the tokens of that `$type`.
     """
     for key, value in tree.items():
         if key.startswith("$") or not isinstance(value, Mapping):
             continue
         if "$value" in value:
+            if kind is not None and value.get("$type") != kind:
+                continue
             raw = value["$value"]
             yield prefix + key, ", ".join(raw) if isinstance(raw, list) else str(raw)
         else:
-            yield from tokens(value, f"{prefix}{key}.")
+            yield from tokens(value, f"{prefix}{key}.", kind)
+
+
+def _font(settings: Any) -> str:
+    """Return the forced font stack, commas between faces, or "" for none."""
+    forced = settings.get("font") or ""
+    return ", ".join(forced) if isinstance(forced, list) else str(forced)
 
 
 def fill(text: str, scope: Mapping[str, str]) -> str:
@@ -230,7 +241,7 @@ def load(settings: Any, name: str | None = None, theme: str | None = None) -> Pr
     """Return the named profile, else the configured one, generated from its tokens.
 
     A `theme` the profile lists under `themes` overrides its entries, a
-    mapping entry key by key.
+    mapping entry key by key. A `font` setting replaces every fontFamily token.
 
     Raises:
         ProfileError: The profile, or a token it names, isn't defined.
@@ -248,9 +259,13 @@ def load(settings: Any, name: str | None = None, theme: str | None = None) -> Pr
         for key, value in override.items()
     } | {key: value for key, value in entry.items() if key not in override}
     scope: dict[str, str] = {}
+    font = _font(settings)
     for relative in entry["tokens"]:
         path = config.data_file(settings, relative)
-        scope.update(tokens(json.loads(path.read_text(encoding="utf-8"))))
+        tree = json.loads(path.read_text(encoding="utf-8"))
+        scope.update(tokens(tree))
+        if font:
+            scope.update({key: font for key, _ in tokens(tree, kind="fontFamily")})
     order = list(entry["class_properties"])
     defaults = entry.get("class_defaults") or {}
     class_lines, icon_lines = [], []

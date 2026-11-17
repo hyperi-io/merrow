@@ -4,7 +4,7 @@ Why [`style/diagrams.md`](../style/diagrams.md) says what it says: the sources, 
 
 ## Problem
 
-- LLM-written docs drift from Mermaid to text-box diagrams. dfe-receiver's internals page drew its architecture with box-drawing characters in a `text` fence.
+- LLM-written docs drift from Mermaid to text-box diagrams. One product's internals page drew its architecture with box-drawing characters in a `text` fence.
 - When an LLM does write Mermaid, the structure is right and the presentation is poor: tall `graph TD` chains that waste the page width, no colour or arbitrary colour, lines that cross and run through boxes, and one diagram that tries to show everything.
 - The earlier standard set a node cap, a five-colour brand palette and a shape list. It gave no way to split a system across diagrams, no layout method, and no check an author could run.
 
@@ -112,17 +112,11 @@ WCAG contrast ratios. Thresholds are 4.5:1 for text and 3:1 for graphics. The ca
 | `error` | 11.84 | 4.21 | 5.18 | 3.65 | 3.32 |
 | `ext` | 12.85 | 4.23 | 4.83 | 3.91 | 3.56 |
 
-No HyperI brand hue passes 3:1 as a border on both a light and a dark canvas, so `core` keeps the Okabe-Ito blue.
-
-| Brand hue | On white | On `#0D1117` | On `#1B1B1D` |
-|---|---|---|---|
-| Tertiary `#2EA4F6` | 2.71 | 6.99 | 6.35 |
-| Navy `#000647` | 18.80 | 1.01 | 1.09 |
-| Accent `#2DED88` | 1.55 | 12.24 | 11.12 |
+A typical brand set fails here: a light blue passes on dark and fails on white, and a navy does the reverse. So `core` keeps the Okabe-Ito blue, and a brand colour goes in a reference repo with one value per theme.
 
 ### The checker
 
-`tools/diagram_check.py` was run on diagrams built to break one rule each, on both Mermaid releases.
+`merrow diagram lint` was run on diagrams built to break one rule each, on both Mermaid releases.
 
 | Diagram | Expect | Mermaid 12.3.0 | Mermaid 11.17.2 |
 |---|---|---|---|
@@ -133,11 +127,11 @@ No HyperI brand hue passes 3:1 as a border on both a light and a dark canvas, so
 | A skip arrow inside a left-to-right stage of a top-down chart | The skip arrow | Found | Found |
 | `graph TD` with an init directive, `style`, `click`, a thick and a double-headed arrow, a circle and a made-up class | Each fault named | 11 source findings | Not run |
 
-Five of those DFE diagrams were then redrawn to the standard. The checker failed three of the redraws on the first try, two for width and one for proportion, and all six resulting diagrams pass. That run found two gaps in the standard, which it now covers: three decision diamonds in a row leave no room for a start node, and an arrow touching the `core` box is labelled.
+Five diagrams from those product docs were then redrawn to the standard. The checker failed three of the redraws on the first try, two for width and one for proportion, and all six resulting diagrams pass. That run found two gaps in the standard, which it now covers: three decision diamonds in a row leave no room for a start node, and an arrow touching the `core` box is labelled.
 
-It was first run, read-only, over nine pages of the DFE docs holding 29 diagrams. Every diagram failed, which is expected of pages written before the standard. The verdicts on dfe-loader's `docs/pipeline/routing.md` (871 x 1234, no crossings, three skip arrows, six arrows into one box) were compared with the screenshot and match. It found one text-box diagram and one diagram that no longer parses on Mermaid 12.3.0.
+It was first run, read-only, over nine pages of one product's docs holding 29 diagrams. Every diagram failed, which is expected of pages written before the standard. The verdicts on its routing page (871 x 1234, no crossings, three skip arrows, six arrows into one box) were compared with the screenshot and match. It found one text-box diagram and one diagram that no longer parses on Mermaid 12.3.0.
 
-Across the four DFE repos' `docs/` trees: 165 Markdown files, 62 with diagrams, 36 top-down flowcharts, 69 left-to-right, 18 of other types, and none with `accTitle` or `accDescr`.
+Across that product's four repos' `docs/` trees: 165 Markdown files, 62 with diagrams, 36 top-down flowcharts, 69 left-to-right, 18 of other types, and none with `accTitle` or `accDescr`.
 
 ## Not verified
 
@@ -155,7 +149,7 @@ Across the four DFE repos' `docs/` trees: 165 Markdown files, 62 with diagrams, 
 | Lines that run on top of each other | The checker does not report them. Right-angle routing in Mermaid 12 makes them more common |
 | Lines in sequence, state, ER and class diagrams | The checker measures their size alone. Its line checks read flowchart arrows |
 | A crossing that falls exactly on a sampled point | An earlier build missed one of the nine crossings above for this reason. No diagram was built to hit the case on purpose |
-| The checker's skip-arrow test on diagrams with nested subgraphs | Run on flat diagrams and the DFE pages. No nested case was built to break it |
+| The checker's skip-arrow test on diagrams with nested subgraphs | Run on flat diagrams and the product pages. No nested case was built to break it |
 
 ## Actions for a docs site owner
 
@@ -168,7 +162,7 @@ Across the four DFE repos' `docs/` trees: 165 Markdown files, 62 with diagrams, 
 
 | Option | Why not |
 |---|---|
-| Brand colours as the diagram palette | No brand hue passes 3:1 on both light and dark canvases (table above) |
+| Brand colours as the diagram palette | A brand hue rarely passes 3:1 on both a light and a dark canvas. A company that wants its own sets them in its reference repo, per theme |
 | A custom `base` theme with `themeVariables` | They apply to one theme, so one set of values has to serve light and dark. Node classes avoid the problem |
 | Raw Okabe-Ito hues as fills | Too saturated for large fills, and several fail 3:1 on white |
 | Mermaid `C4Context` diagrams | Experimental in Mermaid for years, with little layout control. Flowcharts drawn to C4's rules render better |
