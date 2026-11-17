@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from merrow import config, node, proc
+from merrow import config, node, post, proc
 
 FENCE = re.compile(r"^```mermaid[^\n]*\n(.*?)^```", re.MULTILINE | re.DOTALL)
 
@@ -62,9 +62,11 @@ def render(items: list[Diagram], out_dir: Path, settings: Any) -> list[dict[str,
     """
     options: Mapping[str, Any] = settings.get("render")
     argv = node.mmdc(settings)
-    packs = icon_pack_args(config.packs_dir(settings))
+    packs_dir = config.packs_dir(settings)
+    packs = icon_pack_args(packs_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
+    jobs: list[tuple[Path, dict[str, tuple[str, int]], str]] = []
     with tempfile.TemporaryDirectory(prefix="merrow-render-") as work:
         puppeteer_config = Path(work) / "puppeteer.json"
         puppeteer_config.write_text(
@@ -75,9 +77,12 @@ def render(items: list[Diagram], out_dir: Path, settings: Any) -> list[dict[str,
             json.dumps(options["mermaid_config"]), encoding="utf-8"
         )
         for item in items:
-            source = Path(work) / f"{item.name}.mmd"
-            source.write_text(item.source, encoding="utf-8")
+            groups = post.marks(item.source)
             for theme, look in options["themes"].items():
+                suffix = str(look.get("icon_suffix", ""))
+                source = Path(work) / f"{item.name}-{theme}.mmd"
+                text = post.themed(item.source, suffix, packs_dir)
+                source.write_text(text, encoding="utf-8")
                 target = out_dir / f"{item.name}-{theme}.svg"
                 command = [
                     *argv,
@@ -102,4 +107,7 @@ def render(items: list[Diagram], out_dir: Path, settings: Any) -> list[dict[str,
                 written.append(
                     {"diagram": item.name, "theme": theme, "svg": str(target)}
                 )
+                if groups:
+                    jobs.append((target, groups, suffix))
+    post.group_icons(jobs, packs_dir)
     return written

@@ -109,10 +109,13 @@ def flowchart(
     return "\n".join(lines) + "\n"
 
 
+GROUP_ICON = "%% merrow:group-icon"
+
+
 def misfits(profile: Profile, known: L1Object) -> list[str]:
     """Return why an object can't be drawn in the profile: its class or shape."""
     found = []
-    if known.style not in profile.classes:
+    if known.style and known.style not in profile.classes:
         found.append(
             f"{known.id} styles as {known.style!r}, not a {profile.name} class"
         )
@@ -132,7 +135,26 @@ def profile_label(profile: Profile, node: Node, shape: str | None = None) -> str
     return fill(form, fields)
 
 
-def house(
+def _icon_node(form: str, node: Node, icon: str) -> str:
+    text = _quoted(node.label) + (
+        f"<br/>{_quoted(node.subtitle)}" if node.subtitle else ""
+    )
+    return fill(form, {"node.icon": icon, "node.text": text})
+
+
+def _group_style(profile: Profile, known: L1Object | None, problems: list[str]) -> str:
+    """Return a group's boundary style: its object's group style, else the profile's."""
+    name = known.group_style if known else None
+    if known is None or not name or not profile.group_boundaries:
+        return profile.boundary
+    if name not in profile.group_boundaries:
+        problems.append(
+            f"{known.id} has group style {name!r}, not a {profile.name} one"
+        )
+    return profile.group_boundaries.get(name, profile.boundary)
+
+
+def diagram(
     graph: Graph,
     profile: Profile,
     library: Mapping[str, L1Object],
@@ -143,32 +165,45 @@ def house(
 
     `title` is the `accTitle` (`L<n> <Level> -- <scope>`), `description` the
     `accDescr`. A chain past the profile's `max_ranks` is drawn as pattern B.
+    Where the profile draws icons, a node whose object has one is drawn as it.
 
     Raises:
         ValueError: The graph has problems, names an unknown object, or an
-            object styles as a class the profile doesn't define.
+            object's class, shape or group style isn't the profile's.
     """
     bound, problems = bind(graph, library)
     styles: dict[str, list[str]] = {}
-    shapes: dict[str, str | None] = {}
+    labels: dict[str, str] = {}
     for node in bound.nodes:
         known = library.get(node.object) if node.object else None
         if known is not None:
-            problems += misfits(profile, known)
-            styles.setdefault(known.style, []).append(node.id)
-            shapes[node.id] = known.shape
-        else:
-            styles.setdefault(profile.default_class, []).append(node.id)
+            wrong = misfits(profile, known)
+            problems += wrong
+            if wrong:
+                continue
+        if known is not None and known.icon and profile.icon_node:
+            labels[node.id] = _icon_node(profile.icon_node, node, known.icon)
+            continue
+        style = (known.style if known else "") or profile.default_class
+        styles.setdefault(style, []).append(node.id)
+        labels[node.id] = profile_label(profile, node, known.shape if known else None)
+    layout = stages(bound, profile.max_ranks, profile.stage_title)
+    group_objects = {
+        g.id: library.get(g.object) if g.object else None for g in layout.graph.groups
+    }
+    group_styles = {
+        group_id: _group_style(profile, known, problems)
+        for group_id, known in group_objects.items()
+    }
     if problems:
         raise ValueError("; ".join(problems))
 
     ids: dict[str, str] = {}
     head = [f"accTitle: {title}", f"accDescr: {description}"]
-    layout = stages(bound, profile.max_ranks, profile.stage_title)
     body = flowchart(
         layout.graph,
         layout.direction,
-        lambda node: profile_label(profile, node, shapes.get(node.id)),
+        lambda node: labels[node.id],
         head,
         ids,
         layout.inner,
@@ -179,7 +214,13 @@ def house(
         for name in sorted(styles, key=order.index)
     ]
     tail += profile.class_lines
-    tail += [f"style {ids[g.id]} {profile.boundary}" for g in layout.graph.groups]
+    tail += [f"style {ids[gid]} {style}" for gid, style in group_styles.items()]
+    if profile.group_icon_size:
+        tail += [
+            f"{GROUP_ICON} {ids[gid]} {known.icon} {profile.group_icon_size}"
+            for gid, known in group_objects.items()
+            if known is not None and known.icon
+        ]
     return f"{profile.fronts['flowchart']}\n{body}" + "".join(
         f"  {line}\n" for line in tail
     )

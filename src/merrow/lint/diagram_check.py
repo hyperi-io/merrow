@@ -37,6 +37,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from merrow import config, node
+from merrow.browser import launch
 from merrow.lint import icons
 from merrow.objects import by_class_name, library
 from merrow.profile import Profile, load
@@ -118,6 +119,8 @@ _FLOW_BANNED = (
         "R6 an outline outside the five",
     ),
 )
+# An icon node `id@{ ... }`, allowed where the profile draws icons.
+_ICON_NODE = re.compile(r"\w@\{[^}]*\}")
 # A house flowchart's rounded `id("...")` label, read after quoted labels are emptied.
 _ROUNDED = re.compile(r'\w\(""\)')
 _SUBGRAPH = re.compile(r"^subgraph\s+([A-Za-z_]\w*)")
@@ -295,16 +298,16 @@ def split_front(source: str) -> tuple[str | None, str]:
 
 
 def _house_style_problems(
-    lines: list[str], boundary: str
+    lines: list[str], boundaries: frozenset[str]
 ) -> tuple[list[str], set[str]]:
-    """Return a house flowchart's boundary-line problems and the `style` lines that are house boundaries."""
+    """Return a profile flowchart's boundary-line problems and the `style` lines that are its boundaries."""
     subgraphs = [match.group(1) for line in lines if (match := _SUBGRAPH.match(line))]
     allowed: set[str] = set()
     problems: list[str] = []
     styled: list[str] = []
     for line in lines:
         match = _STYLE.match(line)
-        if match and match.group(2) == boundary:
+        if match and match.group(2) in boundaries:
             styled.append(match.group(1))
             if match.group(1) in subgraphs:
                 allowed.add(line)
@@ -348,7 +351,7 @@ def source_problems(
     house_classes = frozenset(profile.class_lines)
     if house and flow:
         class_lines = house_classes
-        found, house_lines = _house_style_problems(lines, profile.boundary)
+        found, house_lines = _house_style_problems(lines, profile.boundaries)
         problems += found
     if flow:
         pairs = {
@@ -392,6 +395,8 @@ def source_problems(
     ]
     if house and flow:
         bare = [_ROUNDED.sub('_[""]', line) for line in bare]
+    if house and flow and profile.icon_node:
+        bare = [_ICON_NODE.sub('_[""]', line) for line in bare]
     for pattern, what in _BANNED + (_FLOW_BANNED if flow else ()):
         if any(pattern.search(line) for line in bare):
             problems.append(f"{what} is not allowed")
@@ -579,7 +584,7 @@ window.measure = async (src, cfg, id, dir) => {
     }
     return [tops.length, label.querySelectorAll('br').length + 1];
   };
-  const nodes = [...svg.querySelectorAll('g.node')].map(el => ({name: text(el), b: box(el), lines: lines(el)}));
+  const nodes = [...svg.querySelectorAll('g.node, g.icon-shape')].map(el => ({name: text(el), b: box(el), lines: lines(el)}));
   const groups = [...svg.querySelectorAll('g.cluster')].map(el => ({name: text(el) || '(group)', b: box(el), group: true}));
   const ends = nodes.concat(groups);
   const near = p => ends.reduce((best, n) => gap(p, n.b) + (n.group ? 6 : 0) < gap(p, best.b) + (best.group ? 6 : 0) ? n : best);
@@ -686,19 +691,11 @@ def render(
 ) -> list[dict]:
     """Lay each diagram out in a ``column`` px page and return its measurements, with screenshots under ``png``."""
     # Imported here so the source pass runs on a host without playwright.
-    from playwright.sync_api import Error, sync_playwright
+    from playwright.sync_api import sync_playwright
 
     results: list[dict] = []
     with sync_playwright() as driver:
-        try:
-            browser = driver.chromium.launch(channel="chrome")
-        except Error:
-            try:
-                browser = driver.chromium.launch()
-            except Error as failure:
-                raise SystemExit(
-                    f"no Chrome or Chromium to render with: {failure}"
-                ) from failure
+        browser = launch(driver)
         page = browser.new_page(viewport={"width": column + 40, "height": 700})
         page.set_content(
             f'<!doctype html><div id="o" style="width:{column}px;padding:16px"></div>'
@@ -746,6 +743,9 @@ def main(argv: list[str] | None = None) -> int:
         help="a local mermaid.min.js (default: the version merrow pins)",
     )
     parser.add_argument("--json", action="store_true", help="print the results as JSON")
+    parser.add_argument(
+        "--profile", default="", help="profile, default the configured one"
+    )
     args = parser.parse_args(argv)
 
     blocks: list[Block] = []
@@ -755,7 +755,7 @@ def main(argv: list[str] | None = None) -> int:
         blocks += found
         page_level += problems
     settings = config.load()
-    profile = load(settings)
+    profile = load(settings, args.profile or None)
     measured: list[dict | None] = [None] * len(blocks)
     how = "source only, not rendered"
     if not args.no_render:
@@ -778,9 +778,11 @@ def main(argv: list[str] | None = None) -> int:
             for key in icons.unresolved(block.source, patterns, known)
         ]
         if result:
-            problems += layout_problems(
+            found = layout_problems(
                 result, profile.limits, diagram_type(block.source)[0] in _LANDSCAPE
             )
+            waive = profile.layout_waive
+            problems += [p for p in found if not (waive and waive.search(p))]
         report.append(Verdict(block.name, problems, result))
     if args.json:
         print(

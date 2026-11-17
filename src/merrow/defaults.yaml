@@ -53,10 +53,6 @@ formats:
 tokens:
   github: GITHUB_TOKEN
 
-# L1 objects by id, such as `dfe.loader`: `class` (a profile class), `label`,
-# and optional `subtitle` and `icon`. Reference repos add theirs.
-objects: {}
-
 render:
   # One SVG per theme. `mermaid` is mermaid-cli's theme name.
   themes:
@@ -66,6 +62,8 @@ render:
     dark:
       mermaid: dark
       background: "#1B1B1D"
+      # An icon with a variant of this name drawn for dark, as AWS ships.
+      icon_suffix: "-dark"
   # Passed to mermaid-cli as its config file. useMaxWidth shrinks wide diagrams.
   mermaid_config:
     flowchart:

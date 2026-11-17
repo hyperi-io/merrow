@@ -213,7 +213,7 @@ def _written(path: Path, settings: Any, shown: profile.Profile) -> str:
     found = spec.read(path)
     graph = spec.graph(found, patterns.library(settings))
     library = objects.library(settings)
-    return write.house(graph, shown, library, found.title, found.description)
+    return write.diagram(graph, shown, library, found.title, found.description)
 
 
 @graph_app.command("schema")
@@ -343,9 +343,11 @@ def diagram_lint(
         False, "--no-render", help="Source checks only, no browser"
     ),
     as_json: bool = Option(False, "--json", help="Print the results as JSON"),
+    name: str = Option("", "--profile", help="Profile, default the configured one"),
 ) -> None:
     """Check diagrams against the standard and the built packs. Exits 1 on any failure."""
     argv = [str(path) for path in files]
+    argv += ["--profile", name] if name else []
     argv += ["--no-render"] if no_render else []
     argv += ["--json"] if as_json else []
     code = diagram_check.main(argv)

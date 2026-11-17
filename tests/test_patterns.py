@@ -40,7 +40,7 @@ def settings(monkeypatch, tmp_path):
 def drawn(settings, graph, house=None):
     house = house or profile.load(settings, "house")
     library = objects.library(settings)
-    source = write.house(graph, house, library, "L2 Services -- Demo", "Data path.")
+    source = write.diagram(graph, house, library, "L2 Services -- Demo", "Data path.")
     block = dc.Block("demo.mmd", source, None, None)
     return source, dc.source_problems(block, frozenset(), house)
 

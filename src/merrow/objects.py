@@ -18,6 +18,7 @@ class L1Object:
         subtitle: The second line a node takes when it gives none.
         icon: An Iconify key, `prefix:name`, for profiles that draw icons.
         shape: A profile shape such as `cylinder`. None takes the profile's default.
+        group_style: A profile group style such as `region`, for a group object.
     """
 
     id: str
@@ -26,29 +27,31 @@ class L1Object:
     subtitle: str | None = None
     icon: str | None = None
     shape: str | None = None
+    group_style: str | None = None
 
 
 def library(settings: Any) -> dict[str, L1Object]:
     """Return every configured object by id.
 
     Raises:
-        KeyError: An entry has no `class` or no `label`.
+        KeyError: An entry has no `label`.
     """
     found = {}
     for object_id, entry in (settings.get("objects") or {}).items():
         found[object_id] = L1Object(
             object_id,
-            str(entry["class"]),
+            str(entry.get("class", "")),
             str(entry["label"]),
             entry.get("subtitle"),
             entry.get("icon"),
             entry.get("shape"),
+            entry.get("group_style"),
         )
     return found
 
 
 def bind(graph: Graph, objects: Mapping[str, L1Object]) -> tuple[Graph, list[str]]:
-    """Return the graph with each node's missing label and subtitle from its object.
+    """Return the graph with each missing node and group label from its object.
 
     The second value lists what can't be drawn: an unknown object, or a node
     with neither a label nor an object.
@@ -68,7 +71,15 @@ def bind(graph: Graph, objects: Mapping[str, L1Object]) -> tuple[Graph, list[str
         if not node.label:
             problems.append(f"node {node.id!r} has no label and no object")
         nodes.append(node)
-    return Graph(nodes, list(graph.edges), list(graph.groups)), problems
+    groups = []
+    for group in graph.groups:
+        known = objects.get(group.object) if group.object else None
+        if group.object and known is None:
+            problems.append(f"group {group.id!r} names unknown object {group.object!r}")
+        groups.append(
+            replace(group, label=group.label or known.label) if known else group
+        )
+    return Graph(nodes, list(graph.edges), groups), problems
 
 
 def by_class_name(library: Mapping[str, L1Object]) -> dict[str, L1Object]:

@@ -3,7 +3,7 @@
 import json
 import re
 from collections.abc import Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from merrow import config
@@ -36,6 +36,12 @@ class Profile:
         limits: Rendered `column`, `max_width` and `max_height`, in px.
         label_styling: Styling lint fails inside a quoted label.
         caption_styling: Styling lint fails when a caption names it.
+        layout_waive: Render findings lint drops for this profile.
+        icon_node: How a node whose object has an icon is drawn, its `{node.*}`
+            fields left for the writer. None draws every node as a box.
+        group_boundaries: A group's style by the `group_style` its object names.
+        group_icon_size: The px size of the icon put on a group after render,
+            0 for none.
     """
 
     name: str
@@ -51,11 +57,20 @@ class Profile:
     limits: Mapping[str, int]
     label_styling: re.Pattern[str]
     caption_styling: re.Pattern[str]
+    icon_node: str | None = None
+    layout_waive: re.Pattern[str] | None = None
+    group_boundaries: Mapping[str, str] = field(default_factory=dict)
+    group_icon_size: int = 0
 
     @property
     def classes(self) -> frozenset[str]:
         """Return the class names the profile defines."""
         return frozenset(line.split()[1] for line in self.class_lines)
+
+    @property
+    def boundaries(self) -> frozenset[str]:
+        """Return every style a subgraph boundary line may carry."""
+        return frozenset({self.boundary, *self.group_boundaries.values()})
 
 
 def tokens(tree: Mapping[str, Any], prefix: str = "") -> Iterator[tuple[str, str]]:
@@ -115,6 +130,46 @@ def _expand(template: str, scope: Mapping[str, str]) -> str:
     return "\n".join(out)
 
 
+def _partial(text: str, scope: Mapping[str, str]) -> str:
+    """Resolve the tokens `scope` holds, leaving other aliases for the writer."""
+    for _ in range(_MAX_DEPTH):
+        done = _ALIAS.sub(lambda m: scope.get(m.group(1), m.group(0)), text)
+        if done == text:
+            return text
+        text = done
+    raise ProfileError(f"aliases nest deeper than {_MAX_DEPTH}: {text}")
+
+
+def _group_boundaries(
+    settings: Any,
+    styles: Mapping[str, Any],
+    order: Sequence[str],
+    scope: Mapping[str, str],
+) -> dict[str, str]:
+    """Return each group style in a built pack by its key, as boundary properties.
+
+    Raises:
+        FileNotFoundError: The pack isn't built.
+    """
+    path = config.packs_dir(settings) / f"{styles['pack']}.json"
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"{path} is missing: run `merrow pack build {styles['pack']}`"
+        )
+    found = {}
+    for group in json.loads(path.read_text(encoding="utf-8"))[styles["theme"]]:
+        fields = {
+            "fill": "none",
+            "stroke": group["stroke"],
+            "stroke-width": styles["stroke_width"],
+            "color": group["label_colour"],
+        }
+        if dash := styles["dash"].get(group["dash"]):
+            fields["stroke-dasharray"] = dash
+        found[group["key"]] = _properties(fields, order, scope)
+    return found
+
+
 def _properties(
     fields: Mapping[str, Any], order: Sequence[str], scope: Mapping[str, str]
 ) -> str:
@@ -144,7 +199,7 @@ def load(settings: Any, name: str | None = None) -> Profile:
     for class_name, own in entry["classes"].items():
         fields = {**defaults, **own}
         class_lines.append(f"classDef {class_name} {_properties(fields, order, scope)}")
-        if "icon" in fields:
+        if "icon" in fields and entry.get("icon_css"):
             icon = resolve(str(fields["icon"]), scope)
             each = {**scope, "class.name": class_name, "class.icon": icon}
             icon_lines.append(resolve(entry["icon_css"], each))
@@ -166,4 +221,12 @@ def load(settings: Any, name: str | None = None) -> Profile:
         {key: int(value) for key, value in entry["limits"].items()},
         re.compile(str(entry["lint"]["label_styling"])),
         re.compile(str(entry["lint"]["caption_styling"])),
+        _partial(str(entry["icon_node"]), scope) if entry.get("icon_node") else None,
+        re.compile(str(entry["lint"]["layout_waive"]))
+        if entry["lint"].get("layout_waive")
+        else None,
+        _group_boundaries(settings, entry["group_styles"], order, scope)
+        if entry.get("group_styles")
+        else {},
+        int(resolve(str(entry.get("group_icon_size", 0)), scope)),
     )
