@@ -1,14 +1,16 @@
-"""The one writer from a Graph to Mermaid. Every reader and pattern ends here.
+"""Writers from a Graph to Mermaid. Every reader and pattern ends here.
 
-It writes structure only: subgraphs for groups, boxes, arrows and labels. A
-profile adds its frontmatter and classes on top (DESIGN D3), so nothing here
-names a colour.
+`flowchart` writes structure only: subgraphs for groups, boxes, arrows and
+labels. `house` adds a profile's frontmatter, label form and classes, so no
+colour is named here.
 """
 
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 
 from merrow.graph import Graph, Group, Node
+from merrow.objects import L1Object, bind
+from merrow.profile import Profile, fill
 
 # Words Mermaid's flowchart grammar reserves, which can't be an id as written.
 _RESERVED = {
@@ -40,15 +42,28 @@ def mermaid_id(raw: str, taken: dict[str, str]) -> str:
     return candidate
 
 
+def _quoted(text: str) -> str:
+    return text.replace('"', "#quot;")
+
+
 def _label(node: Node) -> str:
-    text = node.label.replace('"', "#quot;")
+    text = _quoted(node.label)
     if node.subtitle:
-        text += "<br/>" + node.subtitle.replace('"', "#quot;")
-    return f'"{text}"'
+        text += "<br/>" + _quoted(node.subtitle)
+    return f'["{text}"]'
 
 
-def flowchart(graph: Graph, direction: str) -> str:
+def flowchart(
+    graph: Graph,
+    direction: str,
+    label: Callable[[Node], str] = _label,
+    head: Sequence[str] = (),
+    ids: dict[str, str] | None = None,
+) -> str:
     """Return the graph as a Mermaid flowchart laid out in `direction` (LR, TB).
+
+    `label` gives a node's shape and label, `head` the lines after the
+    `flowchart` line, and `ids` collects each graph id's Mermaid id.
 
     Raises:
         ValueError: The graph has problems (dangling ids, shared ids, cycles).
@@ -56,7 +71,7 @@ def flowchart(graph: Graph, direction: str) -> str:
     problems = graph.problems()
     if problems:
         raise ValueError("; ".join(problems))
-    ids: dict[str, str] = {}
+    ids = {} if ids is None else ids
     children: dict[str | None, list[Group]] = {}
     for group in graph.groups:
         children.setdefault(group.parent, []).append(group)
@@ -64,14 +79,14 @@ def flowchart(graph: Graph, direction: str) -> str:
     for node in graph.nodes:
         members.setdefault(node.group, []).append(node)
 
-    lines = [f"flowchart {direction}"]
+    lines = [f"flowchart {direction}", *(f"  {line}" for line in head)]
 
     def emit(group_id: str | None, indent: str) -> None:
         for node in members.get(group_id, []):
-            lines.append(f"{indent}{mermaid_id(node.id, ids)}[{_label(node)}]")
+            lines.append(f"{indent}{mermaid_id(node.id, ids)}{label(node)}")
         for group in children.get(group_id, []):
             # Mermaid rejects an empty title, so an untitled group gets a space.
-            title = group.label.replace('"', "#quot;") or " "
+            title = _quoted(group.label) or " "
             lines.append(f'{indent}subgraph {mermaid_id(group.id, ids)}["{title}"]')
             emit(group.id, indent + "  ")
             lines.append(f"{indent}end")
@@ -81,11 +96,63 @@ def flowchart(graph: Graph, direction: str) -> str:
         source, target = mermaid_id(edge.source, ids), mermaid_id(edge.target, ids)
         arrow = "-.->" if edge.optional else "-->"
         if edge.label:
-            label = edge.label.replace('"', "#quot;").replace("|", "/")
-            lines.append(f'  {source} {arrow}|"{label}"| {target}')
+            text = _quoted(edge.label).replace("|", "/")
+            lines.append(f'  {source} {arrow}|"{text}"| {target}')
         else:
             lines.append(f"  {source} {arrow} {target}")
     return "\n".join(lines) + "\n"
+
+
+def house(
+    graph: Graph,
+    profile: Profile,
+    library: Mapping[str, L1Object],
+    direction: str,
+    title: str,
+    description: str,
+) -> str:
+    """Return the graph as a flowchart in `profile`'s look, its objects bound.
+
+    `title` is the `accTitle` (`L<n> <Level> -- <scope>`), `description` the
+    `accDescr`.
+
+    Raises:
+        ValueError: The graph has problems, names an unknown object, or an
+            object styles as a class the profile doesn't define.
+    """
+    bound, problems = bind(graph, library)
+    styles: dict[str, list[str]] = {}
+    for node in bound.nodes:
+        known = library.get(node.object) if node.object else None
+        if known is not None and known.style not in profile.classes:
+            problems.append(
+                f"object {known.id!r} styles as {known.style!r}, not a "
+                f"{profile.name} class"
+            )
+        elif known is not None:
+            styles.setdefault(known.style, []).append(node.id)
+    if problems:
+        raise ValueError("; ".join(problems))
+
+    def label(node: Node) -> str:
+        form = profile.node_label["subtitle" if node.subtitle else "plain"]
+        fields = {"node.label": _quoted(node.label)}
+        fields["node.subtitle"] = _quoted(node.subtitle or "")
+        return fill(form, fields)
+
+    ids: dict[str, str] = {}
+    head = [f"accTitle: {title}", f"accDescr: {description}"]
+    body = flowchart(bound, direction, label, head, ids)
+    order = [line.split()[1] for line in profile.class_lines]
+    tail = [
+        f"class {','.join(mermaid_id(n, ids) for n in styles[name])} {name}"
+        for name in sorted(styles, key=order.index)
+    ]
+    tail += profile.class_lines
+    tail += [f"style {ids[g.id]} {profile.boundary}" for g in bound.groups]
+    return f"{profile.fronts['flowchart']}\n{body}" + "".join(
+        f"  {line}\n" for line in tail
+    )
 
 
 def score(found: Graph, expected: Mapping[str, list]) -> dict[str, float]:

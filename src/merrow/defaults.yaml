@@ -53,6 +53,10 @@ formats:
 tokens:
   github: GITHUB_TOKEN
 
+# L1 objects by id, such as `dfe.loader`: `class` (a profile class), `label`,
+# and optional `subtitle` and `icon`. Reference repos add theirs.
+objects: {}
+
 render:
   # One SVG per theme. `mermaid` is mermaid-cli's theme name.
   themes:

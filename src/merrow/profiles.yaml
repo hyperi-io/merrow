@@ -37,6 +37,10 @@ profiles:
       stroke-width: "{stroke.boundary}"
       stroke-dasharray: "{dash.boundary}"
     icon_css: ".{class.name} .label-icon{color:{class.icon}}"
+    # A node's shape and label, from its `{node.*}` fields.
+    node_label:
+      subtitle: '("<b>{node.label}</b><br/><span>{node.subtitle}</span>")'
+      plain: '("<b>{node.label}</b>")'
     front:
       flowchart: |-
         ---

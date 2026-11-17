@@ -26,12 +26,20 @@ class Profile:
         fronts: Frontmatter by diagram family, `flowchart` or `other`.
         class_lines: One `classDef` line a class, in the configured order.
         boundary: The style a subgraph boundary line carries.
+        node_label: A node's shape and label, `subtitle` and `plain`, its
+            `{node.*}` fields left for the writer.
     """
 
     name: str
     fronts: Mapping[str, str]
     class_lines: tuple[str, ...]
     boundary: str
+    node_label: Mapping[str, str]
+
+    @property
+    def classes(self) -> frozenset[str]:
+        """Return the class names the profile defines."""
+        return frozenset(line.split()[1] for line in self.class_lines)
 
 
 def tokens(tree: Mapping[str, Any], prefix: str = "") -> Iterator[tuple[str, str]]:
@@ -49,11 +57,11 @@ def tokens(tree: Mapping[str, Any], prefix: str = "") -> Iterator[tuple[str, str
             yield from tokens(value, f"{prefix}{key}.")
 
 
-def resolve(text: str, scope: Mapping[str, str]) -> str:
-    """Replace every alias in `text`, following aliases to aliases.
+def fill(text: str, scope: Mapping[str, str]) -> str:
+    """Replace each alias in `text` once, leaving what the values hold alone.
 
     Raises:
-        ProfileError: An alias names nothing, or aliases loop.
+        ProfileError: An alias names nothing in `scope`.
     """
 
     def value(match: re.Match[str]) -> str:
@@ -61,10 +69,19 @@ def resolve(text: str, scope: Mapping[str, str]) -> str:
             raise ProfileError(f"no token {match.group(1)}")
         return scope[match.group(1)]
 
+    return _ALIAS.sub(value, text)
+
+
+def resolve(text: str, scope: Mapping[str, str]) -> str:
+    """Replace every alias in `text`, following aliases to aliases.
+
+    Raises:
+        ProfileError: An alias names nothing, or aliases loop.
+    """
     for _ in range(_MAX_DEPTH):
         if not _ALIAS.search(text):
             return text
-        text = _ALIAS.sub(value, text)
+        text = fill(text, scope)
     raise ProfileError(f"aliases nest deeper than {_MAX_DEPTH}: {text}")
 
 
@@ -121,4 +138,5 @@ def load(settings: Any, name: str | None = None) -> Profile:
         {family: _expand(text, scope) for family, text in entry["front"].items()},
         tuple(class_lines),
         _properties(entry["boundary"], order, scope),
+        dict(entry["node_label"]),
     )

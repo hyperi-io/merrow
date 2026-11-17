@@ -15,14 +15,14 @@ class Node:
 
     Attributes:
         id: Unique in the graph.
-        label: The name a reader sees.
+        label: The name a reader sees. Empty takes its object's label.
         subtitle: A second line, such as what the thing does.
         object: The L1 object it is, such as `dfe.loader` or `aws.eks`.
         group: The id of the group it sits in, if any.
     """
 
     id: str
-    label: str
+    label: str = ""
     subtitle: str | None = None
     object: str | None = None
     group: str | None = None
