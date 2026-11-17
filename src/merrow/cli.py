@@ -43,9 +43,17 @@ def config_get() -> None:
 
 
 @tools_app.command("ensure")
-def tools_ensure() -> None:
+def tools_ensure(
+    install_deps: bool = Option(
+        False,
+        "--install-deps",
+        help="Also install the browser's system libraries (Linux, needs root)",
+    ),
+) -> None:
     """Install the pinned mermaid-cli and browser if missing, then print them."""
     settings = config.load()
+    if install_deps:
+        node.install_browser_deps(settings)
     argv = node.mmdc(settings)
     result = proc.run([*argv, "--version"])
     if result.returncode != 0:

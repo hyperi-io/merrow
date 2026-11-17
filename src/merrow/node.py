@@ -121,3 +121,22 @@ def mmdc(settings: Any) -> list[str]:
         NodeToolsError: node or npm is missing, or an install step failed.
     """
     return [_require("node"), str(_bin(installed(settings), "@mermaid-js/mermaid-cli"))]
+
+
+def install_browser_deps(settings: Any) -> None:
+    """Install the system libraries the pinned browser needs (Linux, as root).
+
+    puppeteer reads them from its browser build, so the list is never ours.
+
+    Raises:
+        NodeToolsError: The install failed, for example without root.
+    """
+    root = installed(settings)
+    timeout = config.limits(settings).npm_timeout_seconds
+    puppeteer = str(_bin(root, "puppeteer"))
+    browser = str(settings.get("browser"))
+    _run(
+        [_require("node"), puppeteer, "browsers", "install", browser, "--install-deps"],
+        root,
+        timeout,
+    )
