@@ -118,5 +118,6 @@ def render(
                 )
                 if groups:
                     jobs.append((target, groups, suffix))
-    post.group_icons(jobs, packs_dir)
+    if jobs:
+        post.group_icons(jobs, packs_dir, node.browser_path(settings))
     return written

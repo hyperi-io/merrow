@@ -70,9 +70,11 @@ def _icons(
 
 
 def group_icons(
-    jobs: Sequence[tuple[Path, Mapping[str, str], str]], packs_dir: Path
+    jobs: Sequence[tuple[Path, Mapping[str, str], str]],
+    packs_dir: Path,
+    executable: Path | None = None,
 ) -> None:
-    """Place group icons in each rendered SVG, in place.
+    """Place group icons in each rendered SVG, in place, in the `executable` browser.
 
     A job is the SVG, its marks and the icon name suffix for its theme.
 
@@ -86,7 +88,7 @@ def group_icons(
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as driver:
-        browser = launch(driver)
+        browser = launch(driver, executable)
         try:
             page = browser.new_page()
             for svg, groups, suffix in jobs:

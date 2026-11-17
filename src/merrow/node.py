@@ -140,3 +140,28 @@ def install_browser_deps(settings: Any) -> None:
         root,
         timeout,
     )
+
+
+@functools.cache
+def _browser_path(root: Path, browser: str, timeout: float) -> Path:
+    puppeteer = str(_bin(root, "puppeteer"))
+    argv = [_require("node"), puppeteer, "browsers", "install", browser]
+    result = proc.run(argv, root, timeout)
+    lines = result.stdout.strip().splitlines() if result.returncode == 0 else []
+    if not lines or " " not in lines[-1]:
+        raise NodeToolsError(
+            f"puppeteer gave no path for {browser}: {proc.tail(result)}"
+        )
+    return Path(lines[-1].split(" ", 1)[1])
+
+
+def browser_path(settings: Any) -> Path:
+    """Return the browser puppeteer installed for render, so other steps use the same one.
+
+    puppeteer prints `name@version path` for an install, and installing again is a no-op.
+
+    Raises:
+        NodeToolsError: node or npm is missing, or puppeteer gave no path.
+    """
+    timeout = config.limits(settings).npm_timeout_seconds
+    return _browser_path(installed(settings), str(settings.get("browser")), timeout)
