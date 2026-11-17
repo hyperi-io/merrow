@@ -43,9 +43,7 @@ def settings_with(monkeypatch, tmp_path, library):
 
 def written(settings, graph):
     house = profile.load(settings, "house")
-    source = write.house(
-        graph, house, objects.library(settings), "LR", TITLE, DESCRIPTION
-    )
+    source = write.house(graph, house, objects.library(settings), TITLE, DESCRIPTION)
     block = dc.Block("demo.mmd", source, None, None)
     return source, dc.source_problems(block, frozenset(), house)
 

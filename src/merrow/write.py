@@ -8,6 +8,7 @@ colour is named here.
 import re
 from collections.abc import Callable, Mapping, Sequence
 
+from merrow.compose import stages
 from merrow.graph import Graph, Group, Node
 from merrow.objects import L1Object, bind
 from merrow.profile import Profile, fill
@@ -59,11 +60,13 @@ def flowchart(
     label: Callable[[Node], str] = _label,
     head: Sequence[str] = (),
     ids: dict[str, str] | None = None,
+    inner: Mapping[str, str] | None = None,
 ) -> str:
     """Return the graph as a Mermaid flowchart laid out in `direction` (LR, TB).
 
     `label` gives a node's shape and label, `head` the lines after the
-    `flowchart` line, and `ids` collects each graph id's Mermaid id.
+    `flowchart` line, `ids` collects each graph id's Mermaid id, and `inner`
+    sets the direction inside a group.
 
     Raises:
         ValueError: The graph has problems (dangling ids, shared ids, cycles).
@@ -72,6 +75,7 @@ def flowchart(
     if problems:
         raise ValueError("; ".join(problems))
     ids = {} if ids is None else ids
+    inner = {} if inner is None else inner
     children: dict[str | None, list[Group]] = {}
     for group in graph.groups:
         children.setdefault(group.parent, []).append(group)
@@ -88,6 +92,8 @@ def flowchart(
             # Mermaid rejects an empty title, so an untitled group gets a space.
             title = _quoted(group.label) or " "
             lines.append(f'{indent}subgraph {mermaid_id(group.id, ids)}["{title}"]')
+            if group.id in inner:
+                lines.append(f"{indent}  direction {inner[group.id]}")
             emit(group.id, indent + "  ")
             lines.append(f"{indent}end")
 
@@ -107,14 +113,13 @@ def house(
     graph: Graph,
     profile: Profile,
     library: Mapping[str, L1Object],
-    direction: str,
     title: str,
     description: str,
 ) -> str:
     """Return the graph as a flowchart in `profile`'s look, its objects bound.
 
     `title` is the `accTitle` (`L<n> <Level> -- <scope>`), `description` the
-    `accDescr`.
+    `accDescr`. A chain past the profile's `max_ranks` is drawn as pattern B.
 
     Raises:
         ValueError: The graph has problems, names an unknown object, or an
@@ -142,14 +147,15 @@ def house(
 
     ids: dict[str, str] = {}
     head = [f"accTitle: {title}", f"accDescr: {description}"]
-    body = flowchart(bound, direction, label, head, ids)
+    layout = stages(bound, profile.max_ranks, profile.stage_title)
+    body = flowchart(layout.graph, layout.direction, label, head, ids, layout.inner)
     order = [line.split()[1] for line in profile.class_lines]
     tail = [
         f"class {','.join(mermaid_id(n, ids) for n in styles[name])} {name}"
         for name in sorted(styles, key=order.index)
     ]
     tail += profile.class_lines
-    tail += [f"style {ids[g.id]} {profile.boundary}" for g in bound.groups]
+    tail += [f"style {ids[g.id]} {profile.boundary}" for g in layout.graph.groups]
     return f"{profile.fronts['flowchart']}\n{body}" + "".join(
         f"  {line}\n" for line in tail
     )

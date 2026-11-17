@@ -28,6 +28,8 @@ class Profile:
         boundary: The style a subgraph boundary line carries.
         node_label: A node's shape and label, `subtitle` and `plain`, its
             `{node.*}` fields left for the writer.
+        max_ranks: The longest chain drawn left to right before pattern B.
+        stage_title: A pattern B stage's title, `{n}` its number.
     """
 
     name: str
@@ -35,6 +37,8 @@ class Profile:
     class_lines: tuple[str, ...]
     boundary: str
     node_label: Mapping[str, str]
+    max_ranks: int
+    stage_title: str
 
     @property
     def classes(self) -> frozenset[str]:
@@ -139,4 +143,6 @@ def load(settings: Any, name: str | None = None) -> Profile:
         tuple(class_lines),
         _properties(entry["boundary"], order, scope),
         dict(entry["node_label"]),
+        int(entry["layout"]["max_ranks"]),
+        str(entry["layout"]["stage_title"]),
     )
