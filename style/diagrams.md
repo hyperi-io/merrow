@@ -137,7 +137,7 @@ Expand a box only where the docs explain it. Not every box gets a child.
 
 A subgraph's `direction` stops working the moment a node inside it links to a node outside it. Link the subgraphs themselves.
 
-An optional path that skips a stage goes in the prose, not on the diagram. A bypass arrow across stage groups staggers the rows and widens the diagram.
+Every path stays on the diagram, optional ones included. An optional step is its own stage group, and optional paths are dotted arrows (`-.->`) from group to group, a bypass included with its label. The main path stays solid. Where that widens the diagram, split the groups smaller.
 
 ## Lines
 

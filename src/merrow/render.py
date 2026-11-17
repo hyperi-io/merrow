@@ -66,6 +66,10 @@ def render(items: list[Diagram], out_dir: Path, settings: Any) -> list[dict[str,
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
     with tempfile.TemporaryDirectory(prefix="merrow-render-") as work:
+        puppeteer_config = Path(work) / "puppeteer.json"
+        puppeteer_config.write_text(
+            json.dumps(options.get("puppeteer") or {}), encoding="utf-8"
+        )
         mermaid_config = Path(work) / "mermaid.json"
         mermaid_config.write_text(
             json.dumps(options["mermaid_config"]), encoding="utf-8"
@@ -88,11 +92,13 @@ def render(items: list[Diagram], out_dir: Path, settings: Any) -> list[dict[str,
                     look["background"],
                     "--configFile",
                     str(mermaid_config),
+                    "--puppeteerConfigFile",
+                    str(puppeteer_config),
                     *packs,
                 ]
                 result = proc.run(command)
                 if result.returncode != 0:
-                    raise RenderError(f"{item.name} ({theme}): {proc.tail(result)}")
+                    raise RenderError(f"{item.name} ({theme}): {proc.tail(result, 20)}")
                 written.append(
                     {"diagram": item.name, "theme": theme, "svg": str(target)}
                 )

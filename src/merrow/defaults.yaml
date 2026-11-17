@@ -70,6 +70,9 @@ render:
       useMaxWidth: false
     sequence:
       useMaxWidth: false
+  # puppeteer launch options, passed to mermaid-cli as its puppeteer config.
+  # A container without user namespaces sets `args: ["--no-sandbox"]` here.
+  puppeteer: {}
 
 lint:
   # Where a diagram names an icon as `prefix:name`, by Mermaid syntax. Group 1
@@ -80,3 +83,15 @@ lint:
 
 # The browser puppeteer fetches for render, by puppeteer's own name for it.
 browser: chrome-headless-shell
+
+# How each diagram reader recognises structure in its format.
+readers:
+  drawio:
+    # Style keys marking a cell as a container, beside cells with children.
+    container: container,swimlane,group
+    # Style key=value pairs marking an edge as optional (drawn dotted).
+    optional: dashed=1
+    # Style keys marking a text cell that titles the container it sits in.
+    title: text
+    # A label matching this is a template placeholder, not text.
+    placeholder: "%[^%]+%"
