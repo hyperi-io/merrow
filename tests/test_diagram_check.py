@@ -82,7 +82,7 @@ def test_the_render_bundle_is_the_version_merrows_lock_pins():
 
 
 def test_every_template_in_the_standard_passes_the_source_pass():
-    blocks, page = dc.page_blocks(STANDARD_PATH)
+    blocks, page = dc.page_blocks(ROOT / "style" / "diagram-templates.md")
     assert page == []
     assert len(blocks) == 8
     assert {

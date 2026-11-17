@@ -44,7 +44,7 @@ profiles:
     # named in a caption, where it goes stale when the profile changes.
     lint:
       label_styling: '(?i)style\s*=|<font\b|\bcolou?r\s*:|\bfill\s*:|\bstroke\s*:'
-      caption_styling: '(?i)\b(?:red|orange|yellow|green|teal|blue|purple|pink|grey|gray|black|white)\s+(?:box(?:es)?|arrows?|lines?|borders?|outlines?|nodes?|groups?)\b|\b(?:dashed|dotted|thick|bold)\b'
+      caption_styling: '(?i)\b(?:red|orange|yellow|green|teal|blue|purple|pink|grey|gray|black|white)\s+(?:box(?:es)?|arrows?|lines?|borders?|outlines?|nodes?|groups?|is|are|means|marks|shows)\b|\b(?:dashed|dotted|thick|bold)\b'
     # A chain of more ranks than this is drawn as pattern B, in stages titled
     # from `stage_title` (`{n}` is the stage number).
     layout:

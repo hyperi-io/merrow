@@ -39,5 +39,7 @@ Hand-written Mermaid works too. Write the body only and name each object as `loa
 - A long chain in one row. The writer stacks a chain past four ranks in stages, so let it.
 - A dropped optional path. Mark the edge `optional: true` and it draws dotted, with its label.
 - A node or arrow that isn't in the code. Diagrams come from reading the code, never from imagination.
+- An L2 to L4 diagram drawn without its parent. Open the parent first and reuse its ids, labels and objects. A box the parent lacks is a change to the parent in the same PR.
+- ASCII art or a `text` block standing in for a diagram. Convert any you find on a page you edit to Mermaid, and never turn Mermaid into text or an image.
 - An intro or caption that restates the picture, or names a colour or a dash. Words beside a diagram carry only what the picture can't show: why, the limits, what is optional.
 - Hexagons, `graph TD` and `style` lines. Lint fails them.
