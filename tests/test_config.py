@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
@@ -59,3 +60,18 @@ def test_listed_repo_without_data_file_fails(monkeypatch, tmp_path):
     result = config_get(monkeypatch, [empty])
     assert result.exit_code != 0
     assert isinstance(result.exception, FileNotFoundError)
+
+
+@pytest.mark.parametrize(
+    ("mode", "under_home"), [("local", True), ("auto", False)], ids=["local", "auto"]
+)
+def test_a_cli_keeps_user_dirs_inside_a_container(
+    monkeypatch, tmp_path, mode, under_home
+):
+    from merrow import config
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("container", "docker")
+    monkeypatch.setenv("MERROW_RUNTIME_MODE", mode)
+    cache = config.cache_dir(config.load())
+    assert cache.is_relative_to(Path.home()) is under_home

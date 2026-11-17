@@ -10,6 +10,10 @@ reference_file: merrow.yaml
 # Download cache. Empty means scalo's runtime cache dir for merrow.
 cache_dir: ""
 
+# merrow is a CLI, so its dirs follow the user even inside a container (a CI
+# runner). `auto` lets scalo detect a container and use its /app layout.
+runtime_mode: local
+
 # Built icon packs. Empty means `packs` under the cache dir.
 packs_dir: ""
 

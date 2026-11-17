@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from scalo.config import get_config
-from scalo.runtime import get_runtime_paths
+from scalo.runtime import RuntimeEnvironment
 
 from merrow.model import Limits, Source
 
@@ -38,7 +38,13 @@ def cache_dir(settings: Any) -> Path:
     configured = settings.get("cache_dir")
     if configured:
         return Path(configured).expanduser()
-    return get_runtime_paths("merrow").effective_cache_dir
+    mode = settings.get("runtime_mode")
+    force = None if mode in (None, "", "auto") else str(mode)
+    return (
+        RuntimeEnvironment("merrow", force_mode=force)
+        .detect_runtime()
+        .effective_cache_dir
+    )
 
 
 def packs_dir(settings: Any) -> Path:
