@@ -115,3 +115,9 @@ readers:
     # LinePattern values that draw dashed or dotted: an optional path.
     optional_patterns: 2,3,4,9,10
     skip_labels: ["%[^%]+%", "\\d{1,2}"]
+  dot:
+    # A subgraph is a group when its name starts with this, as Graphviz draws it.
+    cluster_prefix: cluster
+    # Edge styles marking an optional path (drawn dotted).
+    optional_styles: dashed,dotted
+    skip_labels: []
