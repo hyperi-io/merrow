@@ -1,6 +1,11 @@
+---
+name: merrow-diagrams
+description: Draw, render and lint a diagram with merrow, from a diagram file or hand-written Mermaid. Use when a page needs a new or changed Mermaid diagram, or a diagram fails merrow lint.
+---
+
 # Drawing a diagram with merrow
 
-An agent writes a diagram file, never Mermaid styling. merrow turns the file into Mermaid in the profile's look, renders it and lints it. The rules are [style/diagrams.md](../style/diagrams.md). This page is the loop.
+An agent writes a diagram file, never Mermaid styling. merrow turns the file into Mermaid in the profile's look, renders it and lints it. The rules are style/diagrams.md in the merrow repo (https://github.com/hyperi-io/merrow/blob/main/style/diagrams.md), and lint holds a diagram to them. This page is the loop.
 
 1. Pick the level (L0 to L4) and a pattern. `merrow config get | jq '.patterns | keys'` lists them. A path through several components is `data-path`, and config flowing to a runtime is `gitops-control`. Nothing fits: write the graph yourself.
 2. Pick the objects. `merrow config get | jq '.objects | keys'` lists them, such as `dfe.loader`. An object brings its label, subtitle, class and shape.

@@ -98,3 +98,24 @@ def test_graph_render_writes_the_mermaid_and_both_themes(realm):
         "demo-dark.svg",
         "demo-light.svg",
     ]
+
+
+def test_validate_prints_json_with_every_problem(realm):
+    good, bad = realm / "good.yaml", realm / "bad.yaml"
+    good.write_text(GOOD, encoding="utf-8")
+    bad.write_text(GOOD.replace("[x.agent]", "[x.nothing]"), encoding="utf-8")
+    result = runner.invoke(app, ["graph", "validate", "--json", str(good), str(bad)])
+    assert result.exit_code == 1
+    report = json.loads(result.output)
+    assert report[str(good)] == []
+    assert "unknown object 'x.nothing'" in report[str(bad)][0]
+
+
+def test_skill_install_copies_the_packaged_skill(realm):
+    result = runner.invoke(app, ["skill", "install", "--to", str(realm / "skills")])
+    assert result.exit_code == 0, result.output
+    installed = realm / "skills" / "merrow-diagrams" / "SKILL.md"
+    assert result.output.strip() == str(installed)
+    text = installed.read_text(encoding="utf-8")
+    assert text.startswith("---\nname: merrow-diagrams\n")
+    assert "merrow graph validate" in text

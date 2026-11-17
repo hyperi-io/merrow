@@ -19,10 +19,16 @@ merrow tools ensure    # installs the pinned mermaid-cli and its browser, once
 merrow source list                      # the publisher sources and their pinned versions
 merrow pack build aws-icons             # fetch the pinned download, build the icon pack
 merrow diagram render arch.md --out svg # every mermaid fence, light and dark, icons registered
+merrow diagram lint arch.md             # the standard's checks, rendered; exit 1 on a miss
+merrow diagram apply arch.md            # set the profile's frontmatter and class block
+merrow graph validate path.yaml         # a diagram file: a Graph, or a pattern and its objects
+merrow graph render path.yaml --out svg # the file as Mermaid, light and dark
+merrow profile show                     # the blocks the house profile generates
+merrow skill install                    # the agent skill, into Claude Code's skills dir
 merrow config get                       # every setting, all layers merged
 ```
 
-Each command prints JSON on stdout. Logs go to stderr.
+A command that reports prints JSON, or does with `--json`. Logs go to stderr.
 
 ## Two repos: the tool and your reference data
 

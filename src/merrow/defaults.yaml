@@ -85,6 +85,10 @@ lint:
     - \b(?:service|group|junction)\s+\w+\(([a-z0-9-]+:[a-z0-9-]+)\)
     - icon:\s*["']([a-z0-9-]+:[a-z0-9-]+)["']
 
+# Where `merrow skill install` puts merrow's agent skill: Claude Code's
+# personal skills dir.
+skill_dir: ~/.claude/skills
+
 # The browser puppeteer fetches for render, by puppeteer's own name for it.
 browser: chrome-headless-shell
 

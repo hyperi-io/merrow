@@ -1,8 +1,10 @@
 """merrow command line: `merrow <noun> <verb>`."""
 
 import json
+import shutil
 import sys
 from dataclasses import asdict
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +39,7 @@ source_app = Typer(
 diagram_app = Typer(help="Diagrams: render to SVG and lint.", no_args_is_help=True)
 pack_app = Typer(help="Icon packs built from vendor sources.", no_args_is_help=True)
 profile_app = Typer(help="Profiles: the look a diagram takes.", no_args_is_help=True)
+skill_app = Typer(help="The agent skill merrow ships.", no_args_is_help=True)
 graph_app = Typer(
     help="Diagram files: a Graph or an L2 pattern, drawn in a profile.",
     no_args_is_help=True,
@@ -48,6 +51,7 @@ app.add_typer(pack_app, name="pack")
 app.add_typer(diagram_app, name="diagram")
 app.add_typer(profile_app, name="profile")
 app.add_typer(graph_app, name="graph")
+app.add_typer(skill_app, name="skill")
 
 
 @app.callback()
@@ -222,28 +226,44 @@ def graph_schema() -> None:
 def graph_validate(
     files: list[Path] = Argument(help="Diagram files, YAML or JSON"),
     name: str = Option("", "--profile", help="Profile, default the configured one"),
+    as_json: bool = Option(False, "--json", help="Print the results as JSON"),
 ) -> None:
     """Check each file draws and passes lint's source pass. Exits 1 on any problem."""
     settings = config.load()
     shown = profile.load(settings, name or None)
     names = frozenset(objects.by_class_name(objects.library(settings)))
-    failed = False
+    report = {}
     for path in files:
         try:
             source = _written(path, settings, shown)
         except (ValueError, yaml.YAMLError) as error:
-            problems = [str(error)]
-        else:
-            block = diagram_check.Block(path.name, source, None, None)
-            problems = diagram_check.source_problems(
-                block, diagram_check.CLASS_LINES, shown, names
-            )
-        failed = failed or bool(problems)
-        print(f"{'FAIL' if problems else 'ok  '}  {path}")
-        for problem in problems:
-            print(f"        {problem}")
-    if failed:
+            report[str(path)] = [str(error)]
+            continue
+        block = diagram_check.Block(path.name, source, None, None)
+        report[str(path)] = diagram_check.source_problems(
+            block, diagram_check.CLASS_LINES, shown, names
+        )
+    if as_json:
+        print(json.dumps(report, indent=1))
+    else:
+        for path, problems in report.items():
+            print(f"{'FAIL' if problems else 'ok  '}  {path}")
+            print("".join(f"        {problem}\n" for problem in problems), end="")
+    if any(report.values()):
         raise Exit(1)
+
+
+@skill_app.command("install")
+def skill_install(
+    to: Path | None = Option(None, "--to", help="Skills dir, default `skill_dir`"),
+) -> None:
+    """Copy merrow's agent skill into a skills dir. Prints the installed SKILL.md."""
+    source = Path(str(files("merrow") / "skill"))
+    front = (source / "SKILL.md").read_text(encoding="utf-8").split("---")[1]
+    root = to or Path(str(config.load().get("skill_dir"))).expanduser()
+    target = root / str(yaml.safe_load(front)["name"])
+    shutil.copytree(source, target, dirs_exist_ok=True)
+    print(target / "SKILL.md")
 
 
 @graph_app.command("render")
