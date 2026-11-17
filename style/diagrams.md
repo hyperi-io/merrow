@@ -21,7 +21,7 @@ This file is self-contained. Why each rule exists, with sources and test evidenc
 | R4 | Zero crossed lines, zero lines through boxes, zero overlapping labels. |
 | R5 | Colour comes from the class lines in "Colour", or in "House style", byte for byte. No other colour. |
 | R6 | Five node outlines ("Node outlines"), plus the rounded label a house flowchart uses. Nothing else. |
-| R7 | Every diagram has `accTitle`, `accDescr` and a caption. The prose beside it carries only what the picture cannot show: why, the limits, what is optional. No sentence restates what the diagram shows, and none announces it. |
+| R7 | Every diagram has `accTitle`, `accDescr` and a caption. The prose beside it carries only what the picture cannot show: why, the limits, what is optional. No sentence restates what the diagram shows, and none announces it. A caption names no colour or line style: the profile sets those, and they change with it. |
 | R8 | Every diagram has a level, L0 to L4, and links up to its parent. |
 | R9 | No per-diagram configuration: no `%%{init}%%`, frontmatter, `style`, `linkStyle` or `click`. The one exception is the house block in "House style", byte for byte. |
 | R10 | Every diagram passes the checker ("Checking"), and its light and dark screenshots are looked at before merge. |
@@ -357,7 +357,7 @@ flowchart LR
     ...
 ```
 
-*Figure 2. L2 Services -- DFE. Dashed boxes are external.* Up: [L1 Context -- DFE](../overview.md). Down: [L3 Components -- Loader](../dfe-loader/overview.md).
+*Figure 2. L2 Services -- DFE. Senders and consumers sit outside DFE.* Up: [L1 Context -- DFE](../overview.md). Down: [L3 Components -- Loader](../dfe-loader/overview.md).
 ````
 
 - An intro sentence before, a caption after.
@@ -405,7 +405,7 @@ flowchart LR
     class sources,consumers group
 ```
 
-*Figure 1. L1 Context -- DFE. Dashed boxes are external.* Up: L0 Landscape. Down: L2 Services -- DFE.
+*Figure 1. L1 Context -- DFE. Sources and consumers sit outside DFE.* Up: L0 Landscape. Down: L2 Services -- DFE.
 
 ### L2 Services, straight boundary
 
@@ -446,7 +446,7 @@ flowchart LR
     class dfe group
 ```
 
-*Figure 2. L2 Services -- DFE. The dotted arrow is the rejection path.* Up: L1 Context -- DFE. Down: L3 Components -- Loader.
+*Figure 2. L2 Services -- DFE. The loader takes the dead letter path only for rejected events.* Up: L1 Context -- DFE. Down: L3 Components -- Loader.
 
 ### L3 Components, stacked boundary
 
@@ -607,7 +607,7 @@ sequenceDiagram
     loader->>topic: Commit offset
 ```
 
-*Figure 7. L4 Detail -- Batch write with retry. Solid arrows are requests, dashed arrows are responses.* Up: L3 Components -- Loader.
+*Figure 7. L4 Detail -- Batch write with retry.* Up: L3 Components -- Loader.
 
 6 participants or fewer, with the labels they have on the L2 and L3 diagrams.
 

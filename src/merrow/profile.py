@@ -30,6 +30,9 @@ class Profile:
             `{node.*}` fields left for the writer.
         max_ranks: The longest chain drawn left to right before pattern B.
         stage_title: A pattern B stage's title, `{n}` its number.
+        limits: Rendered `column`, `max_width` and `max_height`, in px.
+        label_styling: Styling lint fails inside a quoted label.
+        caption_styling: Styling lint fails when a caption names it.
     """
 
     name: str
@@ -39,6 +42,9 @@ class Profile:
     node_label: Mapping[str, str]
     max_ranks: int
     stage_title: str
+    limits: Mapping[str, int]
+    label_styling: re.Pattern[str]
+    caption_styling: re.Pattern[str]
 
     @property
     def classes(self) -> frozenset[str]:
@@ -145,4 +151,7 @@ def load(settings: Any, name: str | None = None) -> Profile:
         dict(entry["node_label"]),
         int(entry["layout"]["max_ranks"]),
         str(entry["layout"]["stage_title"]),
+        {key: int(value) for key, value in entry["limits"].items()},
+        re.compile(str(entry["lint"]["label_styling"])),
+        re.compile(str(entry["lint"]["caption_styling"])),
     )

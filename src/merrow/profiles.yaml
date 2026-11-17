@@ -37,6 +37,14 @@ profiles:
       stroke-width: "{stroke.boundary}"
       stroke-dasharray: "{dash.boundary}"
     icon_css: ".{class.name} .label-icon{color:{class.icon}}"
+    # Rendered limits in px. A diagram wider than `column` is shown scaled to
+    # it, and `max_height` is measured at that scale.
+    limits: {column: 860, max_width: 1250, max_height: 600}
+    # Styling lint fails outside the class lines: inside a quoted label, and
+    # named in a caption, where it goes stale when the profile changes.
+    lint:
+      label_styling: '(?i)style\s*=|<font\b|\bcolou?r\s*:|\bfill\s*:|\bstroke\s*:'
+      caption_styling: '(?i)\b(?:red|orange|yellow|green|teal|blue|purple|pink|grey|gray|black|white)\s+(?:box(?:es)?|arrows?|lines?|borders?|outlines?|nodes?|groups?)\b|\b(?:dashed|dotted|thick|bold)\b'
     # A chain of more ranks than this is drawn as pattern B, in stages titled
     # from `stage_title` (`{n}` is the stage number).
     layout:

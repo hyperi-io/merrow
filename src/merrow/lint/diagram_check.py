@@ -32,6 +32,7 @@ import argparse
 import json
 import re
 import sys
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -53,9 +54,8 @@ CLASS_LINES = frozenset(
     }
 )
 
-# The standard's limits. tests/test_diagram_check.py holds the two in step.
-MAX_WIDTH = 1250
-MAX_HEIGHT = 600
+# The standard's limits. tests/test_diagram_check.py holds the two in step. Width,
+# height and the column are the profile's.
 MIN_RATIO = 1.3
 MAX_NODES = 12
 MAX_SUBGRAPHS = 4
@@ -67,8 +67,7 @@ MAX_PARTICIPANTS = 6
 TYPES = ("flowchart", "sequenceDiagram", "stateDiagram-v2", "erDiagram", "classDiagram")
 LEVELS = ("L0 Landscape", "L1 Context", "L2 Services", "L3 Components", "L4 Detail")
 UNCOLOURED = ("sequenceDiagram", "erDiagram", "classDiagram")
-# The docs column a diagram is laid out in, and the canvases a screenshot is taken on.
-COLUMN = 860
+# The canvases a screenshot is taken on.
 CANVASES = {"light": ("neutral", "#FFFFFF"), "dark": ("dark", "#1B1B1D")}
 
 # A fence opener and the first word of its info string: ```mermaid, ~~~c++, ```{mermaid} title="x".
@@ -122,6 +121,8 @@ _FLOW_BANNED = (
 _ROUNDED = re.compile(r'\w\(""\)')
 _SUBGRAPH = re.compile(r"^subgraph\s+([A-Za-z_]\w*)")
 _STYLE = re.compile(r"^style\s+(\S+)\s+(.*)$")
+# `id:::name` applies a class inline. Read after quoted labels are emptied.
+_SHORTHAND = re.compile(r":::([A-Za-z_][\w-]*)")
 _ENTITY = re.compile(r"&#?\w+;")
 _FIGURE = re.compile(r"[*_]Figure (\d+)\.")
 _SEQUENCE_COLOUR = re.compile(
@@ -389,6 +390,11 @@ def source_problems(
             problems.append(f"{what} is not allowed")
     if any(_ENTITY.search(line) for line in lines):
         problems.append("an HTML entity, which shows literally: write the character")
+    labels = [text for line in lines for text in _QUOTED.findall(line)]
+    if any(profile.label_styling.search(text) for text in labels):
+        problems.append(
+            "R5 styling inside a label: colour and line come from the class lines"
+        )
 
     defined = [line for line in lines if line.startswith("classDef ")]
     if defined and kind in UNCOLOURED:
@@ -420,6 +426,7 @@ def source_problems(
             for line in lines
             if (words := line.split())[0] == "class" and len(words) == 3
         }
+        applied |= {name for line in bare for name in _SHORTHAND.findall(line)}
         problems += [
             f"R5 class `{name}` is applied and its class line is missing"
             for name in sorted(applied - names)
@@ -446,6 +453,10 @@ def source_problems(
             "R7 the intro announces the diagram: say what the picture cannot show"
         )
     if block.caption is not None:
+        if found := profile.caption_styling.search(block.caption):
+            problems.append(
+                f"R7 the caption names styling (`{found.group()}`), which goes stale when the profile changes"
+            )
         if not _CAPTION.match(block.caption):
             problems.append("R7 no caption `*Figure N. <title>.*` under the diagram")
         elif level and level.group(1) != LEVELS[0] and not _UP.search(block.caption):
@@ -455,9 +466,12 @@ def source_problems(
     return problems
 
 
-def layout_problems(result: dict, landscape: bool = True) -> list[str]:
+def layout_problems(
+    result: dict, limits: Mapping[str, int], landscape: bool = True
+) -> list[str]:
     """Return what the rendered diagram breaks in the standard, from the page's measurements.
 
+    ``limits`` is the profile's ``column``, ``max_width`` and ``max_height``.
     ``landscape`` is False for the types that are not held to the proportion: sequence, ER and class.
     """
     if not result["ok"]:
@@ -465,11 +479,11 @@ def layout_problems(result: dict, landscape: bool = True) -> list[str]:
     problems: list[str] = []
     width, height = result["width"], result["height"]
     # A diagram wider than the column is scaled down to it, and its height with it.
-    shown = round(height * min(1, COLUMN / max(width, 1)))
-    if width > MAX_WIDTH:
-        problems.append(f"{width} px wide, limit {MAX_WIDTH}")
-    if shown > MAX_HEIGHT:
-        problems.append(f"{shown} px tall on the page, limit {MAX_HEIGHT}")
+    shown = round(height * min(1, limits["column"] / max(width, 1)))
+    if width > limits["max_width"]:
+        problems.append(f"{width} px wide, limit {limits['max_width']}")
+    if shown > limits["max_height"]:
+        problems.append(f"{shown} px tall on the page, limit {limits['max_height']}")
     if landscape and width < MIN_RATIO * height:
         problems.append(
             f"R2 not landscape: width is {width / max(height, 1):.2f} x height, minimum {MIN_RATIO}"
@@ -660,8 +674,10 @@ def mermaid_version() -> str:
     ]
 
 
-def render(blocks: list[Block], library: Path, png: Path | None = None) -> list[dict]:
-    """Lay each diagram out in Chrome and return its measurements, with screenshots under ``png``."""
+def render(
+    blocks: list[Block], library: Path, column: int, png: Path | None = None
+) -> list[dict]:
+    """Lay each diagram out in a ``column`` px page and return its measurements, with screenshots under ``png``."""
     # Imported here so the source pass runs on a host without playwright.
     from playwright.sync_api import Error, sync_playwright
 
@@ -676,9 +692,9 @@ def render(blocks: list[Block], library: Path, png: Path | None = None) -> list[
                 raise SystemExit(
                     f"no Chrome or Chromium to render with: {failure}"
                 ) from failure
-        page = browser.new_page(viewport={"width": COLUMN + 40, "height": 700})
+        page = browser.new_page(viewport={"width": column + 40, "height": 700})
         page.set_content(
-            f'<!doctype html><div id="o" style="width:{COLUMN}px;padding:16px"></div>'
+            f'<!doctype html><div id="o" style="width:{column}px;padding:16px"></div>'
         )
         page.add_script_tag(path=str(library))
         page.add_script_tag(content=_MEASURE)
@@ -731,20 +747,21 @@ def main(argv: list[str] | None = None) -> int:
         found, problems = page_blocks(path)
         blocks += found
         page_level += problems
+    settings = config.load()
+    profile = load(settings)
     measured: list[dict | None] = [None] * len(blocks)
     how = "source only, not rendered"
     if not args.no_render:
-        measured = list(render(blocks, bundle(args.mermaid), args.png))
+        column = profile.limits["column"]
+        measured = list(render(blocks, bundle(args.mermaid), column, args.png))
         how = (
             f"rendered with {args.mermaid.name}"
             if args.mermaid
             else f"rendered with Mermaid {mermaid_version()}"
         )
 
-    settings = config.load()
     patterns = [re.compile(p) for p in settings.get("lint")["icon_refs"]]
     known = icons.known_keys(config.packs_dir(settings))
-    profile = load(settings)
     report: list[Verdict] = []
     for block, result in zip(blocks, measured, strict=True):
         problems = source_problems(block, CLASS_LINES, profile)
@@ -754,7 +771,7 @@ def main(argv: list[str] | None = None) -> int:
         ]
         if result:
             problems += layout_problems(
-                result, diagram_type(block.source)[0] in _LANDSCAPE
+                result, profile.limits, diagram_type(block.source)[0] in _LANDSCAPE
             )
         report.append(Verdict(block.name, problems, result))
     if args.json:

@@ -94,8 +94,8 @@ def test_every_template_in_the_standard_passes_the_source_pass():
     ("row", "limit"),
     [
         ("Proportion", dc.MIN_RATIO),
-        ("Rendered height", dc.MAX_HEIGHT),
-        ("Natural width (SVG `viewBox`)", dc.MAX_WIDTH),
+        ("Rendered height", PROFILE.limits["max_height"]),
+        ("Natural width (SVG `viewBox`)", PROFILE.limits["max_width"]),
         ("Nodes", dc.MAX_NODES),
         ("Subgraphs", dc.MAX_SUBGRAPHS),
         ("Arrows", dc.EXTRA_ARROWS),
@@ -283,6 +283,58 @@ def test_a_house_diagram_has_no_source_problems(source):
 def test_a_house_fault_is_named(source, said):
     found = _problems(source)
     assert any(said in problem for problem in found), found
+
+
+CAPTION = "*Figure 1. L2 Services -- DFE.* Up: [Context](context.md)."
+
+
+@pytest.mark.parametrize(
+    ("source", "caption", "said"),
+    [
+        (
+            HOUSE.replace(
+                "<span>HTTP intake</span>", "<span style='color:red'>HTTP</span>"
+            ),
+            CAPTION,
+            "R5 styling inside a label",
+        ),
+        (
+            HOUSE.replace(
+                "<b>dfe-receiver</b>", "<font color='red'>dfe-receiver</font>"
+            ),
+            CAPTION,
+            "R5 styling inside a label",
+        ),
+        (
+            HOUSE.replace("class topic bus", "topic:::neon"),
+            CAPTION,
+            "R5 class `neon` is applied and its class line is missing",
+        ),
+        (
+            HOUSE,
+            CAPTION.replace("DFE.*", "DFE.* The blue boxes are ours."),
+            "the caption names styling (`blue boxes`)",
+        ),
+        (
+            HOUSE,
+            CAPTION.replace("DFE.*", "DFE.* Dashed arrows are optional."),
+            "the caption names styling (`Dashed`)",
+        ),
+    ],
+    ids=["span_style", "font_tag", "undefined_shorthand", "colour_word", "dash_word"],
+)
+def test_styling_outside_the_profile_is_named(source, caption, said):
+    found = _problems(source, caption=caption)
+    assert any(said in problem for problem in found), found
+
+
+@pytest.mark.parametrize(
+    "caption",
+    [CAPTION, CAPTION.replace("DFE.*", "DFE.* Blue/green rollout keeps one live.")],
+    ids=["plain", "blue_green_is_no_styling"],
+)
+def test_a_caption_without_styling_passes(caption):
+    assert _problems(HOUSE, caption=caption) == []
 
 
 @pytest.mark.parametrize(
@@ -649,13 +701,21 @@ def test_a_mermaid_file_is_one_diagram_with_no_wrapper(tmp_path, monkeypatch):
 
 
 def test_a_diagram_inside_the_limits_has_no_layout_problems():
-    assert dc.layout_problems(MEASURED) == []
-    assert dc.layout_problems(MEASURED | {"backward": ["Write -> Read"]}) == []
+    assert dc.layout_problems(MEASURED, PROFILE.limits) == []
+    assert (
+        dc.layout_problems(MEASURED | {"backward": ["Write -> Read"]}, PROFILE.limits)
+        == []
+    )
     # 1240 px is scaled to the 860 px column, so its 620 px shows as 430.
-    assert dc.layout_problems(MEASURED | {"width": 1240, "height": 620}) == []
+    assert (
+        dc.layout_problems(MEASURED | {"width": 1240, "height": 620}, PROFILE.limits)
+        == []
+    )
     # A sequence, ER or class diagram is not held to the proportion.
     assert (
-        dc.layout_problems(MEASURED | {"width": 389, "height": 300}, landscape=False)
+        dc.layout_problems(
+            MEASURED | {"width": 389, "height": 300}, PROFILE.limits, landscape=False
+        )
         == []
     )
 
@@ -694,7 +754,7 @@ def test_a_diagram_inside_the_limits_has_no_layout_problems():
     ],
 )
 def test_a_layout_fault_is_named(measured, said):
-    found = dc.layout_problems(MEASURED | measured)
+    found = dc.layout_problems(MEASURED | measured, PROFILE.limits)
     assert any(said in problem for problem in found), found
 
 
