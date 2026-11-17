@@ -237,27 +237,50 @@ def _properties(
     )
 
 
+def _merge(base: Mapping[str, Any], over: Mapping[str, Any]) -> dict[str, Any]:
+    """Return `base` with `over`'s entries on top, a mapping entry key by key."""
+    merged = {key: value for key, value in base.items() if key not in over}
+    for key, value in over.items():
+        below = base.get(key)
+        both = isinstance(value, Mapping) and isinstance(below, Mapping)
+        merged[key] = {**below, **value} if both else value
+    return merged
+
+
+def _entry(
+    profiles: Mapping[str, Any], name: str, seen: tuple[str, ...] = ()
+) -> dict[str, Any]:
+    """Return a profile's entry over the profile it `extends`, if any.
+
+    Raises:
+        ProfileError: The profile, or one it extends, isn't defined, or they loop.
+    """
+    entry = profiles.get(name)
+    if not entry:
+        raise ProfileError(f"no profile {name}")
+    parent = entry.get("extends")
+    if not parent:
+        return dict(entry)
+    if parent in (*seen, name):
+        chain = " -> ".join((*seen, name, parent))
+        raise ProfileError(f"profiles extend in a loop: {chain}")
+    return _merge(_entry(profiles, parent, (*seen, name)), entry)
+
+
 def load(settings: Any, name: str | None = None, theme: str | None = None) -> Profile:
     """Return the named profile, else the configured one, generated from its tokens.
 
-    A `theme` the profile lists under `themes` overrides its entries, a
-    mapping entry key by key. A `font` setting replaces every fontFamily token.
+    A profile that `extends` another overrides that one's entries, and a
+    `theme` the profile lists under `themes` overrides its own, a mapping entry
+    key by key. A `font` setting replaces every fontFamily token.
 
     Raises:
         ProfileError: The profile, or a token it names, isn't defined.
         FileNotFoundError: A token file is in no reference repo and not in merrow.
     """
     name = name or str(settings.get("profile"))
-    entry = (settings.get("profiles") or {}).get(name)
-    if not entry:
-        raise ProfileError(f"no profile {name}")
-    override = (entry.get("themes") or {}).get(theme) or {}
-    entry: dict[str, Any] = {
-        key: {**entry[key], **value}
-        if isinstance(value, Mapping) and isinstance(entry.get(key), Mapping)
-        else value
-        for key, value in override.items()
-    } | {key: value for key, value in entry.items() if key not in override}
+    entry = _entry(settings.get("profiles") or {}, name)
+    entry = _merge(entry, (entry.get("themes") or {}).get(theme) or {})
     scope: dict[str, str] = {}
     font = _font(settings)
     for relative in entry["tokens"]:

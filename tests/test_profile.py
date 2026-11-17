@@ -55,6 +55,51 @@ def test_a_realm_token_file_restyles_every_alias_to_it(monkeypatch, tmp_path):
     assert "#0072B2" not in house.fronts["flowchart"]
 
 
+BRAND = """profiles:
+  brand:
+    extends: house
+    tokens: [profiles/house.tokens.json, realm.tokens.json]
+    themes:
+      dark:
+        tokens: [profiles/house.tokens.json, realm.tokens.json, dark.tokens.json]
+"""
+NAVY = {"color": {"group": {"$type": "color", "$value": "#000647"}}}
+BLUE = {"color": {"group": {"$type": "color", "$value": "#2EA4F6"}}}
+
+
+def test_a_profile_extending_house_restyles_it_per_theme(monkeypatch, tmp_path):
+    settings = realm(monkeypatch, tmp_path, BRAND, NAVY)
+    (tmp_path / "realm" / "dark.tokens.json").write_text(
+        json.dumps(BLUE), encoding="utf-8"
+    )
+    house = profile.load(settings, "house")
+    light = profile.load(settings, "brand", "light")
+    dark = profile.load(settings, "brand", "dark")
+    assert "stroke:#0072B2" in house.boundary, "house is untouched"
+    assert "stroke:#000647" in light.boundary
+    assert "stroke:#2EA4F6" in dark.boundary
+    assert light.class_lines == house.class_lines, "only the group colour moved"
+    assert light.limits == house.limits, "the rest comes from house"
+
+
+@pytest.mark.parametrize(
+    ("merrow_yaml", "said"),
+    [
+        (
+            "profiles:\n  a: {extends: b}\n  b: {extends: a}\n",
+            "profiles extend in a loop: a -> b -> a",
+        ),
+        ("profiles:\n  a: {extends: a}\n", "profiles extend in a loop: a -> a"),
+        ("profiles:\n  a: {extends: nothing}\n", "no profile nothing"),
+    ],
+    ids=["loop", "self", "missing_parent"],
+)
+def test_a_broken_extends_is_named(monkeypatch, tmp_path, merrow_yaml, said):
+    settings = realm(monkeypatch, tmp_path, merrow_yaml)
+    with pytest.raises(profile.ProfileError, match=said):
+        profile.load(settings, "a")
+
+
 @pytest.mark.parametrize(
     ("merrow_yaml", "env", "family"),
     [

@@ -1,5 +1,8 @@
 # Profiles: DTCG token files plus templates. `{a.b}` in a template is a token.
 # Later token files win, so a realm restyles a profile by adding one file.
+# A profile with `extends: <profile>` takes that profile's entries under its
+# own, a mapping entry key by key, so a reference repo's brand profile names
+# only what it changes.
 
 profile: house
 
