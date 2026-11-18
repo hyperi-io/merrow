@@ -545,7 +545,7 @@ def layout_problems(
 # Runs in the page. Geometry comes from the laid-out SVG, so transforms and curves are already applied.
 _MEASURE = r"""
 window.measure = async (src, cfg, id, dir) => {
-  mermaid.initialize(Object.assign({startOnLoad: false}, cfg));
+  mermaid.initialize(Object.assign({startOnLoad: false}, cfg, {securityLevel: 'strict'}));
   let out;
   try { out = await mermaid.render(id, src); }
   catch (e) { return {ok: false, error: String(e).replace(/\s+/g, ' ').slice(0, 300)}; }

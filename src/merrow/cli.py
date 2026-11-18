@@ -262,6 +262,19 @@ def skill_install(
     print(target / "SKILL.md")
 
 
+def _one_output_each(files: list[Path]) -> None:
+    """Refuse two files that would write the same output name.
+
+    Raises:
+        BadParameter: Two files share a stem.
+    """
+    seen: dict[str, Path] = {}
+    for path in files:
+        if path.stem in seen:
+            raise BadParameter(f"{seen[path.stem]} and {path} both write {path.stem}")
+        seen[path.stem] = path
+
+
 @graph_app.command("write")
 def graph_write(
     files: list[Path] = Argument(help="Diagram files, YAML or JSON"),
@@ -269,6 +282,7 @@ def graph_write(
     name: str = Option("", "--profile", help="Profile, default the configured one"),
 ) -> None:
     """Write each file as Mermaid, with no browser and no SVG. Prints one JSON line per file."""
+    _one_output_each(files)
     settings = config.load()
     out_dir.mkdir(parents=True, exist_ok=True)
     shown = profile.load(settings, name or None)
@@ -293,6 +307,7 @@ def graph_render(
     Each render theme draws from the profile in that theme, and `<file>.mmd`
     is the profile with no theme, for a page.
     """
+    _one_output_each(files)
     settings = config.load()
     out_dir.mkdir(parents=True, exist_ok=True)
     themes = [str(theme) for theme in settings.get("render")["themes"]]

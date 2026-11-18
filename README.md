@@ -16,7 +16,7 @@ The point is one look from many sources. Your diagrams arrive as Visio pages, Po
 
 ## Quick start
 
-It's a CLI, installed with uv. It runs on Linux, macOS and Windows, on the Python version `pyproject.toml` asks for.
+It's a CLI, installed with uv. It runs on Linux and macOS, with Windows best effort, on the Python version `pyproject.toml` asks for.
 
 ```bash
 uv tool install git+https://github.com/hyperi-io/merrow

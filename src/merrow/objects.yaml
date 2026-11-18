@@ -2,7 +2,7 @@
 # `group_style` (a key in the profile's group styles).
 
 # One object per icon a built pack titles, as `<id_prefix><key>` labelled with
-# the publisher's own name. An entry under `objects` wins over one made here.
+# the publisher's name, its hyphens and underscores read as spaces. An entry under `objects` wins over one made here.
 generated_objects:
   - {pack: aws, id_prefix: aws.}
 

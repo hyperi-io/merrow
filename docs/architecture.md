@@ -179,7 +179,7 @@ flowchart LR
   classDef part fill:#FFFFFF,stroke:#94A3B8,stroke-width:1.5px,color:#0F172A
 ```
 
-*Figure 2. L1 Context -- merrow.* Up: top of merrow. Down: [L2 Services -- merrow](architecture.md).
+*Figure 2. L1 Context -- merrow.* Up: top of merrow. Down: Figure 1, L2 Services, above.
 
 ## A profile is the whole look, and a reference repo can extend one
 
@@ -187,7 +187,7 @@ A profile is a set of DTCG token files plus templates in `profiles.yaml`. `house
 
 ## Objects are drawn the same everywhere
 
-An object is a thing with a label, a class or an icon, defined once. Every titled icon in a built pack becomes an object by itself, such as `aws.amazon-ec2`. A reference repo adds its objects, and an entry it writes wins over a generated one.
+An object is a thing with a label, a class or an icon, defined once. Every titled icon in a pack that `generated_objects` lists becomes an object by itself, such as `aws.amazon-ec2` from the AWS pack. A reference repo adds its objects, and an entry it writes wins over a generated one.
 
 ## What merrow won't do
 

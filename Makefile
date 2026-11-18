@@ -20,7 +20,8 @@ check:
 	hyperi-ci check
 
 # Regenerate every worked example's Mermaid and SVGs. The AWS cases need
-# `merrow pack build aws-icons aws-groups` first.
+# `merrow pack build aws-icons aws-groups` first, the Kubernetes one
+# `merrow pack build kubernetes-icons`.
 examples:
 	uv run merrow graph render docs/examples/pipeline/pipeline.yaml --out docs/examples/pipeline
 	uv run merrow graph render --profile aws docs/examples/aws-web-app/web-app.yaml --out docs/examples/aws-web-app

@@ -60,8 +60,38 @@ SODI = 'xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"'
             {"left": 2.0, "top": 3.0},
             ["complex-css"],
         ),
+        (
+            f'<svg {NS} viewBox="0 0 8 8"><script>x()</script>'
+            '<rect onload="x()" width="1"/><a href="javascript:x()"><rect/></a>'
+            '<image href="data:image/png;base64,AA"/>'
+            '<image href="data:image/svg+xml;base64,BB"/><foreignObject/></svg>',
+            [
+                '<rect width="1" />',
+                "<a><rect /></a>",
+                'href="data:image/png;base64,AA"',
+            ],
+            ["<script", "onload", "javascript", "svg+xml", "foreignObject"],
+            {},
+            ["script-dropped"],
+        ),
+        (
+            f'<svg {NS} viewBox="0 0 8 8"><style>.c{{onclick:x();fill:#000}}</style>'
+            '<rect class="c"/></svg>',
+            ['fill="#000"'],
+            ["onclick"],
+            {},
+            ["script-dropped"],
+        ),
     ],
-    ids=["metadata", "css-inlined", "ids-prefixed", "foreign-ns", "offset-complex-css"],
+    ids=[
+        "metadata",
+        "css-inlined",
+        "ids-prefixed",
+        "foreign-ns",
+        "offset-complex-css",
+        "script-dropped",
+        "script-in-css-dropped",
+    ],
 )
 def test_clean_keeps_artwork_and_isolates_each_icon(
     source, body_has, body_lacks, fields, notes
@@ -250,10 +280,28 @@ def test_every_shipped_alias_and_target_is_in_slug_form(limits):
             "Amazon EC2 Instance",
         ),
         ("P/Arch_Compute/16/Arch_Amazon-EC2_16.svg", None, None),
+        ("P/G/32/Arch_AWS-Marketplace_Light_32.svg", "aws-marketplace-32", None),
+        ("P/G/32/Arch_AWS-Marketplace_Dark_32.svg", "aws-marketplace-dark-32", None),
+        ("P/Arch_Compute/32/Arch_Amazon-EC2_32.svg", "amazon-ec2-32", None),
+        (
+            "P/Res_Compute/Res_Amazon-EC2_Instance_48_Light.svg",
+            "res-amazon-ec2-instance",
+            "Amazon EC2 Instance",
+        ),
     ],
-    ids=["light", "dark", "service", "resource", "skipped_size"],
+    ids=[
+        "light",
+        "dark",
+        "service",
+        "resource",
+        "skipped_size",
+        "light_32",
+        "dark_32",
+        "service_32",
+        "resource_light",
+    ],
 )
-def test_the_shipped_aws_rules_name_and_title_icons(limits, path, key, title):
+def test_the_shipped_aws_rules_name_and_title_icons(path, key, title):
     rules = naming.rules(config.sources(config.load())["aws-icons"].options["names"])
     assert naming.key_for(path, rules) == key
     assert naming.title_for(path, rules) == title

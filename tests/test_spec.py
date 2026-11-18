@@ -102,6 +102,29 @@ def test_graph_writes_the_mermaid_and_renders_only_when_asked(realm, command, sv
     assert sorted(p.name for p in out.glob("*.svg")) == svgs
 
 
+@pytest.mark.parametrize("command", ["write", "render"])
+@pytest.mark.parametrize(
+    ("files", "said"),
+    [
+        ({"a/demo.yaml": GOOD.replace("[x.agent]", "[x.nothing]")}, "unknown object"),
+        ({"a/demo.yaml": GOOD, "b/demo.yaml": GOOD}, "both write demo"),
+    ],
+    ids=["bad_file", "same_stem"],
+)
+def test_graph_names_bad_input_and_writes_nothing(realm, command, files, said):
+    paths = []
+    for name, text in files.items():
+        path = realm / name
+        path.parent.mkdir(exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        paths.append(str(path))
+    out = realm / "out"
+    result = runner.invoke(app, ["graph", command, *paths, "--out", str(out)])
+    assert result.exit_code == 2
+    assert said in result.output, result.output
+    assert not out.exists() or not any(out.iterdir())
+
+
 def test_validate_prints_json_with_every_problem(realm):
     good, bad = realm / "good.yaml", realm / "bad.yaml"
     good.write_text(GOOD, encoding="utf-8")

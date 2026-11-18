@@ -8,7 +8,7 @@ description: Draw, render and lint a diagram with merrow, from a diagram file or
 An agent writes a diagram file, never Mermaid styling. merrow turns the file into Mermaid in the profile's look, renders it and lints it. The rules are style/diagrams.md in the merrow repo (https://github.com/hyperi-io/merrow/blob/main/style/diagrams.md), and lint holds a diagram to them. This page is the loop.
 
 1. Pick the level (L0 to L4) and a pattern. `merrow config get | jq '.patterns | keys'` lists them. A path through several components is `data-path`, and config flowing to a runtime is `gitops-control`. Nothing fits: write the graph yourself.
-2. Pick the objects. `merrow config get | jq '.objects | keys'` lists them, such as `aws.msk`, and a reference repo adds its own. An object brings its label, subtitle, class and shape. A thing with no object is a fill or node with a `label` alone, drawn in the profile's plain `part` class.
+2. Pick the objects. `merrow config get | jq '.objects | keys'` lists them, such as `aws.msk`, and a reference repo adds its own. An object brings its `label`, `subtitle`, `class` and `shape`. A thing with no object is a fill or node with a `label` alone, drawn in the profile's plain `part` class.
 3. Write the file. `merrow graph schema` prints its JSON Schema. A file takes a pattern, its own `nodes`, `edges` and `groups`, or both: add nodes and edges beside a pattern when it lacks a box you need.
 
    ```yaml
@@ -36,7 +36,7 @@ Hand-written Mermaid works too. Write the body with its `accTitle` and `accDescr
 ## What goes wrong
 
 - A home-made renderer or apply script. merrow's commands are the tooling.
-- A long chain in one row. The writer stacks a chain past four ranks in stages, so let it. Edges between stages join stage to stage, so the picture no longer says which box hands over. Where that matters, say it in the caption or draw the hand-over as its own L4 diagram.
+- A long chain in one row. The writer stacks a chain past four ranks in stages, so let it. Edges between stages join stage to stage, so the picture no longer says which box hands over. Where that matters, say it in the caption or draw the hand-over as its own L4 diagram. A system boundary whose inside runs past the profile's `stack_after` columns is stacked the same way: the boundary lays out across, its neighbours sit above and below, and their arrows land on the boundary, not the box inside.
 - A dropped optional path. Mark the edge `optional: true` and it draws dotted, with its label.
 - A node or arrow that isn't in the code. Diagrams come from reading the code, never from imagination.
 - An L2 to L4 diagram drawn without its parent. Open the parent first and reuse its ids, labels and objects. A box the parent lacks is a change to the parent in the same PR.

@@ -17,8 +17,9 @@ FENCE = re.compile(r"^```mermaid[^\n]*\n(.*?)^```", re.MULTILINE | re.DOTALL)
 
 # Runs in the page with [source, id, Mermaid config, background colour]. Mermaid's
 # HTML labels are not valid XML, so the SVG is parsed as HTML and written as XML.
+# Strict comes last because that parse runs whatever a label carries.
 _RENDER = """async ([source, id, options, background]) => {
-  mermaid.initialize({startOnLoad: false, ...options});
+  mermaid.initialize({startOnLoad: false, ...options, securityLevel: 'strict'});
   const { svg } = await mermaid.render(id, source);
   const host = document.createElement('div');
   host.innerHTML = svg;
