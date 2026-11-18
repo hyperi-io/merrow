@@ -130,7 +130,7 @@ def test_score_counts_what_a_reader_recovered():
 def test_a_group_of_unlinked_members_is_drawn_as_a_row(graph, expected):
     assert write.rows(graph) == expected
     text = write.flowchart(
-        graph, "LR", inner=dict.fromkeys(expected, "LR"), rows=list(expected.values())
+        graph, "LR", inner=dict.fromkeys(expected, "LR"), chains=list(expected.values())
     )
     assert ("a ~~~ b" in text) is bool(expected)
     assert ("direction LR" in text) is bool(expected)

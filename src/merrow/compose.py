@@ -119,7 +119,11 @@ def stacked(graph: Graph, after: int) -> Layout | None:
             for n in graph.nodes
             if top[n.id] == box
         ],
-        [e for e in graph.edges if top[e.source] == box == top[e.target]],
+        [
+            e
+            for e in graph.edges
+            if top[e.source] == box == top[e.target] and box not in (e.source, e.target)
+        ],
         [
             replace(g, parent=None) if g.parent == box else g
             for g in graph.groups

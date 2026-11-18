@@ -133,6 +133,14 @@ def test_a_short_or_looped_chain_stays_left_to_right(graph):
     assert layout.graph is graph
 
 
+def forked(length: int) -> Graph:
+    """A chain that ends in two unlinked nodes: 13 ranks leave them a stage of their own."""
+    base = chain(length)
+    last = f"n{length - 1}"
+    nodes = [*base.nodes, Node("a", "A"), Node("b", "B")]
+    return Graph(nodes, [*base.edges, Edge(last, "a"), Edge(last, "b")])
+
+
 def boundary_graph(inner: int, second_group: bool = False) -> Graph:
     """A neighbour, a boundary holding a chain of `inner` nodes, and a sink."""
     chain = [f"n{i}" for i in range(inner)]
@@ -151,11 +159,28 @@ def boundary_graph(inner: int, second_group: bool = False) -> Graph:
     ("graph", "after", "stacks"),
     [
         (boundary_graph(5), 3, True),
+        (boundary_graph(4), 3, True),
         (boundary_graph(3), 3, False),
         (boundary_graph(5), 0, False),
         (boundary_graph(5, second_group=True), 3, False),
+        (
+            Graph(
+                boundary_graph(5).nodes,
+                [*boundary_graph(5).edges, Edge("box", "n2")],
+                boundary_graph(5).groups,
+            ),
+            3,
+            True,
+        ),
     ],
-    ids=["long_inside", "short_inside", "off", "two_boundaries"],
+    ids=[
+        "long_inside",
+        "one_over",
+        "short_inside",
+        "off",
+        "two_boundaries",
+        "box_to_member",
+    ],
 )
 def test_a_long_boundary_is_stacked_with_its_arrows_on_the_group(graph, after, stacks):
     layout = compose.stacked(graph, after)
@@ -164,4 +189,25 @@ def test_a_long_boundary_is_stacked_with_its_arrows_on_the_group(graph, after, s
         assert layout.direction == "TB" and layout.inner == {"box": "LR"}
         crossing = {(e.source, e.target, e.label) for e in layout.graph.edges}
         assert {("user", "box", "uses"), ("box", "sink", "writes")} <= crossing
-        assert ("n3", "n4", None) in crossing, "arrows inside stay"
+        assert ("n0", "n1", None) in crossing, "arrows inside stay"
+
+
+@pytest.mark.parametrize(
+    ("graph", "has"),
+    [
+        (
+            boundary_graph(5),
+            ["flowchart TB", "    direction LR", 'user -->|"uses"| box'],
+        ),
+        (forked(12), ["flowchart TB", "subgraph stage_4"]),
+    ],
+    ids=["boundary_stacked", "stage_never_a_row"],
+)
+def test_the_house_profile_stacks_a_boundary_and_leaves_stages_unchained(
+    settings, graph, has
+):
+    source, problems = drawn(settings, graph)
+    assert problems == []
+    for text in has:
+        assert text in source
+    assert "~~~" not in source

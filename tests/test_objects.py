@@ -153,19 +153,22 @@ def test_a_node_with_no_object_takes_the_profile_default_class(monkeypatch, tmp_
 @pytest.mark.parametrize(
     ("built", "expected"),
     [
-        (True, {"demo.amazon-ec2": "Amazon EC2", "demo.bus": "Kafka"}),
-        (False, {"demo.bus": "Kafka"}),
+        (
+            {"titles": {"amazon-ec2": "Amazon EC2", "bus": "Generated bus"}},
+            {"demo.amazon-ec2": "Amazon EC2", "demo.bus": "Kafka"},
+        ),
+        (None, {"demo.bus": "Kafka"}),
+        ({}, {"demo.bus": "Kafka"}),
     ],
-    ids=["pack_built", "pack_not_built"],
+    ids=["pack_built", "pack_not_built", "pack_built_before_titles"],
 )
 def test_a_pack_titles_become_objects_and_configured_ones_win(
     monkeypatch, tmp_path, built, expected
 ):
     packs = tmp_path / "packs"
     packs.mkdir()
-    if built:
-        titles = {"amazon-ec2": "Amazon EC2", "bus": "Generated bus"}
-        pack = {"prefix": "demo", "icons": {}, "titles": titles}
+    if built is not None:
+        pack = {"prefix": "demo", "icons": {}, **built}
         (packs / "demo.json").write_text(json.dumps(pack), encoding="utf-8")
     monkeypatch.setenv("MERROW_PACKS_DIR", str(packs))
     settings = settings_with(

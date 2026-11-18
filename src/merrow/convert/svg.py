@@ -1,6 +1,7 @@
 """Vendor SVG icon sets to an Iconify JSON pack for Mermaid's `registerIconPacks`.
 
-Per icon: drop editor metadata and foreign namespaces, inline simple CSS class
+Per icon: drop editor metadata, foreign namespaces and anything that runs script
+(scripts, `on*` handlers, links off the icon), inline simple CSS class
 rules (a pack puts many icons on one page, so a shared `.st1` would recolour its
 neighbours), and prefix every id so gradients and clip paths can't collide. The
 artwork is never changed. Which file becomes which icon key is the source's
@@ -21,6 +22,9 @@ XLINK = "http://www.w3.org/1999/xlink"
 ET.register_namespace("", SVG)
 ET.register_namespace("xlink", XLINK)
 _DROP_TAGS = {"title", "desc", "metadata", "style"}
+# Render pastes group icons into the page without Mermaid's sanitiser.
+_UNSAFE_TAGS = {"script", "foreignObject"}
+_SAFE_HREF = re.compile(r"#|data:image/(png|jpeg|gif|webp)[;,]")
 
 
 @dataclass(slots=True)
@@ -77,18 +81,32 @@ def clean(svg: bytes, key: str) -> tuple[dict[str, object], list[str]]:
         if complex_selector:
             notes.append("complex-css")
 
+    unsafe = False
     for parent in list(root.iter()):
         for child in list(parent):
             namespace, local = _local_name(child.tag)
-            if local in _DROP_TAGS or (namespace and namespace != SVG):
+            unsafe = unsafe or local in _UNSAFE_TAGS
+            if local in _DROP_TAGS | _UNSAFE_TAGS or (namespace and namespace != SVG):
                 parent.remove(child)
     for element in root.iter():
-        for attribute in list(element.attrib):
-            if attribute.startswith("{") and not attribute.startswith(f"{{{XLINK}}}"):
-                del element.attrib[attribute]
+        # Inlined first, so a CSS declaration passes the same checks as an attribute.
         for name in (element.attrib.pop("class", None) or "").split():
             for prop, value in css.get(name, {}).items():
                 element.set(prop, value)
+        for attribute, value in list(element.attrib.items()):
+            local = _local_name(attribute)[1]
+            runs = local.lower().startswith("on") or (
+                local == "href" and not _SAFE_HREF.match(value.strip())
+            )
+            unsafe = unsafe or runs
+            foreign = attribute.startswith("{") and not attribute.startswith(
+                f"{{{XLINK}}}"
+            )
+            if runs or foreign:
+                del element.attrib[attribute]
+
+    if unsafe:
+        notes.append("script-dropped")
 
     ids = {element.get("id") for element in root.iter() if element.get("id")}
 
@@ -167,9 +185,7 @@ def pack(
         if title := naming.title_for(member.path, rules):
             titles[key] = title
     report.icons = len(icons)
-    built: dict[str, object] = {"prefix": prefix, "icons": icons}
-    if titles:
-        built["titles"] = titles
+    built: dict[str, object] = {"prefix": prefix, "icons": icons, "titles": titles}
     resolved = {}
     for short, target in (aliases or {}).items():
         if target in icons:
