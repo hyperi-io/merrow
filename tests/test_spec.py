@@ -164,3 +164,46 @@ def test_yes_no_and_on_stay_labels(tmp_path):
     assert [n.label for n in read.nodes] == ["yes", "on"]
     assert read.edges[0].label == "no"
     assert read.edges[0].optional is True, "true and false stay booleans"
+
+
+INLINE = """title: L4 Detail -- Order
+description: An order waits on stock.
+objects:
+  flow.gate: {label: "In stock?", class: decision, shape: diamond}
+  x.kafka: {label: Order topic, class: bus}
+nodes:
+  - {id: gate, object: flow.gate}
+  - {id: topic, object: x.kafka}
+edges:
+  - {source: topic, target: gate}
+"""
+
+
+def test_a_files_own_objects_draw_and_win_for_that_file_only(realm):
+    path = realm / "order.yaml"
+    path.write_text(INLINE, encoding="utf-8")
+    out = realm / "out"
+    result = runner.invoke(app, ["graph", "write", str(path), "--out", str(out)])
+    assert result.exit_code == 0, result.output
+    source = (out / "order.mmd").read_text(encoding="utf-8")
+    assert 'gate{"<b>In stock?</b>"}' in source
+    assert "  class gate decision\n" in source
+    assert '"<b>Order topic</b>"' in source, "the file's entry wins over the library"
+    good = realm / "demo.yaml"
+    good.write_text(GOOD, encoding="utf-8")
+    runner.invoke(app, ["graph", "write", str(good), "--out", str(out)])
+    assert "Kafka" in (out / "demo.mmd").read_text(encoding="utf-8"), "only that file"
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "said"),
+    [
+        ('{label: "In stock?",', '{lable: "In stock?",', "lable"),
+        ("{label: Order topic, class: bus}", "{class: bus}", "label"),
+    ],
+    ids=["misspelt_key", "no_label"],
+)
+def test_a_bad_inline_object_is_named(realm, old, new, said):
+    result = validate(realm, INLINE.replace(old, new))
+    assert result.exit_code == 1
+    assert said in result.output, result.output

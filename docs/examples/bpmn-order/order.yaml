@@ -1,5 +1,10 @@
 title: L4 Detail -- Order process
 description: A timer starts the process each time an order is received. A sub-process creates the invoice. If an invoice id is set while it runs, the process archives the invoice as an external task. Redrawn from the Camunda BPM order-handling example (Apache-2.0).
+objects:
+  bpmn.start: {class: control, label: Start, shape: stadium}
+  bpmn.end: {class: control, label: End, shape: stadium}
+  bpmn.task: {class: part, label: Task}
+  bpmn.subprocess: {class: part, label: Sub-process, shape: subroutine}
 nodes:
   - {id: received, object: bpmn.start, label: Order received, subtitle: timer}
   - {id: invoicing, object: bpmn.subprocess, label: Create invoice, subtitle: sub-process}
