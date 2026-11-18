@@ -21,6 +21,8 @@ BEGIN = "%% merrow:begin"
 END = "%% merrow:end"
 _REF = re.compile(r"^(?P<id>[A-Za-z_]\w*)(?P<label>[\[(].*[\])])?:::(?P<ref>[\w-]+)$")
 _SUBGRAPH = re.compile(r"^subgraph\s+([A-Za-z_]\w*)")
+# Mermaid kinds that take the frontmatter alone: they can name no object.
+_FRONT_ONLY = ("sequenceDiagram", "erDiagram", "classDiagram")
 
 
 def _indent(line: str) -> str:
@@ -79,7 +81,8 @@ def apply(source: str, profile: Profile, by_ref: Mapping[str, L1Object]) -> str:
 def apply_file(path: Path, profile: Profile, by_ref: Mapping[str, L1Object]) -> bool:
     """Apply the profile to a `.mmd` file, or to each managed fence in Markdown.
 
-    A fence is managed once it names an object or carries the class block.
+    A fence is managed once it names an object or carries the class block. A
+    sequence, ER or class diagram is always managed: it can name no object.
     Returns whether the file changed.
 
     Raises:
@@ -95,7 +98,8 @@ def apply_file(path: Path, profile: Profile, by_ref: Mapping[str, L1Object]) -> 
             names = {
                 m["ref"] for ln in body.splitlines() if (m := _REF.match(ln.strip()))
             }
-            if BEGIN not in body and not names & set(by_ref):
+            front_only = diagram_type(split_front(body)[1])[0] in _FRONT_ONLY
+            if BEGIN not in body and not names & set(by_ref) and not front_only:
                 return fence.group(0)
             return fence.group(0).replace(body, apply(body, profile, by_ref), 1)
 

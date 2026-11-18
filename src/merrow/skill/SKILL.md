@@ -31,7 +31,7 @@ An agent writes a diagram file, never Mermaid styling. merrow turns the file int
 
 No Chrome on the host: `merrow diagram lint --no-render` runs the source pass alone. Say "not rendered" when you report it.
 
-Hand-written Mermaid works too. Write the body with its `accTitle` and `accDescr` lines, and name each object as `bus:::aws-msk`, the object id with dots as hyphens, after a shape if you want your own label (`topics[("Raw topics")]:::aws-msk`). `merrow diagram apply page.md` adds the frontmatter and the class block, and fills in a bare object's label. A label you wrote stays. Never type frontmatter, `classDef` or `style` lines.
+Hand-written Mermaid works too. Write the body with its `accTitle` and `accDescr` lines, and name each object as `bus:::aws-msk`, the object id with dots as hyphens, after a shape if you want your own label (`topics[("Raw topics")]:::aws-msk`). `merrow diagram apply page.md` adds the frontmatter and the class block, and fills in a bare object's label. A label you wrote stays. A sequence, ER or class diagram names no object, so apply gives it the frontmatter alone. Never type frontmatter, `classDef` or `style` lines.
 
 ## What goes wrong
 

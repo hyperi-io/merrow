@@ -77,9 +77,11 @@ def test_an_object_edit_restyles_on_the_next_apply(settings, tmp_path):
 
 def test_a_markdown_page_changes_only_its_managed_fences(settings, tmp_path):
     other = "flowchart LR\n    a --> b\n"
+    sequence = "sequenceDiagram\n    a->>b: hi\n"
     page = tmp_path / "page.md"
     page.write_text(
-        f"# Page\n\n```mermaid\n{HAND}```\n\nText.\n\n```mermaid\n{other}```\n",
+        f"# Page\n\n```mermaid\n{HAND}```\n\nText.\n\n```mermaid\n{other}```\n"
+        f"\n```mermaid\n{sequence}```\n",
         encoding="utf-8",
     )
     result = CliRunner().invoke(app, ["diagram", "apply", str(page)])
@@ -88,6 +90,7 @@ def test_a_markdown_page_changes_only_its_managed_fences(settings, tmp_path):
     text = page.read_text(encoding="utf-8")
     assert text.count(apply.BEGIN) == 1
     assert f"```mermaid\n{other}```" in text, "a fence with no object is left alone"
+    assert text.count("actorBkg") == 1, "a sequence takes the frontmatter alone"
     again = CliRunner().invoke(app, ["diagram", "apply", str(page)])
     assert again.output.startswith("unchanged")
 
