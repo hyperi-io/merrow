@@ -192,11 +192,24 @@ def diagram_render(
     ),
     out_dir: Path = Option(..., "--out", help="Directory for the SVGs"),
 ) -> None:
-    """Render each diagram once per configured theme. Prints one JSON line per SVG."""
+    """Render each diagram once per configured theme. Prints one JSON line per SVG.
+
+    A diagram the profile manages takes that theme's look first, so a dark
+    render isn't the light frontmatter on a dark page.
+    """
     settings = config.load()
     items = [diagram for path in files for diagram in render.diagrams(path)]
-    for written in render.render(items, out_dir, settings):
-        print(json.dumps(written))
+    by_ref = objects.by_class_name(objects.library(settings))
+    for theme in settings.get("render")["themes"]:
+        shown = profile.load(settings, None, theme)
+        themed = [
+            render.Diagram(d.name, apply.apply(d.source, shown, by_ref))
+            if apply.managed(d.source, by_ref)
+            else d
+            for d in items
+        ]
+        for written in render.render(themed, out_dir, settings, [theme]):
+            print(json.dumps(written))
 
 
 def _written(path: Path, settings: Any, shown: profile.Profile) -> str:

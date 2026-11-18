@@ -3,6 +3,7 @@ import re
 from dataclasses import replace
 
 import pytest
+import yaml
 
 from merrow import config, objects, post, profile, render, write
 from merrow.graph import Edge, Graph, Group, Node
@@ -175,3 +176,13 @@ def test_a_dark_theme_takes_the_dark_slide_and_ink(settings):
     assert replace(house_dark, fronts=house.fronts) == house, (
         "house dark moves icons only"
     )
+
+
+def test_no_profile_puts_angle_brackets_in_its_css(settings):
+    for name in settings.get("profiles"):
+        for theme in [None, *settings.get("render")["themes"]]:
+            for front in profile.load(settings, name, theme).fronts.values():
+                css = yaml.safe_load(front.strip("-\n"))["config"].get("themeCSS", "")
+                assert "<" not in css and ">" not in css, (
+                    f"{name} {theme}: Mermaid drops config text holding < or >"
+                )

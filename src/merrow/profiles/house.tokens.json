@@ -4,6 +4,7 @@
     "ink": { "$type": "color", "$value": "#0F172A", "$description": "Label text" },
     "ink-muted": { "$type": "color", "$value": "#334155", "$description": "Second label line" },
     "icon": { "$type": "color", "$value": "#334155", "$description": "A monochrome icon, which takes the node border colour" },
+    "page-ink": { "$type": "color", "$value": "#0F172A", "$description": "Text on the page, not on a card: an icon's label" },
     "ink-edge": { "$type": "color", "$value": "#1E293B", "$description": "Edge label text" },
     "ink-group": { "$type": "color", "$value": "#0B2A3F", "$description": "Group title text" },
     "paper": { "$type": "color", "$value": "#FFFFFF", "$description": "Node fill and label backgrounds" },
