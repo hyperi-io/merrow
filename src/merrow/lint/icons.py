@@ -6,10 +6,10 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 
 
-def known_keys(packs_dir: Path) -> set[str]:
-    """Return every `prefix:name` the Iconify packs in the dir define, aliases included."""
+def known_keys(packs: Iterable[Path]) -> set[str]:
+    """Return every `prefix:name` the Iconify pack files define, aliases included."""
     keys = set()
-    for pack in packs_dir.glob("*.json"):
+    for pack in packs:
         data = json.loads(pack.read_text(encoding="utf-8"))
         if not (isinstance(data, Mapping) and "icons" in data and "prefix" in data):
             continue

@@ -5,6 +5,7 @@
 # the publisher's name, its hyphens and underscores read as spaces. An entry under `objects` wins over one made here.
 generated_objects:
   - {pack: aws, id_prefix: aws.}
+  - {pack: starter, id_prefix: icon.}
   - {pack: k8s, id_prefix: k8s.}
   - {pack: carbon, id_prefix: carbon.}
   - {pack: hashicorp, id_prefix: hashicorp.}

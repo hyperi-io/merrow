@@ -42,4 +42,7 @@ def packs(tmp_path):
 def test_every_named_icon_must_resolve(packs, monkeypatch, tmp_path, source, missing):
     monkeypatch.chdir(tmp_path)
     patterns = [re.compile(p) for p in config.load().get("lint")["icon_refs"]]
-    assert icons.unresolved(source, patterns, icons.known_keys(packs)) == missing
+    assert (
+        icons.unresolved(source, patterns, icons.known_keys(packs.glob("*.json")))
+        == missing
+    )

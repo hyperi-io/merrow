@@ -5,7 +5,7 @@
 # License:   Apache-2.0
 # Copyright: (c) 2026 HYPERI PTY LIMITED
 
-.PHONY: quality test build check examples
+.PHONY: quality test build check starter examples
 
 quality:
 	hyperi-ci run quality
@@ -18,6 +18,10 @@ build:
 
 check:
 	hyperi-ci check
+
+# Rebuild the starter pack merrow ships, after a Carbon bump.
+starter:
+	env MERROW_PACKS_DIR=src/merrow/packs uv run merrow pack build starter-icons
 
 # Regenerate every worked example's Mermaid and SVGs. The AWS cases need
 # `merrow pack build aws-icons aws-groups` first, the Kubernetes one

@@ -20,6 +20,7 @@ A diagram rendered with publisher icons is the permitted use ("to create archite
 ## What merrow does about it
 
 - Fetches AWS, Azure and GCP packs from the publisher at build time and caches them outside every repo.
+- Ships one pack in merrow itself, `starter`: 34 Carbon icons with Carbon's LICENSE beside it.
 - Paints a monochrome open set that sets no colour (Carbon, Red Hat) in the theme's icon colour, through the source's `fill`.
 - Never recolours or resizes publisher icons. AWS ships separate artwork per size (viewBox 24/40/64/80), and the aws profile draws each icon at its own artwork size.
 - Draws AWS groups only in AWS's styles, plus AWS's custom-group recipe for a service group.

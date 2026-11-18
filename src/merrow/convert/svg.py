@@ -179,12 +179,14 @@ def pack(
     aliases: Mapping[str, str] | None = None,
     titles: Mapping[str, str] | None = None,
     fill: str | None = None,
+    info: Mapping[str, object] | None = None,
 ) -> tuple[dict[str, object], Report]:
     """Return the Iconify pack for a download's files and what was dropped.
 
     `aliases` maps a short name to an icon key. One whose key isn't in the pack
     is left out and listed in the report, never written. A rule's `title` goes
     into the pack's `titles`, by key, and an entry in `titles` wins over it.
+    `info` is Iconify's pack info, the licence and author with it.
     """
     icons: dict[str, object] = {}
     titles_found: dict[str, str] = {}
@@ -219,6 +221,8 @@ def pack(
         "icons": icons,
         "titles": titles_found,
     }
+    if info:
+        built["info"] = dict(info)
     resolved = {}
     for short, target in (aliases or {}).items():
         if target in icons:
@@ -247,5 +251,6 @@ def build(download: Path, source: Source, limits: Limits) -> Built:
         options.get("aliases"),
         options.get("titles"),
         options.get("fill"),
+        options.get("info"),
     )
     return Built(f"{source.prefix}.json", built, asdict(report))

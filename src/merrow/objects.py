@@ -51,10 +51,11 @@ def generated(settings: Any) -> dict[str, L1Object]:
     A pack not built yet gives none: `merrow pack build` makes it. A pack built
     before packs held titles gives none either, and a warning to rebuild it.
     """
+    files = config.pack_files(settings)
     found = {}
     for entry in settings.get("generated_objects") or []:
-        path = config.packs_dir(settings) / f"{entry['pack']}.json"
-        if not path.is_file():
+        path = files.get(entry["pack"])
+        if path is None:
             continue
         titles = _titles(path, path.stat().st_mtime)
         if titles is None:

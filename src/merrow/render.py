@@ -6,7 +6,7 @@ anything. A Markdown file renders each of its `mermaid` fences.
 
 import json
 import re
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -61,10 +61,10 @@ def diagrams(path: Path) -> Iterator[Diagram]:
         yield Diagram(f"{path.stem}-{number}", fence.group(1))
 
 
-def icon_packs(packs_dir: Path) -> list[dict[str, Any]]:
-    """Return every Iconify pack in the dir, to register with Mermaid."""
+def icon_packs(packs: Iterable[Path]) -> list[dict[str, Any]]:
+    """Return every Iconify pack among the files, to register with Mermaid."""
     found = []
-    for pack in sorted(packs_dir.glob("*.json")):
+    for pack in packs:
         data = json.loads(pack.read_text(encoding="utf-8"))
         if isinstance(data, dict) and "icons" in data and "prefix" in data:
             found.append(data)
@@ -96,7 +96,7 @@ def render(
     from playwright.sync_api import Error, sync_playwright
 
     options: Mapping[str, Any] = settings.get("render")
-    packs_dir = config.packs_dir(settings)
+    packs = config.pack_files(settings)
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
     with sync_playwright() as driver:
@@ -105,14 +105,14 @@ def render(
             page = shown.new_page()
             page.set_content("<!doctype html><body></body>")
             page.add_script_tag(path=str(bundle.path(settings)))
-            page.evaluate(_PACKS, icon_packs(packs_dir))
+            page.evaluate(_PACKS, icon_packs(packs.values()))
             for number, item in enumerate(items):
                 groups = post.marks(item.source)
                 for theme, look in options["themes"].items():
                     if themes is not None and theme not in themes:
                         continue
                     suffix = str(look.get("icon_suffix", ""))
-                    text = post.themed(item.source, suffix, packs_dir)
+                    text = post.themed(item.source, suffix, packs)
                     mermaid = {**options["mermaid_config"], "theme": look["mermaid"]}
                     call = [text, f"d{number}{theme}", mermaid, look["background"]]
                     try:
@@ -122,7 +122,7 @@ def render(
                             f"{item.name} ({theme}): {failure.message}"
                         ) from failure
                     if groups:
-                        svg = post.group_icons(page, svg, groups, packs_dir, suffix)
+                        svg = post.group_icons(page, svg, groups, packs, suffix)
                     target = out_dir / f"{item.name}-{theme}.svg"
                     svg = _stable_ids(svg, f"d{number}{theme}")
                     target.write_text(svg, encoding="utf-8", newline="\n")

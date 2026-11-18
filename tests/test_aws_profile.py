@@ -89,7 +89,7 @@ def test_one_graph_draws_clean_under_either_profile(settings, name):
     source, problems = drawn(settings, name)
     assert problems == []
     icons = 'users@{ icon: "aws:res-users", label: "Users", pos: "b", h: 10 }' in source
-    assert icons is (name == "aws"), "only aws draws icons"
+    assert icons, "both draw an object's icon"
     assert ("style region fill:none,stroke:#00A4A6" in source) is (name == "aws")
     assert (f"{write.GROUP_ICON} region aws:group-region" in source) is (name == "aws")
     assert re.search(r"^  class \S*\bapp\b\S* part$", source, re.M), (
@@ -111,7 +111,7 @@ def test_an_unknown_group_style_is_refused(settings, monkeypatch):
 
 
 def test_a_dark_render_swaps_icons_that_have_a_dark_variant(settings):
-    packs = config.packs_dir(settings)
+    packs = config.pack_files(settings)
     source = (
         'a@{ icon: "aws:res-users" }\nb@{ icon: "aws:amazon-simple-storage-service" }'
     )

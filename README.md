@@ -10,7 +10,8 @@ The point is one look from many sources. Your diagrams arrive as Visio pages, Po
 
 - Draws a graph of nodes, groups and arrows as Mermaid, in a profile's look. No hand-typed colours or `style` lines.
 - Keeps a library of objects (`aws.s3`, or your `shop.orders`) so a thing looks the same in every diagram that uses it.
-- Builds icon packs from what AWS, Kubernetes, GCP and others publish, and draws AWS diagrams with AWS's icons and group styles.
+- Builds icon packs from what AWS, Kubernetes, GCP, IBM Carbon, Tabler and others publish, and draws AWS diagrams with AWS's icons and group styles.
+- Ships 34 generic icons from IBM Carbon (Apache-2.0), so `icon.server`, `icon.database` and the like draw before any pack is built.
 - Renders light and dark SVGs, and lints each diagram for size, crossed lines, skip arrows, labels and captions.
 - Reads draw.io, PPTX, Visio, Excalidraw, Graphviz and Structurizr files into the same graph.
 
@@ -66,7 +67,7 @@ Settings come in layers: merrow's defaults, then the reference repos you list, t
 - [docs/architecture.md](docs/architecture.md) -- how the pieces fit, with diagrams.
 - [style/diagrams.md](style/diagrams.md) -- the diagram standard lint holds you to, and [style/diagram-templates.md](style/diagram-templates.md) to start from.
 - [src/merrow/skill/SKILL.md](src/merrow/skill/SKILL.md) -- the agent loop. `merrow skill install` puts it where Claude Code loads skills.
-- [docs/icon-sources.md](docs/icon-sources.md) and [docs/source-register.md](docs/source-register.md) -- icon publishers and their terms. Publisher packs never go in a repo.
+- [docs/icon-sources.md](docs/icon-sources.md) and [docs/source-register.md](docs/source-register.md) -- icon publishers and their terms. Publisher packs never go in a repo, apart from the Apache-2.0 starter pack merrow ships.
 
 ## Getting help
 

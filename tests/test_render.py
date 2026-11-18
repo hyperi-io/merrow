@@ -29,8 +29,8 @@ def test_only_iconify_packs_are_registered(tmp_path):
     (tmp_path / "aws-groups.json").write_text(
         json.dumps({"light": []}), encoding="utf-8"
     )
-    assert render.icon_packs(tmp_path) == [aws]
-    assert render.icon_packs(tmp_path / "empty") == []
+    assert render.icon_packs(sorted(tmp_path.glob("*.json"))) == [aws]
+    assert render.icon_packs([]) == []
 
 
 def test_render_writes_one_svg_per_theme_with_local_icons(tmp_path, monkeypatch):
