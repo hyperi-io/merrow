@@ -362,3 +362,71 @@ sources:
       - {match: '^package/svg/32/machine-+learning-+model\.svg$', key: ai-model, title: AI model}
       - match: .
         key: null
+
+  # Apache project logos: "our graphic logos are licensed to the public under the
+  # Apache License" (apache.org/foundation/marks). The names stay ASF trademarks.
+  # One PDF each, so one source each, all drawn as `asf.<project>` objects.
+  asf-kafka-logo:
+    format: pdf
+    size: 96
+    prefix: asf-kafka
+    info:
+      name: Apache Kafka logo
+      author: {name: The Apache Software Foundation, url: 'https://www.apache.org/logos/'}
+      license: {title: Apache License 2.0, spdx: Apache-2.0, url: 'https://www.apache.org/licenses/LICENSE-2.0'}
+    check:
+      source: httpheader
+      url: https://www.apache.org/logos/res/kafka/kafka.pdf
+      header: ETag
+      regex: '"(.+)"'
+    url: https://www.apache.org/logos/res/kafka/kafka.pdf
+    names:
+      - {match: '^kafka\.pdf$', key: kafka, title: Apache Kafka}
+  asf-flink-logo:
+    format: pdf
+    size: 96
+    prefix: asf-flink
+    info:
+      name: Apache Flink logo
+      author: {name: The Apache Software Foundation, url: 'https://www.apache.org/logos/'}
+      license: {title: Apache License 2.0, spdx: Apache-2.0, url: 'https://www.apache.org/licenses/LICENSE-2.0'}
+    check:
+      source: httpheader
+      url: https://www.apache.org/logos/res/flink/flink-1.pdf
+      header: ETag
+      regex: '"(.+)"'
+    url: https://www.apache.org/logos/res/flink/flink-1.pdf
+    names:
+      - {match: '^flink-1\.pdf$', key: flink, title: Apache Flink}
+  asf-iceberg-logo:
+    format: pdf
+    size: 96
+    prefix: asf-iceberg
+    info:
+      name: Apache Iceberg logo
+      author: {name: The Apache Software Foundation, url: 'https://www.apache.org/logos/'}
+      license: {title: Apache License 2.0, spdx: Apache-2.0, url: 'https://www.apache.org/licenses/LICENSE-2.0'}
+    check:
+      source: httpheader
+      url: https://www.apache.org/logos/res/iceberg/iceberg.pdf
+      header: ETag
+      regex: '"(.+)"'
+    url: https://www.apache.org/logos/res/iceberg/iceberg.pdf
+    names:
+      - {match: '^iceberg\.pdf$', key: iceberg, title: Apache Iceberg}
+  asf-spark-logo:
+    format: pdf
+    size: 96
+    prefix: asf-spark
+    info:
+      name: Apache Spark logo
+      author: {name: The Apache Software Foundation, url: 'https://www.apache.org/logos/'}
+      license: {title: Apache License 2.0, spdx: Apache-2.0, url: 'https://www.apache.org/licenses/LICENSE-2.0'}
+    check:
+      source: httpheader
+      url: https://www.apache.org/logos/res/spark/spark.pdf
+      header: ETag
+      regex: '"(.+)"'
+    url: https://www.apache.org/logos/res/spark/spark.pdf
+    names:
+      - {match: '^spark\.pdf$', key: spark, title: Apache Spark}

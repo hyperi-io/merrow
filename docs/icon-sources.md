@@ -14,6 +14,7 @@ Every source merrow knows, with its quoted terms, is in [source-register.md](sou
 | Tabler | `@tabler/icons`, the outline set without `brand-*` | MIT (LICENSE in the package) | Yes, with its LICENSE |
 | Red Hat | red-hat-icons `src/standard` | "Red Hat icons are licensed under a Creative Commons Attribution 4.0 International license" and "If you redistribute these icons, Red Hat should be given attribution." | Yes, with attribution |
 | Interop Tokyo ShowNet NOC | shownet-icons `svg` | "ShowNet Icons is licensed under a Creative Commons Attribution 4.0 International License." (LICENSE.txt) | Yes, with attribution |
+| Apache Software Foundation | Project logos (Kafka, Flink, Iceberg, Spark), one PDF each | "our graphic logos are licensed to the public under the Apache License" (apache.org/foundation/marks). The names and logos stay ASF trademarks | Yes, with attribution |
 
 A diagram rendered with publisher icons is the permitted use ("to create architecture diagrams"), so committing a rendered SVG diagram is fine. Redistributing the icon pack itself is what the terms don't grant.
 

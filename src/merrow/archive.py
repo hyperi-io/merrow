@@ -33,6 +33,8 @@ def members(
 ) -> Iterator[Member]:
     """Yield every file under `source` whose path matches `pattern`, sorted by path.
 
+    A plain file is one member, named by its file name.
+
     A path matching `ignore` is left out, such as the `__MACOSX/` resource forks
     a zip made on a Mac carries.
 
@@ -40,8 +42,10 @@ def members(
     a bad download can't fill memory.
 
     Raises:
-        ValueError: `source` is not a directory, zip or tarball.
+        ValueError: `source` doesn't exist.
     """
+    if not source.exists():
+        raise ValueError(f"{source} is not a file, directory, zip or tarball")
     if source.is_dir():
         for path in sorted(p for p in source.rglob("*") if p.is_file()):
             name = path.relative_to(source).as_posix()
@@ -64,8 +68,9 @@ def members(
                 if handle and _wanted(info.name, pattern, ignore):
                     small = info.size <= max_bytes
                     yield Member(info.name, handle.read() if small else None)
-    else:
-        raise ValueError(f"{source} is not a directory, zip or tarball")
+    elif _wanted(source.name, pattern, ignore):
+        small = source.stat().st_size <= max_bytes
+        yield Member(source.name, source.read_bytes() if small else None)
 
 
 def _wanted(

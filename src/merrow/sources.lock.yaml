@@ -1,5 +1,25 @@
 # Written by `merrow source update`. Edit the sources, not this file.
 lock:
+  asf-flink-logo:
+    version: 103dc-601f2525d5906
+    url: https://www.apache.org/logos/res/flink/flink-1.pdf
+    sha256: f4683cd131de6ac707c4f6afeaf900750e7e3bfeb631a46974a50905e4ca0841
+    bytes: 66524
+  asf-iceberg-logo:
+    version: 25de-62cafa7c2ed7c
+    url: https://www.apache.org/logos/res/iceberg/iceberg.pdf
+    sha256: 87823699cabe68bc8019e99ac6d21777365740381ebc7b464c74034af78700e9
+    bytes: 9694
+  asf-kafka-logo:
+    version: cc8-601f23c002983
+    url: https://www.apache.org/logos/res/kafka/kafka.pdf
+    sha256: 6905190d5b81edb361897a44fa111332ff370adce1cd352f9934be04e2194d0b
+    bytes: 3272
+  asf-spark-logo:
+    version: 13c6-601f24f516fce
+    url: https://www.apache.org/logos/res/spark/spark.pdf
+    sha256: 1aaafe294e9a198f6c63fe9698646bb698cae036de17fcc3af038d82e41dbffb
+    bytes: 5062
   aws-groups:
     version: d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Microsoft-PPTx-toolkits_07312026.1c286c4a809a3cf2902c88ff63bf7dd1fa3cd55d.zip
     url: https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Microsoft-PPTx-toolkits_07312026.1c286c4a809a3cf2902c88ff63bf7dd1fa3cd55d.zip

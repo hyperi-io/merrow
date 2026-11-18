@@ -10,7 +10,7 @@ artwork is never changed. Which file becomes which icon key is the source's
 
 import re
 import xml.etree.ElementTree as ET
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from xml.sax.saxutils import quoteattr
@@ -172,6 +172,21 @@ def clean(
     return icon, notes
 
 
+def _squared(icon: dict[str, object], size: float) -> dict[str, object]:
+    """Return the icon centred on a `size` square, its artwork unchanged inside.
+
+    Mermaid draws an icon in a square box, so a wide logo fills the box's width.
+    """
+    width, height = float(str(icon["width"])), float(str(icon["height"]))
+    left, top = float(str(icon.get("left", 0))), float(str(icon.get("top", 0)))
+    factor = size / max(width, height)
+    dx = (size - width * factor) / 2 - left * factor
+    dy = (size - height * factor) / 2 - top * factor
+    move = f"translate({dx:.6g} {dy:.6g}) scale({factor:.6g})"
+    body = f'<g transform="{move}">{icon["body"]}</g>'
+    return {"body": body, "width": size, "height": size}
+
+
 def pack(
     members: Iterable[archive.Member],
     prefix: str,
@@ -180,13 +195,17 @@ def pack(
     titles: Mapping[str, str] | None = None,
     fill: str | None = None,
     info: Mapping[str, object] | None = None,
+    to_svg: Callable[[bytes], tuple[bytes, list[str]]] | None = None,
+    size: float | None = None,
 ) -> tuple[dict[str, object], Report]:
     """Return the Iconify pack for a download's files and what was dropped.
 
     `aliases` maps a short name to an icon key. One whose key isn't in the pack
     is left out and listed in the report, never written. A rule's `title` goes
     into the pack's `titles`, by key, and an entry in `titles` wins over it.
-    `info` is Iconify's pack info, the licence and author with it.
+    `info` is Iconify's pack info, the licence and author with it. `to_svg`
+    turns another format's file into SVG first, with its own notes. `size`
+    puts every icon on a square that size, for logos drawn at any size.
     """
     icons: dict[str, object] = {}
     titles_found: dict[str, str] = {}
@@ -206,8 +225,11 @@ def pack(
             report.oversized.append(member.path)
             continue
         try:
-            icons[key], notes = clean(member.data, key, fill)
-        except ET.ParseError as error:
+            data, notes = to_svg(member.data) if to_svg else (member.data, [])
+            icon, cleaned = clean(data, key, fill)
+            icons[key] = _squared(icon, size) if size else icon
+            notes = [*notes, *cleaned]
+        except (ET.ParseError, ValueError) as error:
             report.failed.append(f"{member.path}: {error}")
             continue
         for note in notes:
@@ -234,11 +256,16 @@ def pack(
     return built, report
 
 
-def build(download: Path, source: Source, limits: Limits) -> Built:
-    """Build a source's Iconify pack, `<prefix>.json`.
+def build(
+    download: Path,
+    source: Source,
+    limits: Limits,
+    to_svg: Callable[[bytes], tuple[bytes, list[str]]] | None = None,
+) -> Built:
+    """Build a source's Iconify pack, `<prefix>.json`, through `to_svg` for a non-SVG format.
 
     Raises:
-        ValueError: The download is not a directory, zip or tarball.
+        ValueError: The download is not a file, directory, zip or tarball.
     """
     files = re.compile(source.options["files"])
     members = archive.members(download, files, limits.member_bytes, limits.ignore)
@@ -252,5 +279,7 @@ def build(download: Path, source: Source, limits: Limits) -> Built:
         options.get("titles"),
         options.get("fill"),
         options.get("info"),
+        to_svg,
+        options.get("size"),
     )
     return Built(f"{source.prefix}.json", built, asdict(report))
