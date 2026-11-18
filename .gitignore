@@ -28,8 +28,11 @@ venv/
 .coverage.*
 coverage.xml
 htmlcov/
+# hyperi-ci's JUnit report
+test-results/
 
-# Node. The pinned tools install into merrow's cache, never the repo.
+# npm, if someone installs the Mermaid lock by hand. merrow downloads the
+# bundle into its cache, never the repo.
 node_modules/
 
 # Render output from a local run
