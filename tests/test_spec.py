@@ -85,19 +85,21 @@ def test_a_bad_file_is_named(realm, text, said):
     assert said in result.output, result.output
 
 
-def test_graph_render_writes_the_mermaid_and_both_themes(realm):
+@pytest.mark.parametrize(
+    ("command", "svgs"),
+    [("render", ["demo-dark.svg", "demo-light.svg"]), ("write", [])],
+    ids=["render_both", "write_mermaid_only"],
+)
+def test_graph_writes_the_mermaid_and_renders_only_when_asked(realm, command, svgs):
     path = realm / "demo.yaml"
     path.write_text(GOOD, encoding="utf-8")
     out = realm / "out"
-    result = runner.invoke(app, ["graph", "render", str(path), "--out", str(out)])
+    result = runner.invoke(app, ["graph", command, str(path), "--out", str(out)])
     assert result.exit_code == 0, result.output
     assert "<span>schema-free insert</span>" in (out / "demo.mmd").read_text(
         encoding="utf-8"
     )
-    assert sorted(p.name for p in out.glob("*.svg")) == [
-        "demo-dark.svg",
-        "demo-light.svg",
-    ]
+    assert sorted(p.name for p in out.glob("*.svg")) == svgs
 
 
 def test_validate_prints_json_with_every_problem(realm):

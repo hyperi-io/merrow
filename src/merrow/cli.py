@@ -262,6 +262,26 @@ def skill_install(
     print(target / "SKILL.md")
 
 
+@graph_app.command("write")
+def graph_write(
+    files: list[Path] = Argument(help="Diagram files, YAML or JSON"),
+    out_dir: Path = Option(..., "--out", help="Directory for the .mmd files"),
+    name: str = Option("", "--profile", help="Profile, default the configured one"),
+) -> None:
+    """Write each file as Mermaid, with no browser and no SVG. Prints one JSON line per file."""
+    settings = config.load()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    shown = profile.load(settings, name or None)
+    for path in files:
+        try:
+            source = _written(path, settings, shown)
+        except (ValueError, yaml.YAMLError) as error:
+            raise BadParameter(f"{path}: {error}") from error
+        target = out_dir / f"{path.stem}.mmd"
+        target.write_text(source, encoding="utf-8", newline="\n")
+        print(json.dumps({"diagram": path.stem, "mmd": str(target)}))
+
+
 @graph_app.command("render")
 def graph_render(
     files: list[Path] = Argument(help="Diagram files, YAML or JSON"),
