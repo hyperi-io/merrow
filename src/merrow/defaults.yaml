@@ -44,6 +44,10 @@ ignore: (^|/)(__MACOSX/|\._)
 formats:
   svg:
     files: \.svg$
+  pdf:
+    files: \.pdf$
+    # A page that isn't plain paths renders to a PNG this many px on its long side.
+    raster_px: 512
   pptx: {}
   vssx:
     files: \.vssx$

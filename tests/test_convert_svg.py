@@ -228,12 +228,16 @@ def test_pack_reads_every_container_and_reports_what_it_dropped(
     assert report.unmatched == 0
 
 
-def test_build_refuses_a_file_that_is_no_container(tmp_path, limits):
+def test_a_single_file_download_is_one_member_and_a_missing_one_is_refused(
+    tmp_path, limits
+):
     loose = tmp_path / "icon.svg"
     loose.write_bytes(ICON)
-    source = Source("demo", "svg", "aws", options={"files": r"\.svg$", "names": []})
-    with pytest.raises(ValueError, match="not a directory, zip or tarball"):
-        svg.build(loose, source, limits)
+    names = [{"match": r"^icon\.svg$", "key": "icon"}]
+    source = Source("demo", "svg", "aws", options={"files": r"\.svg$", "names": names})
+    assert list(svg.build(loose, source, limits).data["icons"]) == ["icon"]
+    with pytest.raises(ValueError, match="not a file, directory, zip or tarball"):
+        svg.build(tmp_path / "gone.svg", source, limits)
 
 
 def test_resource_forks_are_ignored_by_the_shipped_ignore_pattern(tmp_path, limits):

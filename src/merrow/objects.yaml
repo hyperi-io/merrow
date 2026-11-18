@@ -12,6 +12,10 @@ generated_objects:
   - {pack: tabler, id_prefix: tabler.}
   - {pack: redhat, id_prefix: redhat.}
   - {pack: shownet, id_prefix: shownet.}
+  - {pack: asf-kafka, id_prefix: asf.}
+  - {pack: asf-flink, id_prefix: asf.}
+  - {pack: asf-iceberg, id_prefix: asf.}
+  - {pack: asf-spark, id_prefix: asf.}
 
 objects:
   aws.cloud: {label: AWS Cloud, icon: "aws:group-aws-cloud-logo", group_style: aws-cloud}

@@ -10,7 +10,7 @@ The point is one look from many sources. Your diagrams arrive as Visio pages, Po
 
 - Draws a graph of nodes, groups and arrows as Mermaid, in a profile's look. No hand-typed colours or `style` lines.
 - Keeps a library of objects (`aws.s3`, or your `shop.orders`) so a thing looks the same in every diagram that uses it.
-- Builds icon packs from what AWS, Kubernetes, GCP, IBM Carbon, Tabler and others publish, and draws AWS diagrams with AWS's icons and group styles.
+- Builds icon packs from the SVG, Visio, PowerPoint or PDF files AWS, Kubernetes, GCP, IBM Carbon, Tabler, the ASF and others publish, and draws AWS diagrams with AWS's icons and group styles.
 - Ships 34 generic icons from IBM Carbon (Apache-2.0), so `icon.server`, `icon.database` and the like draw before any pack is built.
 - Renders light and dark SVGs, and lints each diagram for size, crossed lines, skip arrows, labels and captions.
 - Reads draw.io, PPTX, Visio, Excalidraw, Graphviz and Structurizr files into the same graph.
