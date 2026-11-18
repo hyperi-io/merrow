@@ -2,7 +2,9 @@
 
 Mermaid diagram automation for people, now updated for AI too.
 
-You describe a diagram as a small YAML file, or write the Mermaid yourself. merrow writes it as Mermaid in a house style, ready to drop into Markdown, renders that Mermaid to light and dark SVG for places that don't run Mermaid, and checks it against a diagram standard. Agents get the same loop people do: write, render, lint, fix.
+You describe a diagram as a small YAML file, or write the Mermaid yourself. merrow writes it as Mermaid in a house style, ready to drop into Markdown. It renders that Mermaid to light and dark SVG for places that don't run Mermaid, and checks it against a diagram standard. Agents get the same loop people do: write, render, lint, fix.
+
+The point is one look from many sources. Your diagrams arrive as Visio pages, PowerPoint slides, draw.io files, Structurizr models and publisher icon sets, each styled differently. merrow reads them into one graph and draws them all the same way. Where a source has style rules worth keeping, merrow keeps them: AWS diagrams keep AWS's group styles and icon sizes. [tests/test_one_look.py](tests/test_one_look.py) and [tests/test_aws_profile.py](tests/test_aws_profile.py) check both.
 
 ## What it does
 
@@ -43,7 +45,7 @@ you get the Mermaid and a light and a dark SVG:
 {"diagram": "demo", "theme": "dark", "svg": "out/demo-dark.svg"}
 ```
 
-`merrow diagram lint out/demo.mmd` then measures it. `merrow --help` lists the rest.
+`merrow diagram lint out/demo.mmd` then measures it. `merrow graph write` writes the Mermaid alone, with no browser. `merrow --help` lists the rest.
 
 ## Configuration
 
@@ -60,6 +62,7 @@ Settings come in layers: merrow's defaults, then the reference repos you list, t
 
 ## Documentation
 
+- [docs/examples/](docs/examples/) -- worked examples: the diagram file, its Mermaid and its SVGs.
 - [docs/architecture.md](docs/architecture.md) -- how the pieces fit, with diagrams.
 - [style/diagrams.md](style/diagrams.md) -- the diagram standard lint holds you to, and [style/diagram-templates.md](style/diagram-templates.md) to start from.
 - [src/merrow/skill/SKILL.md](src/merrow/skill/SKILL.md) -- the agent loop. `merrow skill install` puts it where Claude Code loads skills.
