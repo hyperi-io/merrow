@@ -43,3 +43,4 @@ Hand-written Mermaid works too. Write the body with its `accTitle` and `accDescr
 - ASCII art or a `text` block standing in for a diagram. Convert any you find on a page you edit to Mermaid, and never turn Mermaid into text or an image.
 - An intro or caption that restates the picture, or names a colour or a dash. Words beside a diagram carry only what the picture can't show: why, the limits, what is optional.
 - Hexagons, `graph TD` and `style` lines. Lint fails them.
+- A copy of every Availability Zone. Draw the zone once, labelled with its count (`Availability Zones x2`), with one subnet group per tier inside it and one node per tier (`Web servers`, subtitle `Auto Scaling group`). Mermaid can't draw a group that crosses another, so an Auto Scaling group or subnet group that spans zones becomes a subtitle, not a group. Say how many zones in the description.
