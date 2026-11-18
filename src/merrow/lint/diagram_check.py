@@ -762,7 +762,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     patterns = [re.compile(p) for p in settings.get("lint")["icon_refs"]]
-    known = icons.known_keys(config.packs_dir(settings))
+    known = icons.known_keys(config.pack_files(settings).values())
     object_names = frozenset(by_class_name(library(settings)))
     report: list[Verdict] = []
     for block, result in zip(blocks, measured, strict=True):

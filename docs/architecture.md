@@ -187,7 +187,7 @@ A profile is a set of DTCG token files plus templates in `profiles.yaml`. `house
 
 ## Objects are drawn the same everywhere
 
-An object is a thing with a label, a class or an icon, defined once. Every titled icon in a pack that `generated_objects` lists becomes an object by itself, such as `aws.amazon-ec2` from the AWS pack or `k8s.sts` from the Kubernetes one. A title comes from a `names` rule, or from the source's `titles` map where file names are abbreviations. A reference repo adds its objects, and an entry it writes wins over a generated one.
+An object is a thing with a label, a class or an icon, defined once. Every titled icon in a pack that `generated_objects` lists becomes an object by itself, such as `aws.amazon-ec2` from the AWS pack or `k8s.sts` from the Kubernetes one. merrow ships one pack, `starter`: 34 generic Carbon icons drawn as `icon.server` and the like with nothing built, and a built pack of the same name wins over it. A title comes from a `names` rule, or from the source's `titles` map where file names are abbreviations. A reference repo adds its objects, and an entry it writes wins over a generated one.
 
 ## What merrow won't do
 

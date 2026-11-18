@@ -1,6 +1,8 @@
 # Built icon packs and downloads. Publisher terms bar redistribution, so no
-# pack or source file is ever committed. Rendered diagrams are fine.
+# pack or source file is ever committed. Rendered diagrams are fine. The one
+# exception is the starter pack merrow ships, Apache-2.0 with its licence.
 packs/
+!src/merrow/packs/
 .cache/
 *.vssx
 *.vsdx

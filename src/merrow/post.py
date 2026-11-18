@@ -49,13 +49,13 @@ def marks(source: str) -> dict[str, str]:
 
 
 def _icons(
-    packs_dir: Path, keys: Sequence[str], suffix: str
+    packs: Mapping[str, Path], keys: Sequence[str], suffix: str
 ) -> dict[str, dict[str, Any]]:
     """Return each icon's body and box by key, its `suffix` variant where one exists."""
     found = {}
     for key in keys:
         prefix, name = key.split(":", 1)
-        pack = json.loads((packs_dir / f"{prefix}.json").read_text(encoding="utf-8"))
+        pack = json.loads(packs[prefix].read_text(encoding="utf-8"))
         icons = pack["icons"]
         name = pack.get("aliases", {}).get(name, {}).get("parent", name)
         name = f"{name}{suffix}" if suffix and f"{name}{suffix}" in icons else name
@@ -71,7 +71,11 @@ def _icons(
 
 
 def group_icons(
-    page: Any, svg: str, groups: Mapping[str, str], packs_dir: Path, suffix: str
+    page: Any,
+    svg: str,
+    groups: Mapping[str, str],
+    packs: Mapping[str, Path],
+    suffix: str,
 ) -> str:
     """Return a rendered SVG with each marked group's icon placed, laid out in `page`.
 
@@ -79,9 +83,9 @@ def group_icons(
 
     Raises:
         KeyError: A marked icon isn't in its pack.
-        FileNotFoundError: A marked icon's pack isn't built.
+        KeyError: A marked icon's pack isn't built either.
     """
-    icons = _icons(packs_dir, sorted(set(groups.values())), suffix)
+    icons = _icons(packs, sorted(set(groups.values())), suffix)
     by_group = {gid: icons[key] for gid, key in groups.items()}
     return page.evaluate(_PLACE, [svg, by_group])
 
@@ -89,7 +93,7 @@ def group_icons(
 _ICON_REF = re.compile(r'(icon:\s*")([a-z0-9-]+):([a-z0-9-]+)(")')
 
 
-def themed(source: str, suffix: str, packs_dir: Path) -> str:
+def themed(source: str, suffix: str, packs: Mapping[str, Path]) -> str:
     """Return the source with each node icon swapped for its `suffix` variant, where one exists."""
     if not suffix:
         return source
@@ -98,10 +102,10 @@ def themed(source: str, suffix: str, packs_dir: Path) -> str:
     def swap(match: re.Match[str]) -> str:
         prefix, name = match.group(2), match.group(3)
         if prefix not in names:
-            pack = packs_dir / f"{prefix}.json"
+            pack = packs.get(prefix)
             names[prefix] = (
                 set(json.loads(pack.read_text(encoding="utf-8"))["icons"])
-                if pack.is_file()
+                if pack is not None
                 else set()
             )
         if f"{name}{suffix}" in names[prefix]:

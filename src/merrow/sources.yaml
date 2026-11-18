@@ -215,6 +215,10 @@ sources:
     format: svg
     prefix: carbon
     fill: currentColor
+    info:
+      name: Carbon icons
+      author: {name: IBM, url: 'https://github.com/carbon-design-system/carbon'}
+      license: {title: Apache License 2.0, spdx: Apache-2.0, url: 'https://www.apache.org/licenses/LICENSE-2.0'}
     check:
       source: npm
       npm: "@carbon/icons"
@@ -232,6 +236,10 @@ sources:
   hashicorp-icons:
     format: svg
     prefix: hashicorp
+    info:
+      name: Flight icons
+      author: {name: HashiCorp, url: 'https://github.com/hashicorp/design-system'}
+      license: {title: Mozilla Public License 2.0, spdx: MPL-2.0, url: 'https://www.mozilla.org/MPL/2.0/'}
     check:
       source: npm
       npm: "@hashicorp/flight-icons"
@@ -246,6 +254,10 @@ sources:
   tabler-icons:
     format: svg
     prefix: tabler
+    info:
+      name: Tabler icons
+      author: {name: Pawel Kuna, url: 'https://github.com/tabler/tabler-icons'}
+      license: {title: MIT, spdx: MIT, url: 'https://github.com/tabler/tabler-icons/blob/main/LICENSE'}
     check:
       source: npm
       npm: "@tabler/icons"
@@ -264,6 +276,10 @@ sources:
     format: svg
     prefix: redhat
     fill: currentColor
+    info:
+      name: Red Hat standard icons
+      author: {name: Red Hat, url: 'https://github.com/RedHat-UX/red-hat-icons'}
+      license: {title: CC BY 4.0, spdx: CC-BY-4.0, url: 'https://creativecommons.org/licenses/by/4.0/'}
     check:
       source: github
       github: RedHat-UX/red-hat-icons
@@ -280,6 +296,10 @@ sources:
   shownet-icons:
     format: svg
     prefix: shownet
+    info:
+      name: ShowNet icons
+      author: {name: Interop Tokyo ShowNet NOC Team, url: 'https://github.com/interop-tokyo-shownet/shownet-icons'}
+      license: {title: CC BY 4.0, spdx: CC-BY-4.0, url: 'https://creativecommons.org/licenses/by/4.0/'}
     check:
       source: github
       github: interop-tokyo-shownet/shownet-icons
@@ -288,5 +308,57 @@ sources:
       - match: /svg/([^/]+)\.svg$
         key: \1
         title: \1
+      - match: .
+        key: null
+
+  # merrow's bundled pack: a small generic set from Carbon, keyed by concept.
+  # `make starter` rebuilds it into src/merrow/packs/ after a Carbon bump.
+  starter-icons:
+    format: svg
+    prefix: starter
+    fill: currentColor
+    info:
+      name: Carbon icons
+      author: {name: IBM, url: 'https://github.com/carbon-design-system/carbon'}
+      license: {title: Apache License 2.0, spdx: Apache-2.0, url: 'https://www.apache.org/licenses/LICENSE-2.0'}
+    check:
+      source: npm
+      npm: "@carbon/icons"
+    url: https://registry.npmjs.org/@carbon/icons/-/icons-{version}.tgz
+    names:
+      - {match: '^package/svg/32/bare-+metal-+server\.svg$', key: server, title: Server}
+      - {match: '^package/svg/32/data-+base\.svg$', key: database, title: Database}
+      - {match: '^package/svg/32/message-+queue\.svg$', key: queue, title: Queue}
+      - {match: '^package/svg/32/flow-+stream\.svg$', key: stream, title: Stream}
+      - {match: '^package/svg/32/flash\.svg$', key: cache, title: Cache}
+      - {match: '^package/svg/32/object-+storage\.svg$', key: object-storage, title: Object storage}
+      - {match: '^package/svg/32/file-+storage\.svg$', key: file-storage, title: File storage}
+      - {match: '^package/svg/32/load-+balancer-+network\.svg$', key: load-balancer, title: Load balancer}
+      - {match: '^package/svg/32/firewall\.svg$', key: firewall, title: Firewall}
+      - {match: '^package/svg/32/router\.svg$', key: router, title: Router}
+      - {match: '^package/svg/32/switch-+layer-+2\.svg$', key: switch, title: Switch}
+      - {match: '^package/svg/32/user\.svg$', key: user, title: User}
+      - {match: '^package/svg/32/user-+multiple\.svg$', key: users, title: Users}
+      - {match: '^package/svg/32/application-+web\.svg$', key: browser, title: Browser}
+      - {match: '^package/svg/32/mobile\.svg$', key: mobile, title: Mobile}
+      - {match: '^package/svg/32/api\.svg$', key: api, title: API}
+      - {match: '^package/svg/32/function\.svg$', key: function, title: Function}
+      - {match: '^package/svg/32/container-+software\.svg$', key: container, title: Container}
+      - {match: '^package/svg/32/assembly-+cluster\.svg$', key: cluster, title: Cluster}
+      - {match: '^package/svg/32/cloud\.svg$', key: cloud, title: Cloud}
+      - {match: '^package/svg/32/data-+center\.svg$', key: datacentre, title: Datacentre}
+      - {match: '^package/svg/32/chat\.svg$', key: message, title: Message}
+      - {match: '^package/svg/32/email\.svg$', key: email, title: Email}
+      - {match: '^package/svg/32/password\.svg$', key: secret, title: Secret}
+      - {match: '^package/svg/32/locked\.svg$', key: lock, title: Lock}
+      - {match: '^package/svg/32/dashboard\.svg$', key: metrics, title: Metrics}
+      - {match: '^package/svg/32/cloud-+logging\.svg$', key: log, title: Log}
+      - {match: '^package/svg/32/search\.svg$', key: search, title: Search}
+      - {match: '^package/svg/32/content-+delivery-+network\.svg$', key: cdn, title: CDN}
+      - {match: '^package/svg/32/dns-+services\.svg$', key: dns, title: DNS}
+      - {match: '^package/svg/32/gateway-+api\.svg$', key: gateway, title: Gateway}
+      - {match: '^package/svg/32/event-+schedule\.svg$', key: scheduler, title: Scheduler}
+      - {match: '^package/svg/32/notebook\.svg$', key: notebook, title: Notebook}
+      - {match: '^package/svg/32/machine-+learning-+model\.svg$', key: ai-model, title: AI model}
       - match: .
         key: null

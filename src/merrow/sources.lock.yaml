@@ -55,6 +55,11 @@ lock:
     url: https://codeload.github.com/interop-tokyo-shownet/shownet-icons/tar.gz/fd2cc01ad2b736160e72c66b3c629ac5870d1040
     sha256: d183734e0c405ab6ce99a8e9dc4bb29607ae563e2ec1e8b41cced069de2c9ebd
     bytes: 26714489
+  starter-icons:
+    version: 11.92.0
+    url: https://registry.npmjs.org/@carbon/icons/-/icons-11.92.0.tgz
+    sha256: ed2635e02e6bb29ecfccd65550b2311230bb550229ffacdaa8a079ad8e6f0321
+    bytes: 6998677
   tabler-icons:
     version: 3.52.0
     url: https://registry.npmjs.org/@tabler/icons/-/icons-3.52.0.tgz

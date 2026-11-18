@@ -165,21 +165,25 @@ def _partial(text: str, scope: Mapping[str, str]) -> str:
 
 
 def _icon_facts(settings: Any, packs: Sequence[str]) -> dict[str, tuple[int, str]]:
-    """Return each icon's height and first fill colour in the named built packs.
+    """Return each icon's height and first fill colour in the named packs, every pack for `all`.
 
     Aliases are included. An icon with no fill colour has an empty one.
 
     Raises:
         FileNotFoundError: A pack isn't built.
     """
+    files = config.pack_files(settings)
     found = {}
-    for name in packs:
-        path = config.packs_dir(settings) / f"{name}.json"
-        if not path.is_file():
+    for name in files if packs == "all" else packs:
+        path = files.get(name)
+        if path is None:
+            missing = config.packs_dir(settings) / f"{name}.json"
             raise FileNotFoundError(
-                f"{path} is missing: run `merrow pack build` for it"
+                f"{missing} is missing: run `merrow pack build` for it"
             )
         pack = json.loads(path.read_text(encoding="utf-8"))
+        if "icons" not in pack:
+            continue
         default = pack.get("height", 16)
         facts = {}
         for key, icon in pack["icons"].items():
@@ -207,10 +211,11 @@ def _group_boundaries(
     Raises:
         FileNotFoundError: The pack isn't built.
     """
-    path = config.packs_dir(settings) / f"{styles['pack']}.json"
-    if not path.is_file():
+    path = config.pack_files(settings).get(styles["pack"])
+    if path is None:
+        missing = config.packs_dir(settings) / f"{styles['pack']}.json"
         raise FileNotFoundError(
-            f"{path} is missing: run `merrow pack build {styles['pack']}`"
+            f"{missing} is missing: run `merrow pack build {styles['pack']}`"
         )
     found = {}
     for group in json.loads(path.read_text(encoding="utf-8"))[styles["theme"]]:

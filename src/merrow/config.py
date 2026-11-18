@@ -63,12 +63,23 @@ def cache_dir(settings: Any) -> Path:
     )
 
 
+# Icon packs merrow ships, so a diagram has icons before any pack is built.
+BUNDLED_PACKS = Path(__file__).parent / "packs"
+
+
 def packs_dir(settings: Any) -> Path:
     """Return where built icon packs go: `packs_dir` if set, else under the cache."""
     configured = settings.get("packs_dir")
     if configured:
         return Path(configured).expanduser()
     return cache_dir(settings) / "packs"
+
+
+def pack_files(settings: Any) -> dict[str, Path]:
+    """Return every icon pack file by prefix: the shipped ones, then the built ones over them."""
+    found = {path.stem: path for path in sorted(BUNDLED_PACKS.glob("*.json"))}
+    built = packs_dir(settings)
+    return found | {path.stem: path for path in sorted(built.glob("*.json"))}
 
 
 def sources(settings: Any) -> dict[str, Source]:

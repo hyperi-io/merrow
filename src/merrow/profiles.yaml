@@ -46,6 +46,10 @@ profiles:
     # Rendered limits in px. A diagram wider than `column` is shown scaled to
     # it, and `max_height` is measured at that scale.
     limits: {column: 860, max_width: 1250, max_height: 600}
+    # A node whose object has an icon is drawn as the icon, its label under it,
+    # from every pack merrow ships or has built.
+    icon_node: '@{ icon: "{node.icon}", label: "{node.text}", pos: "b", h: {node.size} }'
+    icon_packs: all
     # Styling lint fails outside the class lines: inside a quoted label, and
     # named in a caption, where it goes stale when the profile changes.
     lint: &lint

@@ -193,3 +193,31 @@ def test_each_generated_pack_is_a_shipped_source_with_its_own_prefix(
     assert {entry["pack"] for entry in entries} <= prefixes
     ids = [entry["id_prefix"] for entry in entries]
     assert len(ids) == len(set(ids)), "two packs would make the same object ids"
+
+
+@pytest.mark.parametrize(
+    ("built", "label"),
+    [(None, "Server"), ({"server": "Built server"}, "Built server")],
+    ids=["shipped_pack", "built_pack_wins"],
+)
+def test_the_shipped_starter_pack_draws_icons_until_one_is_built(
+    monkeypatch, tmp_path, built, label
+):
+    packs = tmp_path / "packs"
+    packs.mkdir()
+    if built is not None:
+        pack = {"prefix": "starter", "icons": {}, "titles": built}
+        (packs / "starter.json").write_text(json.dumps(pack), encoding="utf-8")
+    monkeypatch.setenv("MERROW_PACKS_DIR", str(packs))
+    settings = settings_with(monkeypatch, tmp_path, "objects: {}\n")
+    found = objects.library(settings)
+    assert found["icon.server"].label == label
+    assert found["icon.server"].icon == "starter:server"
+    if built is None:
+        graph = Graph(
+            [Node("a", object="icon.server"), Node("b", object="icon.database")],
+            [Edge("a", "b")],
+        )
+        source, problems = written(settings, graph)
+        assert problems == []
+        assert '@{ icon: "starter:server"' in source
