@@ -29,16 +29,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-      - name: Install the CLI
-        run: uv tool install --python 3.14 .
-      - name: Browser system libraries (Linux)
-        if: runner.os == 'Linux'
+      # Linux and macOS: the installer, from no uv, as a new user runs it.
+      - name: Install (Linux, macOS)
+        if: runner.os != 'Windows'
         shell: bash
-        # Install as the runner first, so root only adds the system libraries.
         run: |
-          merrow tools ensure
-          sudo env "PATH=$PATH" "HOME=$HOME" merrow tools ensure --install-deps
+          ./install.sh
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+      # Windows, best effort: the README's manual steps.
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        if: runner.os == 'Windows'
+      - name: Install (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: uv tool install --python "$(cat .python-version)" .
       - name: Run it
         shell: bash
         run: |

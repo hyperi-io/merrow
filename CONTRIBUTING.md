@@ -99,7 +99,7 @@ merrow is a CLI that turns a diagram file or hand-written Mermaid into Mermaid i
 
 ### Commands that test a change
 
-`hyperi-ci check` runs the quality gates and the tests. `uv run pytest -n 2` alone misses ruff, ty, semgrep and the docs checks. Render tests launch playwright's headless shell, which `merrow tools ensure` installs. On Linux it needs Chrome's system libraries: `merrow tools ensure --install-deps` as root.
+`hyperi-ci check` runs the quality gates and the tests. `uv run pytest -n 2` alone misses ruff, ty, semgrep and the docs checks. Render tests launch playwright's headless shell, which `merrow tools ensure` installs. On Debian and Ubuntu it needs Chrome's system libraries: `merrow tools ensure --install-deps` asks sudo for them.
 
 ### What tends to bite
 
