@@ -56,6 +56,9 @@ profiles:
       # A group of like things with no arrow between them reads as a row, not
       # the column Mermaid stacks it in.
       row_groups: true
+      # A boundary diagram with more inner columns than this is stacked: the
+      # boundary laid across, its neighbours above and below.
+      stack_after: 3
     # A node's label from its `{node.*}` fields, inside its shape's brackets.
     node_label: &node_label
       subtitle: '{shape.open}"<b>{node.label}</b><br/><span>{node.subtitle}</span>"{shape.close}'

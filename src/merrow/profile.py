@@ -48,6 +48,8 @@ class Profile:
         icon_fills: Each built icon's first fill colour by `prefix:name`.
         service_group: The `group_style` that takes its icon's colour, if any.
         row_groups: Lay a group with no arrow between its members left to right.
+        stack_after: Stack a boundary diagram whose inside runs past this many
+            columns, 0 for never.
     """
 
     name: str
@@ -71,6 +73,7 @@ class Profile:
     icon_fills: Mapping[str, str] = field(default_factory=dict)
     service_group: str = ""
     row_groups: bool = False
+    stack_after: int = 0
 
     @property
     def classes(self) -> frozenset[str]:
@@ -333,4 +336,5 @@ def load(settings: Any, name: str | None = None, theme: str | None = None) -> Pr
         {key: fill for key, (_, fill) in facts.items()},
         str((entry.get("group_styles") or {}).get("service", "")),
         bool(entry["layout"].get("row_groups")),
+        int(entry["layout"].get("stack_after", 0)),
     )

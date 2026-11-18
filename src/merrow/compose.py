@@ -54,6 +54,18 @@ def ranks(graph: Graph) -> dict[str, int] | None:
     return rank
 
 
+def _merged(crossing: Mapping[tuple[str, str], list[Edge]]) -> list[Edge]:
+    """Return one solid edge a pair, plus one dotted edge for each optional label."""
+    edges = []
+    for (source, target), found in crossing.items():
+        solid = {e.label for e in found if not e.optional}
+        if solid:
+            edges.append(Edge(source, target, solid.pop() if len(solid) == 1 else None))
+        for label in dict.fromkeys(e.label for e in found if e.optional):
+            edges.append(Edge(source, target, label, optional=True))
+    return edges
+
+
 def stages(graph: Graph, max_ranks: int, title: str) -> Layout:
     """Return the graph as pattern B when its chain runs past `max_ranks`, else LR.
 
@@ -83,11 +95,50 @@ def stages(graph: Graph, max_ranks: int, title: str) -> Layout:
             edges.append(edge)
         else:
             crossing.setdefault(pair, []).append(edge)
-    for (source, target), found in crossing.items():
-        solid = {e.label for e in found if not e.optional}
-        if solid:
-            edges.append(Edge(source, target, solid.pop() if len(solid) == 1 else None))
-        for label in dict.fromkeys(e.label for e in found if e.optional):
-            edges.append(Edge(source, target, label, optional=True))
+    edges += _merged(crossing)
     inner = dict.fromkeys(stage_ids, "LR")
     return Layout(Graph(nodes, edges, groups), "TB", inner)
+
+
+def stacked(graph: Graph, after: int) -> Layout | None:
+    """Return the standard's stacked boundary form, or None where it doesn't apply.
+
+    It applies to a graph with one top-level group and only nodes beside it,
+    whose inside runs more than `after` columns. The group lays out LR, the
+    neighbours sit above and below it, and each arrow between inside and
+    outside moves onto the group, one arrow a pair as `stages` merges them.
+    """
+    tops = [g for g in graph.groups if g.parent is None]
+    if after <= 0 or len(tops) != 1:
+        return None
+    box = tops[0].id
+    top = _outermost(graph)
+    inside = Graph(
+        [
+            replace(n, group=None) if n.group == box else n
+            for n in graph.nodes
+            if top[n.id] == box
+        ],
+        [e for e in graph.edges if top[e.source] == box == top[e.target]],
+        [
+            replace(g, parent=None) if g.parent == box else g
+            for g in graph.groups
+            if g.id != box
+        ],
+    )
+    inner_rank = ranks(inside)
+    if inner_rank is None or max(inner_rank.values(), default=0) < after:
+        return None
+    edges: list[Edge] = []
+    crossing: dict[tuple[str, str], list[Edge]] = {}
+    for edge in graph.edges:
+        source = box if top[edge.source] == box else edge.source
+        target = box if top[edge.target] == box else edge.target
+        if (source == box) == (target == box):
+            edges.append(edge)
+        else:
+            crossing.setdefault((source, target), []).append(edge)
+    edges += _merged(crossing)
+    return Layout(
+        Graph(list(graph.nodes), edges, list(graph.groups)), "TB", {box: "LR"}
+    )

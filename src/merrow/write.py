@@ -8,7 +8,7 @@ colour is named here.
 import re
 from collections.abc import Callable, Mapping, Sequence
 
-from merrow.compose import stages
+from merrow.compose import stacked, stages
 from merrow.graph import Graph, Group, Node
 from merrow.objects import L1Object, bind
 from merrow.profile import Profile, fill
@@ -218,6 +218,8 @@ def diagram(
         styles.setdefault(style, []).append(node.id)
         labels[node.id] = profile_label(profile, node, known.shape if known else None)
     layout = stages(bound, profile.max_ranks, profile.stage_title)
+    if layout.direction == "LR" and not layout.inner:
+        layout = stacked(layout.graph, profile.stack_after) or layout
     group_objects = {
         g.id: library.get(g.object) if g.object else None for g in layout.graph.groups
     }

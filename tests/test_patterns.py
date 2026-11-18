@@ -3,7 +3,7 @@ import json
 import pytest
 
 from merrow import compose, config, objects, patterns, profile, write
-from merrow.graph import Edge, Graph, Node
+from merrow.graph import Edge, Graph, Group, Node
 from merrow.lint import diagram_check as dc
 
 LIBRARY = """objects:
@@ -131,3 +131,37 @@ def test_a_short_or_looped_chain_stays_left_to_right(graph):
     layout = compose.stages(graph, 4, "Stage {n}")
     assert layout.direction == "LR"
     assert layout.graph is graph
+
+
+def boundary_graph(inner: int, second_group: bool = False) -> Graph:
+    """A neighbour, a boundary holding a chain of `inner` nodes, and a sink."""
+    chain = [f"n{i}" for i in range(inner)]
+    nodes = [Node("user", "User"), Node("sink", "Sink")]
+    nodes += [Node(n, n.upper(), group="box") for n in chain]
+    edges = [Edge("user", chain[0], "uses"), Edge(chain[-1], "sink", "writes")]
+    edges += [Edge(a, b) for a, b in zip(chain, chain[1:], strict=False)]
+    groups = [Group("box", "System")]
+    if second_group:
+        groups.append(Group("other", "Other"))
+        nodes.append(Node("x", "X", group="other"))
+    return Graph(nodes, edges, groups)
+
+
+@pytest.mark.parametrize(
+    ("graph", "after", "stacks"),
+    [
+        (boundary_graph(5), 3, True),
+        (boundary_graph(3), 3, False),
+        (boundary_graph(5), 0, False),
+        (boundary_graph(5, second_group=True), 3, False),
+    ],
+    ids=["long_inside", "short_inside", "off", "two_boundaries"],
+)
+def test_a_long_boundary_is_stacked_with_its_arrows_on_the_group(graph, after, stacks):
+    layout = compose.stacked(graph, after)
+    assert (layout is not None) is stacks
+    if layout is not None:
+        assert layout.direction == "TB" and layout.inner == {"box": "LR"}
+        crossing = {(e.source, e.target, e.label) for e in layout.graph.edges}
+        assert {("user", "box", "uses"), ("box", "sink", "writes")} <= crossing
+        assert ("n3", "n4", None) in crossing, "arrows inside stay"
