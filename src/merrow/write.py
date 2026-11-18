@@ -61,12 +61,14 @@ def flowchart(
     head: Sequence[str] = (),
     ids: dict[str, str] | None = None,
     inner: Mapping[str, str] | None = None,
+    rows: Sequence[Sequence[str]] = (),
 ) -> str:
     """Return the graph as a Mermaid flowchart laid out in `direction` (LR, TB).
 
     `label` gives a node's shape and label, `head` the lines after the
     `flowchart` line, `ids` collects each graph id's Mermaid id, and `inner`
-    sets the direction inside a group.
+    sets the direction inside a group. Each of `rows` is chained with invisible
+    `~~~` links, which holds a group's members in that order.
 
     Raises:
         ValueError: The graph has problems (dangling ids, shared ids, cycles).
@@ -106,7 +108,29 @@ def flowchart(
             lines.append(f'  {source} {arrow}|"{text}"| {target}')
         else:
             lines.append(f"  {source} {arrow} {target}")
+    for row in rows:
+        lines.append("  " + " ~~~ ".join(mermaid_id(node_id, ids) for node_id in row))
     return "\n".join(lines) + "\n"
+
+
+def rows(graph: Graph) -> dict[str, list[str]]:
+    """Return each group of 2 or more nodes, no subgroups and no arrow between its members, with its node ids.
+
+    Mermaid stacks such a group's members down the page. Laid out left to right
+    and chained in order, the group reads as a row of like things.
+    """
+    parents = {group.parent for group in graph.groups}
+    members: dict[str, list[str]] = {}
+    for node in graph.nodes:
+        if node.group is not None and node.group not in parents:
+            members.setdefault(node.group, []).append(node.id)
+    found = {}
+    for group_id, node_ids in members.items():
+        inside = set(node_ids)
+        linked = any(e.source in inside and e.target in inside for e in graph.edges)
+        if len(node_ids) > 1 and not linked:
+            found[group_id] = node_ids
+    return found
 
 
 GROUP_ICON = "%% merrow:group-icon"
@@ -206,13 +230,16 @@ def diagram(
 
     ids: dict[str, str] = {}
     head = [f"accTitle: {title}", f"accDescr: {description}"]
+    found = rows(layout.graph) if profile.row_groups else {}
+    found = {gid: row for gid, row in found.items() if gid not in layout.inner}
     body = flowchart(
         layout.graph,
         layout.direction,
         lambda node: labels[node.id],
         head,
         ids,
-        layout.inner,
+        {**layout.inner, **dict.fromkeys(found, "LR")},
+        list(found.values()),
     )
     order = [line.split()[1] for line in profile.class_lines]
     tail = [
