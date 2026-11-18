@@ -181,3 +181,15 @@ def test_a_pack_titles_become_objects_and_configured_ones_win(
     assert {k: v.label for k, v in found.items() if k.startswith("demo.")} == expected
     if built:
         assert found["demo.amazon-ec2"].icon == "demo:amazon-ec2"
+
+
+def test_each_generated_pack_is_a_shipped_source_with_its_own_prefix(
+    monkeypatch, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    settings = config.load()
+    entries = settings.get("generated_objects")
+    prefixes = {source.prefix for source in config.sources(settings).values()}
+    assert {entry["pack"] for entry in entries} <= prefixes
+    ids = [entry["id_prefix"] for entry in entries]
+    assert len(ids) == len(set(ids)), "two packs would make the same object ids"

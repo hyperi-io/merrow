@@ -112,6 +112,47 @@ sources:
       # The download is the whole kubernetes/community repo.
       - match: .
         key: null
+    # File names are kubectl short names, so each title is the resource's name.
+    titles:
+      api: API server
+      c-c-m: Cloud controller manager
+      c-m: Controller manager
+      c-role: ClusterRole
+      cm: ConfigMap
+      control-plane: Control plane
+      crb: ClusterRoleBinding
+      crd: CustomResourceDefinition
+      cronjob: CronJob
+      deploy: Deployment
+      ds: DaemonSet
+      ep: Endpoints
+      etcd: etcd
+      group: Group
+      hpa: HorizontalPodAutoscaler
+      ing: Ingress
+      job: Job
+      k-proxy: kube-proxy
+      kubelet: kubelet
+      limits: LimitRange
+      netpol: NetworkPolicy
+      node: Node
+      ns: Namespace
+      pod: Pod
+      psp: PodSecurityPolicy
+      pv: PersistentVolume
+      pvc: PersistentVolumeClaim
+      quota: ResourceQuota
+      rb: RoleBinding
+      role: Role
+      rs: ReplicaSet
+      sa: ServiceAccount
+      sc: StorageClass
+      sched: Scheduler
+      secret: Secret
+      sts: StatefulSet
+      svc: Service
+      user: User
+      vol: Volume
 
   # Google Cloud publishes stable URLs with no version signal, so the content
   # hash is the version. No terms published: local-only, never committed.

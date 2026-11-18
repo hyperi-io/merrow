@@ -38,6 +38,7 @@ class Report:
     oversized: list[str] = field(default_factory=list)
     failed: list[str] = field(default_factory=list)
     broken_aliases: list[str] = field(default_factory=list)
+    titled: int = 0
     notes: dict[str, int] = field(default_factory=dict)
 
 
@@ -151,15 +152,16 @@ def pack(
     prefix: str,
     rules: Sequence[naming.NameRule],
     aliases: Mapping[str, str] | None = None,
+    titles: Mapping[str, str] | None = None,
 ) -> tuple[dict[str, object], Report]:
     """Return the Iconify pack for a download's files and what was dropped.
 
     `aliases` maps a short name to an icon key. One whose key isn't in the pack
     is left out and listed in the report, never written. A rule's `title` goes
-    into the pack's `titles`, by key.
+    into the pack's `titles`, by key, and an entry in `titles` wins over it.
     """
     icons: dict[str, object] = {}
-    titles: dict[str, str] = {}
+    titles_found: dict[str, str] = {}
     report = Report()
     for member in members:
         key = naming.key_for(member.path, rules)
@@ -182,10 +184,15 @@ def pack(
             continue
         for note in notes:
             tally(report.notes, note)
-        if title := naming.title_for(member.path, rules):
-            titles[key] = title
+        if title := (titles or {}).get(key) or naming.title_for(member.path, rules):
+            titles_found[key] = title
     report.icons = len(icons)
-    built: dict[str, object] = {"prefix": prefix, "icons": icons, "titles": titles}
+    report.titled = len(titles_found)
+    built: dict[str, object] = {
+        "prefix": prefix,
+        "icons": icons,
+        "titles": titles_found,
+    }
     resolved = {}
     for short, target in (aliases or {}).items():
         if target in icons:
@@ -206,5 +213,8 @@ def build(download: Path, source: Source, limits: Limits) -> Built:
     files = re.compile(source.options["files"])
     members = archive.members(download, files, limits.member_bytes, limits.ignore)
     rules = naming.rules(source.options["names"])
-    built, report = pack(members, source.prefix, rules, source.options.get("aliases"))
+    options = source.options
+    built, report = pack(
+        members, source.prefix, rules, options.get("aliases"), options.get("titles")
+    )
     return Built(f"{source.prefix}.json", built, asdict(report))
