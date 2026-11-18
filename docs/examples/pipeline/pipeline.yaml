@@ -1,0 +1,9 @@
+title: L2 Services -- Log pipeline
+description: Shippers send logs to a collector, which writes them to a store.
+nodes:
+  - {id: shippers, label: Log shippers}
+  - {id: collector, label: Collector}
+  - {id: store, label: Log store}
+edges:
+  - {source: shippers, target: collector, label: logs}
+  - {source: collector, target: store}

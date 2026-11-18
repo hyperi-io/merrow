@@ -1,0 +1,39 @@
+title: L2 Services -- Web application on AWS
+description: Route 53 sends web clients through AWS WAF to CloudFront and the public load balancer. Web servers call application servers through an internal load balancer, and the application servers use RDS, ElastiCache and EFS. Every tier runs in two Availability Zones.
+groups:
+  - {id: cloud, label: "", object: aws.cloud}
+  - {id: vpc, label: "", object: aws.vpc, parent: cloud}
+  - {id: az, label: "Availability Zones x2", object: aws.az, parent: vpc}
+  - {id: pub, label: Public subnets, object: aws.public-subnet, parent: az}
+  - {id: web, label: Web subnets, object: aws.private-subnet, parent: az}
+  - {id: app, label: Application subnets, object: aws.private-subnet, parent: az}
+  - {id: db, label: Database subnets, object: aws.private-subnet, parent: az}
+nodes:
+  - {id: client, object: aws.client, label: Web client}
+  - {id: r53, object: aws.route53, subtitle: DNS, group: cloud}
+  - {id: waf, object: aws.waf, group: cloud}
+  - {id: cf, object: aws.cloudfront, group: cloud}
+  - {id: s3, object: aws.s3, subtitle: static content and backups, group: cloud}
+  - {id: acm, object: aws.acm, label: AWS Certificate Manager, group: cloud}
+  - {id: alb, object: aws.alb, group: pub}
+  - {id: nat, object: aws.nat-gateway, group: pub}
+  - {id: webs, object: aws.ec2, label: Web servers, subtitle: Auto Scaling group, group: web}
+  - {id: ialb, object: aws.alb, label: Internal Application Load Balancer, group: app}
+  - {id: apps, object: aws.ec2, label: Application servers, subtitle: Auto Scaling group, group: app}
+  - {id: rds, object: aws.rds, subtitle: primary and standby, group: db}
+  - {id: cache, object: aws.elasticache, subtitle: caching, group: vpc}
+  - {id: efs, object: aws.efs, subtitle: shared storage, group: vpc}
+edges:
+  - {source: client, target: r53, label: "1"}
+  - {source: r53, target: waf}
+  - {source: waf, target: cf}
+  - {source: cf, target: s3}
+  - {source: waf, target: alb}
+  - {source: acm, target: alb, optional: true}
+  - {source: alb, target: webs}
+  - {source: webs, target: ialb}
+  - {source: ialb, target: apps}
+  - {source: apps, target: rds}
+  - {source: apps, target: cache}
+  - {source: apps, target: efs}
+  - {source: webs, target: nat, optional: true}

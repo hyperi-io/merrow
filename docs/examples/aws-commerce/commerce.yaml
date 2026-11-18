@@ -1,0 +1,41 @@
+title: L2 Services -- Adobe Commerce on AWS
+description: Route 53 resolves shoppers to CloudFront behind AWS WAF. A public load balancer spreads requests over Varnish, an internal one over the Magento servers, which use OpenSearch, ElastiCache for Redis, Aurora and EFS across two Availability Zones.
+groups:
+  - {id: cloud, label: "", object: aws.cloud}
+  - {id: region, label: "", object: aws.region, parent: cloud}
+  - {id: vpc, label: "", object: aws.vpc, parent: region}
+  - {id: az1, label: Availability Zone 1, object: aws.az, parent: vpc}
+  - {id: az2, label: Availability Zone 2, object: aws.az, parent: vpc}
+nodes:
+  - {id: users, object: aws.users, label: Shoppers}
+  - {id: r53, object: aws.amazon-route-53, group: cloud}
+  - {id: waf, object: aws.aws-waf, group: cloud}
+  - {id: cf, object: aws.amazon-cloudfront, group: cloud}
+  - {id: alb, object: aws.alb, label: Public Application Load Balancer, group: vpc}
+  - {id: varnish1, object: aws.ec2, label: Varnish Cache, group: az1}
+  - {id: varnish2, object: aws.ec2, label: Varnish Cache, group: az2}
+  - {id: ialb, object: aws.alb, label: Internal Application Load Balancer, group: vpc}
+  - {id: magento1, object: aws.ec2, label: Magento, group: az1}
+  - {id: magento2, object: aws.ec2, label: Magento, group: az2}
+  - {id: search, object: aws.amazon-opensearch-service, subtitle: catalog search, group: vpc}
+  - {id: redis, object: aws.res-amazon-elasticache-elasticache-for-redis, label: ElastiCache for Redis, subtitle: sessions and query cache, group: vpc}
+  - {id: aurora1, object: aws.amazon-aurora, label: Aurora primary, group: az1}
+  - {id: aurora2, object: aws.amazon-aurora, label: Aurora standby, group: az2}
+  - {id: efs, object: aws.amazon-efs, subtitle: shared content, group: vpc}
+edges:
+  - {source: users, target: r53, label: "1"}
+  - {source: r53, target: cf}
+  - {source: waf, target: cf, label: "2"}
+  - {source: cf, target: alb, label: "3"}
+  - {source: alb, target: varnish1, label: "4"}
+  - {source: alb, target: varnish2}
+  - {source: varnish1, target: ialb, label: "5"}
+  - {source: varnish2, target: ialb}
+  - {source: ialb, target: magento1, label: "6"}
+  - {source: ialb, target: magento2}
+  - {source: magento1, target: search, label: "8"}
+  - {source: magento1, target: redis, label: "9"}
+  - {source: magento1, target: aurora1, label: "10"}
+  - {source: magento2, target: aurora1}
+  - {source: magento1, target: efs, label: "11"}
+  - {source: aurora1, target: aurora2, optional: true}

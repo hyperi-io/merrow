@@ -1,0 +1,15 @@
+# A reference repo's Kubernetes look: the house profile with Kubernetes icons.
+profiles:
+  k8s:
+    extends: house
+    icon_node: '@{ icon: "{node.icon}", label: "{node.text}", pos: "b", h: {node.size} }'
+    icon_packs: [k8s]
+
+objects:
+  k8s.api: {label: API server, icon: "k8s:api"}
+  k8s.etcd: {label: etcd, subtitle: persistence store, icon: "k8s:etcd"}
+  k8s.sched: {label: Scheduler, icon: "k8s:sched"}
+  k8s.c-m: {label: Controller manager, icon: "k8s:c-m"}
+  k8s.c-c-m: {label: Cloud controller manager, icon: "k8s:c-c-m"}
+  k8s.kubelet: {label: kubelet, icon: "k8s:kubelet"}
+  k8s.k-proxy: {label: kube-proxy, icon: "k8s:k-proxy"}
