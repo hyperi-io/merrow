@@ -222,6 +222,9 @@ def _written(path: Path, settings: Any, shown: profile.Profile) -> str:
     found = spec.read(path)
     graph = spec.graph(found, patterns.library(settings))
     library = objects.library(settings)
+    library |= {
+        key: objects.entry(key, fields) for key, fields in found.objects.items()
+    }
     return write.diagram(graph, shown, library, found.title, found.description)
 
 

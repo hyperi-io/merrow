@@ -17,9 +17,9 @@ EXAMPLES = Path(__file__).parent.parent / "docs" / "examples"
         ("pipeline/pipeline.yaml", None, "house"),
         ("c4-big-bank/context.yaml", "c4-big-bank/reference", "house"),
         ("c4-big-bank/containers.yaml", "c4-big-bank/reference", "house"),
-        ("bpmn-order/order.yaml", "bpmn-order/reference", "bpmn"),
-        ("bpmn-order/create-invoice.yaml", "bpmn-order/reference", "bpmn"),
-        ("campus-network/campus.yaml", "campus-network/reference", "house"),
+        ("bpmn-order/order.yaml", None, "house"),
+        ("bpmn-order/create-invoice.yaml", None, "house"),
+        ("campus-network/campus.yaml", None, "house"),
     ],
     ids=[
         "pipeline",

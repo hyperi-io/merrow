@@ -6,7 +6,7 @@ The JSON Schema comes from these types, so it can't drift from what merrow reads
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, Required, TypedDict
 
 import yaml
 from pydantic import ConfigDict, TypeAdapter, with_config
@@ -40,6 +40,23 @@ class Fill(TypedDict, total=False):
     id: str
 
 
+# merrow.yaml's object keys. `class` is a keyword, so the class form can't hold it.
+ObjectEntry = with_config(ConfigDict(extra="forbid"))(
+    TypedDict(
+        "ObjectEntry",
+        {
+            "label": Required[str],
+            "class": str,
+            "subtitle": str,
+            "icon": str,
+            "shape": str,
+            "group_style": str,
+        },
+        total=False,
+    )
+)
+
+
 @with_config(ConfigDict(extra="forbid"))
 @dataclass(frozen=True, slots=True)
 class Spec:
@@ -53,6 +70,7 @@ class Spec:
         nodes: Nodes drawn as given, beside any the pattern makes.
         edges: Edges drawn as given.
         groups: Groups drawn as given.
+        objects: One-off objects for this file, merrow.yaml's keys, over the library.
     """
 
     title: str
@@ -62,6 +80,7 @@ class Spec:
     nodes: list[Node] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
     groups: list[Group] = field(default_factory=list)
+    objects: dict[str, ObjectEntry] = field(default_factory=dict)
 
 
 _ADAPTER = TypeAdapter(Spec)

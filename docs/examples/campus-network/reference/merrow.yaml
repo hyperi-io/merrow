@@ -1,5 +1,0 @@
-# External things in a campus diagram, each drawn with the icon of the thing.
-objects:
-  campus.internet: {class: ext, label: Internet, icon: "starter:cloud"}
-  campus.stations: {class: ext, label: End-stations, icon: "starter:browser"}
-  campus.servers: {class: ext, label: Servers, icon: "starter:server"}

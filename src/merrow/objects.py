@@ -74,17 +74,26 @@ def library(settings: Any) -> dict[str, L1Object]:
         KeyError: An entry has no `label`.
     """
     found = generated(settings)
-    for object_id, entry in (settings.get("objects") or {}).items():
-        found[object_id] = L1Object(
-            object_id,
-            str(entry.get("class", "")),
-            str(entry["label"]),
-            entry.get("subtitle"),
-            entry.get("icon"),
-            entry.get("shape"),
-            entry.get("group_style"),
-        )
+    for object_id, fields in (settings.get("objects") or {}).items():
+        found[object_id] = entry(object_id, fields)
     return found
+
+
+def entry(object_id: str, fields: Mapping[str, Any]) -> L1Object:
+    """Return one object from an `objects:` entry, in merrow.yaml or a diagram file.
+
+    Raises:
+        KeyError: The entry has no `label`.
+    """
+    return L1Object(
+        object_id,
+        str(fields.get("class", "")),
+        str(fields["label"]),
+        fields.get("subtitle"),
+        fields.get("icon"),
+        fields.get("shape"),
+        fields.get("group_style"),
+    )
 
 
 def bind(graph: Graph, objects: Mapping[str, L1Object]) -> tuple[Graph, list[str]]:

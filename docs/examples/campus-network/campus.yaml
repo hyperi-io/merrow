@@ -1,5 +1,9 @@
 title: L4 Detail -- Three-layer campus network
 description: Traffic from the internet enters at the core layer, which holds the internet gateways, and passes down through distribution to access, where end-stations and servers connect. Redrawn from the three-layer hierarchical network design model described on Wikipedia as Hierarchical internetworking model.
+objects:
+  campus.internet: {class: ext, label: Internet, icon: "starter:cloud"}
+  campus.stations: {class: ext, label: End-stations, icon: "starter:browser"}
+  campus.servers: {class: ext, label: Servers, icon: "starter:server"}
 groups:
   - {id: core, label: Core layer}
   - {id: distribution, label: Distribution layer}

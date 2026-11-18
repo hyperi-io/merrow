@@ -33,9 +33,9 @@ examples:
 	uv run merrow graph render --profile aws docs/examples/aws-commerce/commerce.yaml --out docs/examples/aws-commerce
 	env MERROW_REFERENCES='["docs/examples/kubernetes/reference"]' uv run merrow graph render --profile k8s docs/examples/kubernetes/components.yaml --out docs/examples/kubernetes
 	env MERROW_REFERENCES='["docs/examples/c4-big-bank/reference"]' uv run merrow graph render docs/examples/c4-big-bank/context.yaml docs/examples/c4-big-bank/containers.yaml --out docs/examples/c4-big-bank
-	env MERROW_REFERENCES='["docs/examples/bpmn-order/reference"]' uv run merrow graph render --profile bpmn docs/examples/bpmn-order/order.yaml docs/examples/bpmn-order/create-invoice.yaml --out docs/examples/bpmn-order
+	uv run merrow graph render docs/examples/bpmn-order/order.yaml docs/examples/bpmn-order/create-invoice.yaml --out docs/examples/bpmn-order
 	uv run merrow diagram apply docs/examples/oidc-login/login.md
 	uv run merrow diagram render docs/examples/oidc-login/login.md --out docs/examples/oidc-login
-	env MERROW_REFERENCES='["docs/examples/campus-network/reference"]' uv run merrow graph render docs/examples/campus-network/campus.yaml --out docs/examples/campus-network
-	env MERROW_REFERENCES='["docs/examples/flink-platform/reference"]' uv run merrow graph render docs/examples/flink-platform/flink.yaml --out docs/examples/flink-platform
-	env MERROW_REFERENCES='["docs/examples/openshift-platform/reference"]' uv run merrow graph render docs/examples/openshift-platform/openshift.yaml --out docs/examples/openshift-platform
+	uv run merrow graph render docs/examples/campus-network/campus.yaml --out docs/examples/campus-network
+	uv run merrow graph render docs/examples/flink-platform/flink.yaml --out docs/examples/flink-platform
+	uv run merrow graph render docs/examples/openshift-platform/openshift.yaml --out docs/examples/openshift-platform
