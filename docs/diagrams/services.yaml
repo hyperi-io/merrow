@@ -1,0 +1,25 @@
+title: L2 Services -- merrow
+description: Publisher downloads become icon packs. A diagram file and the config layers go to the writer, which emits Mermaid in a profile's look. Render draws it to SVG in a browser page, and lint measures it.
+groups:
+  - {id: merrow, label: merrow}
+nodes:
+  - {id: publishers, label: Icon publishers}
+  - {id: refs, label: Reference repos}
+  - {id: authors, label: People and agents}
+  - {id: sources, label: Sources, subtitle: fetch and pin, group: merrow}
+  - {id: packs, label: Icon packs, subtitle: converters, group: merrow}
+  - {id: config, label: Config cascade, subtitle: objects and profiles, group: merrow}
+  - {id: writer, label: Writer, subtitle: graph to Mermaid, group: merrow}
+  - {id: render, label: Render, subtitle: SVG in a browser page, group: merrow}
+  - {id: lint, label: Lint, subtitle: the standard's checks, group: merrow}
+  - {id: docs, label: Docs pages}
+edges:
+  - {source: publishers, target: sources, label: downloads}
+  - {source: sources, target: packs}
+  - {source: refs, target: config, label: layers}
+  - {source: authors, target: writer, label: diagram files}
+  - {source: packs, target: writer}
+  - {source: config, target: writer}
+  - {source: writer, target: render}
+  - {source: render, target: lint}
+  - {source: render, target: docs, label: SVG}

@@ -1,0 +1,13 @@
+title: L1 Context -- merrow
+description: People and agents hand merrow diagram files. merrow draws them with icon downloads from publishers and objects and profiles from reference repos, and writes Mermaid and SVG for the docs.
+nodes:
+  - {id: authors, label: People and agents}
+  - {id: refs, label: Reference repos, subtitle: objects and profiles}
+  - {id: publishers, label: Icon publishers, subtitle: "AWS, Kubernetes and more"}
+  - {id: merrow, label: merrow}
+  - {id: docs, label: Docs pages, subtitle: Mermaid and SVG}
+edges:
+  - {source: authors, target: merrow, label: diagram files}
+  - {source: refs, target: merrow, label: config layers}
+  - {source: publishers, target: merrow, label: downloads}
+  - {source: merrow, target: docs, label: diagrams}
