@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from xml.sax.saxutils import quoteattr
 
 from merrow import archive, naming
 from merrow.model import Built, Limits, Source, tally
@@ -25,6 +26,19 @@ _DROP_TAGS = {"title", "desc", "metadata", "style"}
 # Render pastes group icons into the page without Mermaid's sanitiser.
 _UNSAFE_TAGS = {"script", "foreignObject"}
 _SAFE_HREF = re.compile(r"#|data:image/(png|jpeg|gif|webp)[;,]")
+# What a root <svg> sets for every shape in it, kept on a wrapping <g>.
+_INHERITED = {
+    "fill",
+    "fill-rule",
+    "clip-rule",
+    "stroke",
+    "stroke-width",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "stroke-miterlimit",
+    "opacity",
+    "color",
+}
 
 
 @dataclass(slots=True)
@@ -67,8 +81,13 @@ def _local_name(tag: object) -> tuple[str, str]:
     return "", tag
 
 
-def clean(svg: bytes, key: str) -> tuple[dict[str, object], list[str]]:
+def clean(
+    svg: bytes, key: str, fill: str | None = None
+) -> tuple[dict[str, object], list[str]]:
     """Return one icon's Iconify entry and the notes worth reviewing.
+
+    `fill` paints a monochrome set that sets none, such as `currentColor`, so
+    the icon takes the theme's colour. A fill the artwork sets wins.
 
     Raises:
         xml.etree.ElementTree.ParseError: The file isn't well-formed XML.
@@ -141,6 +160,12 @@ def clean(svg: bytes, key: str) -> tuple[dict[str, object], list[str]]:
     body = "".join(ET.tostring(child, encoding="unicode") for child in root)
     body = re.sub(r"\s+xmlns(:\w+)?=\"[^\"]+\"", "", body)
     body = re.sub(r">\s+<", "><", body).strip()
+    inherited = {k: v for k, v in root.attrib.items() if k in _INHERITED}
+    if fill and "fill" not in inherited:
+        inherited["fill"] = fill
+    if inherited:
+        shared = " ".join(f"{k}={quoteattr(v)}" for k, v in sorted(inherited.items()))
+        body = f"<g {shared}>{body}</g>"
     icon: dict[str, object] = {"body": body, "width": width, "height": height}
     if left or top:
         icon["left"], icon["top"] = left, top
@@ -153,6 +178,7 @@ def pack(
     rules: Sequence[naming.NameRule],
     aliases: Mapping[str, str] | None = None,
     titles: Mapping[str, str] | None = None,
+    fill: str | None = None,
 ) -> tuple[dict[str, object], Report]:
     """Return the Iconify pack for a download's files and what was dropped.
 
@@ -178,7 +204,7 @@ def pack(
             report.oversized.append(member.path)
             continue
         try:
-            icons[key], notes = clean(member.data, key)
+            icons[key], notes = clean(member.data, key, fill)
         except ET.ParseError as error:
             report.failed.append(f"{member.path}: {error}")
             continue
@@ -215,6 +241,11 @@ def build(download: Path, source: Source, limits: Limits) -> Built:
     rules = naming.rules(source.options["names"])
     options = source.options
     built, report = pack(
-        members, source.prefix, rules, options.get("aliases"), options.get("titles")
+        members,
+        source.prefix,
+        rules,
+        options.get("aliases"),
+        options.get("titles"),
+        options.get("fill"),
     )
     return Built(f"{source.prefix}.json", built, asdict(report))

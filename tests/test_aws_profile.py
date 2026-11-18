@@ -1,5 +1,6 @@
 import json
 import re
+from dataclasses import replace
 
 import pytest
 
@@ -167,4 +168,10 @@ def test_a_dark_theme_takes_the_dark_slide_and_ink(settings):
     assert 'primaryTextColor: "#FFFFFF"' in dark.fronts["flowchart"]
     light = profile.load(settings, "aws", "light")
     assert light.group_boundaries["region"].endswith("color:#000000")
-    assert profile.load(settings, "house", "dark") == profile.load(settings, "house")
+    house, house_dark = (
+        profile.load(settings, "house"),
+        profile.load(settings, "house", "dark"),
+    )
+    assert replace(house_dark, fronts=house.fronts) == house, (
+        "house dark moves icons only"
+    )

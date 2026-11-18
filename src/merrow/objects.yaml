@@ -6,6 +6,11 @@
 generated_objects:
   - {pack: aws, id_prefix: aws.}
   - {pack: k8s, id_prefix: k8s.}
+  - {pack: carbon, id_prefix: carbon.}
+  - {pack: hashicorp, id_prefix: hashicorp.}
+  - {pack: tabler, id_prefix: tabler.}
+  - {pack: redhat, id_prefix: redhat.}
+  - {pack: shownet, id_prefix: shownet.}
 
 objects:
   aws.cloud: {label: AWS Cloud, icon: "aws:group-aws-cloud-logo", group_style: aws-cloud}

@@ -208,3 +208,85 @@ sources:
       # Whole template diagrams, not icons.
       - match: /images/
         key: null
+
+  # Openly licensed sets: the built pack may be redistributed with its licence.
+  # Each is monochrome and sets no colour, so `fill` paints it in the theme's.
+  carbon-icons:
+    format: svg
+    prefix: carbon
+    fill: currentColor
+    check:
+      source: npm
+      npm: "@carbon/icons"
+    url: https://registry.npmjs.org/@carbon/icons/-/icons-{version}.tgz
+    names:
+      # IBM's and third parties' marks, not generic icons.
+      - match: ^package/svg/32/(ibm|logo)-[^/]*\.svg$
+        key: null
+      - match: ^package/svg/32/([^/]+)\.svg$
+        key: \1
+        title: \1
+      - match: .
+        key: null
+
+  hashicorp-icons:
+    format: svg
+    prefix: hashicorp
+    check:
+      source: npm
+      npm: "@hashicorp/flight-icons"
+    url: https://registry.npmjs.org/@hashicorp/flight-icons/-/flight-icons-{version}.tgz
+    names:
+      - match: ^package/svg/([^/]+)-24\.svg$
+        key: \1
+        title: \1
+      - match: .
+        key: null
+
+  tabler-icons:
+    format: svg
+    prefix: tabler
+    check:
+      source: npm
+      npm: "@tabler/icons"
+    url: https://registry.npmjs.org/@tabler/icons/-/icons-{version}.tgz
+    names:
+      # Brand marks, not generic icons.
+      - match: ^package/icons/outline/brand-[^/]*\.svg$
+        key: null
+      - match: ^package/icons/outline/([^/]+)\.svg$
+        key: \1
+        title: \1
+      - match: .
+        key: null
+
+  redhat-icons:
+    format: svg
+    prefix: redhat
+    fill: currentColor
+    check:
+      source: github
+      github: RedHat-UX/red-hat-icons
+      use_latest_release: true
+    url: https://github.com/RedHat-UX/red-hat-icons/archive/refs/tags/{version}.tar.gz
+    names:
+      - match: /src/standard/([^/]+)\.svg$
+        key: \1
+        title: \1
+      - match: .
+        key: null
+
+  # Network devices by layer, from the Interop Tokyo ShowNet NOC team.
+  shownet-icons:
+    format: svg
+    prefix: shownet
+    check:
+      source: github
+      github: interop-tokyo-shownet/shownet-icons
+    url: https://codeload.github.com/interop-tokyo-shownet/shownet-icons/tar.gz/{revision}
+    names:
+      - match: /svg/([^/]+)\.svg$
+        key: \1
+        title: \1
+      - match: .
+        key: null

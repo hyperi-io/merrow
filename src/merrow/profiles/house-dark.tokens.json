@@ -1,0 +1,6 @@
+{
+  "$description": "merrow house profile tokens for a dark render, over house.tokens.json. Nodes stay light cards, so only what sits on the page itself changes.",
+  "color": {
+    "icon": { "$type": "color", "$value": "#CBD5E1", "$description": "A monochrome icon on the dark page" }
+  }
+}

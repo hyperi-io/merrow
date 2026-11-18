@@ -10,6 +10,11 @@ lock:
     url: https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip
     sha256: d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526
     bytes: 13988918
+  carbon-icons:
+    version: 11.92.0
+    url: https://registry.npmjs.org/@carbon/icons/-/icons-11.92.0.tgz
+    sha256: ed2635e02e6bb29ecfccd65550b2311230bb550229ffacdaa8a079ad8e6f0321
+    bytes: 6998677
   gcp-category-icons:
     version: e5bc3abd3527
     url: https://services.google.com/fh/files/misc/category-icons.zip
@@ -20,6 +25,11 @@ lock:
     url: https://services.google.com/fh/files/misc/core-products-icons.zip
     sha256: 6531a10f58bc599c24d9a455d81dd757c1a03c3c43da9cddf639b859c1c1eece
     bytes: 318678
+  hashicorp-icons:
+    version: 5.3.0
+    url: https://registry.npmjs.org/@hashicorp/flight-icons/-/flight-icons-5.3.0.tgz
+    sha256: d2d467cf27c269ed5c64b25b82aa25234a9d908081ec33c36255b626a4302e91
+    bytes: 1588418
   ibm-icons:
     version: v2.0.0
     url: https://github.com/IBM-Cloud/architecture-icons/archive/refs/tags/v2.0.0.tar.gz
@@ -35,3 +45,18 @@ lock:
     url: https://docs.oracle.com/iaas/Content/Resources/Assets/OCI_Icons_Visio.zip
     sha256: f3a14ba1fb809507ce8787f6289dcdb3836a153b88aeeec77973321117b899be
     bytes: 6893720
+  redhat-icons:
+    version: v2.3.1
+    url: https://github.com/RedHat-UX/red-hat-icons/archive/refs/tags/v2.3.1.tar.gz
+    sha256: b89bac87ab1518c204a7f2ea0f6b309ddd6767c1b8818f80af180d1a89da6df7
+    bytes: 644262
+  shownet-icons:
+    version: '20250618.040846'
+    url: https://codeload.github.com/interop-tokyo-shownet/shownet-icons/tar.gz/fd2cc01ad2b736160e72c66b3c629ac5870d1040
+    sha256: d183734e0c405ab6ce99a8e9dc4bb29607ae563e2ec1e8b41cced069de2c9ebd
+    bytes: 26714489
+  tabler-icons:
+    version: 3.52.0
+    url: https://registry.npmjs.org/@tabler/icons/-/icons-3.52.0.tgz
+    sha256: 626620c7d42afd2f294fba167ce4653b5cb946336d186b4991c70b700e5616af
+    bytes: 1299871

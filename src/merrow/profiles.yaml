@@ -9,6 +9,9 @@ profile: house
 profiles:
   house:
     tokens: [profiles/house.tokens.json]
+    themes:
+      dark:
+        tokens: [profiles/house.tokens.json, profiles/house-dark.tokens.json]
     # Mermaid's own order for these properties, which the class lines keep.
     class_properties: &class_properties [fill, stroke, stroke-width, stroke-dasharray, color]
     class_defaults: &class_defaults
@@ -91,6 +94,7 @@ profiles:
             fontSize: {font.size.label}
             lineColor: "{color.line}"
             primaryTextColor: "{color.ink}"
+            nodeBorder: "{color.icon}"
             clusterBorder: "{color.group}"
             edgeLabelBackground: "{color.paper}"
           themeCSS: >-
