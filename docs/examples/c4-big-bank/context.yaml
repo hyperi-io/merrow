@@ -1,0 +1,11 @@
+title: L1 Context -- Internet Banking System
+description: Customers use the Internet Banking System to view balances and make payments. It gets account data from the mainframe and sends e-mail through the bank's Exchange server.
+nodes:
+  - {id: customer, object: bank.customer}
+  - {id: ibs, object: bank.ibs}
+  - {id: mainframe, object: bank.mainframe}
+  - {id: email, object: bank.email}
+edges:
+  - {source: customer, target: ibs, label: uses}
+  - {source: ibs, target: mainframe, label: accounts}
+  - {source: ibs, target: email, label: e-mail}

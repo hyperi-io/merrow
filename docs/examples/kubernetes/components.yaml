@@ -1,0 +1,21 @@
+title: L2 Services -- Kubernetes cluster
+description: The API server is the hub. Every node's kubelet and kube-proxy talk to it, it stores state in etcd, and the scheduler and controller managers work through it. The cloud controller manager calls the cloud provider's API.
+groups:
+  - {id: cluster, label: Kubernetes cluster}
+  - {id: nodes, label: "Nodes x2", parent: cluster}
+  - {id: cp, label: Control plane, parent: cluster}
+  - {id: ctl, label: Controllers, parent: cp}
+nodes:
+  - {id: kubelet, object: k8s.kubelet, group: nodes}
+  - {id: kproxy, object: k8s.k-proxy, group: nodes}
+  - {id: api, object: k8s.api, group: cp}
+  - {id: etcd, object: k8s.etcd, group: cp}
+  - {id: sched, object: k8s.sched, group: ctl}
+  - {id: cm, object: k8s.c-m, group: ctl}
+  - {id: ccm, object: k8s.c-c-m, group: ctl}
+  - {id: cloud, label: Cloud provider API}
+edges:
+  - {source: nodes, target: api}
+  - {source: api, target: etcd}
+  - {source: api, target: ctl}
+  - {source: ccm, target: cloud, optional: true}

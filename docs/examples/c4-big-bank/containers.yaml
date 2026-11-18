@@ -1,0 +1,22 @@
+title: L2 Services -- Internet Banking System
+description: The customer loads the single-page app from the web application, or uses the mobile app. Both call the API application, which keeps users in the database, reads accounts from the mainframe and sends e-mail.
+groups:
+  - {id: ibs, label: Internet Banking System}
+nodes:
+  - {id: customer, object: bank.customer}
+  - {id: web, object: bank.web, group: ibs}
+  - {id: spa, object: bank.spa, group: ibs}
+  - {id: mobile, object: bank.mobile, group: ibs}
+  - {id: api, object: bank.api, group: ibs}
+  - {id: db, object: bank.db, group: ibs}
+  - {id: mainframe, object: bank.mainframe}
+  - {id: email, object: bank.email}
+edges:
+  - {source: customer, target: web, label: uses}
+  - {source: web, target: spa, label: delivers}
+  - {source: customer, target: mobile, label: uses}
+  - {source: spa, target: api, label: API calls}
+  - {source: mobile, target: api, label: API calls}
+  - {source: api, target: db}
+  - {source: api, target: mainframe, label: accounts}
+  - {source: api, target: email, label: e-mail}

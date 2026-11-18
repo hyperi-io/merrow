@@ -1,0 +1,10 @@
+objects:
+  bank.customer: {class: ext, label: Personal banking customer}
+  bank.ibs: {label: Internet Banking System, subtitle: balances and payments}
+  bank.mainframe: {class: ext, label: Mainframe Banking System, subtitle: core banking}
+  bank.email: {class: ext, label: E-mail system, subtitle: Microsoft Exchange}
+  bank.spa: {class: ui, label: Single-page app, subtitle: Angular}
+  bank.mobile: {class: ui, label: Mobile app, subtitle: Xamarin}
+  bank.web: {label: Web application, subtitle: Spring MVC}
+  bank.api: {label: API application, subtitle: JSON over HTTPS}
+  bank.db: {class: store, label: Database, subtitle: Oracle schema, shape: cylinder}
