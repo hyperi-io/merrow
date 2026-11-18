@@ -13,7 +13,7 @@ repo-local git hooks.** Standard tooling is enough.
    `npm test`, `go test ./...`). Lint via the standard tools
    the project declares in its manifest (`ruff`, `clippy`,
    `eslint`, `golangci-lint`, etc.). The project's pyproject /
-   Cargo.toml / package.json carries the lint config; your IDE
+   Cargo.toml / package.json has the lint config, and your IDE
    picks it up without further setup.
 3. Commit with whatever message format your workflow uses.
    Open a PR against `main`.
@@ -52,18 +52,18 @@ Maintainer workflow:
 
 1. Land changes on `main` via PR or direct push (your call).
 2. `hyperi-ci push` instead of `git push`. The pre-push hook
-   enforces this; bypass with `HYPERCI_PUSH=1 git push` if you
+   enforces this. Bypass it with `HYPERCI_PUSH=1 git push` if you
    know what you are doing.
 3. `hyperi-ci push --release` when you want to ship a release.
-   Amends a `Release: true` trailer to HEAD; the CI pipeline
+   It amends a `Release: true` trailer to HEAD. The CI pipeline
    picks that up, predicts the next version, stamps it, and
    publishes.
 
 ## What happens when you push commits to your fork
 
-Nothing on this repo's side. Your fork has its own GitHub
-Actions context; this repo's workflows are not triggered until
-you open a PR. Your fork's own CI (if you enabled it) runs in
+Nothing on this repo's side. Your fork has a separate GitHub
+Actions context, and this repo's workflows are not triggered until
+you open a PR. Your fork's CI (if you enabled it) runs in
 your namespace.
 
 ## Commit message conventions
@@ -78,3 +78,39 @@ as needed.
 Do NOT open a public issue or PR for security vulnerabilities.
 See the repository's `SECURITY.md` (if present) or the
 organisation's security contact for the disclosure process.
+
+## Context
+
+### What this is
+
+merrow is a CLI that turns a diagram file or hand-written Mermaid into Mermaid in a profile's look, renders it to SVG and lints it. It is company-neutral: no company's objects, colours or names live here, and a test fails if one creeps in. Those belong in a reference repo, loaded as a config layer.
+
+### Where things live
+
+| Path | Holds |
+|---|---|
+| `src/merrow/cli.py` | Every command, `merrow <noun> <verb>` |
+| `src/merrow/*.yaml` | The base config layer: defaults, sources, profiles, patterns, objects |
+| `src/merrow/write.py`, `compose.py` | Graph to Mermaid: labels, classes, rows, stacked boundaries, stages |
+| `src/merrow/render.py`, `bundle.py`, `browser.py` | Mermaid to SVG in a playwright page |
+| `src/merrow/lint/diagram_check.py` | The standard's checks |
+| `style/` | The diagram standard and templates lint holds diagrams to |
+| `docs/diagrams/` | Sources for the diagrams in `docs/architecture.md` |
+
+### Commands that test a change
+
+`hyperi-ci check` runs the quality gates and the tests. `uv run pytest -n 2` alone misses ruff, ty, semgrep and the docs checks. Render tests launch playwright's headless shell, which `merrow tools ensure` installs. On Linux it needs Chrome's system libraries: `merrow tools ensure --install-deps` as root.
+
+### What tends to bite
+
+| Don't | Do | Why |
+|---|---|---|
+| Commit an icon pack, a publisher download or a render with publisher icons in a test fixture | Build packs into the cache, fake them in tests | Publisher terms bar redistribution |
+| Name a company or product in merrow | Put it in a reference repo | `tests/test_neutral.py` fails the build |
+| Hard-code a value | Add it to the YAML config | Every tunable goes through the cascade |
+| Type `classDef` or `style` lines in a diagram | Use a profile and objects | Lint fails any styling inside a diagram |
+| Lock a dependency right after its release with a warm uv cache | `uv lock --refresh` | uv serves the old index from its cache |
+
+### Where this sits
+
+merrow depends on scalo-py (config, logging, HTTP) and on hyperi-ci for its CI. Reference repos are read by merrow as config layers and depend on its profile and object formats. Nothing else depends on merrow yet.

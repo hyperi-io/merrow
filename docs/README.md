@@ -1,7 +1,8 @@
 # docs
 
-Design notes and source records.
+How merrow is built, and the records behind its choices.
 
+- [architecture.md](architecture.md): how the parts fit, with diagrams drawn by merrow from [diagrams/](diagrams/).
 - [source-register.md](source-register.md): every publisher source found, with its download, version detection, quoted terms and commit verdict.
 - [icon-sources.md](icon-sources.md): the licence verdict for each icon pack a profile draws with.
 - [diagrams-research.md](diagrams-research.md): the evidence behind the diagram standard's palette and limits.

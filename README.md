@@ -1,63 +1,80 @@
 # merrow
 
-Diagram automation on Mermaid. merrow puts a house style in every diagram, renders it to SVG and lints it. Its converters turn the stencils and icon sets AWS, Azure, GCP, Kubernetes and others publish into Mermaid icon packs, so an AWS diagram comes out in the form AWS architects expect.
+Mermaid diagram automation for people, now updated for AI too.
 
-SVG is the master format. Headline diagrams are pre-rendered to committed SVG. Everything below that stays live Mermaid.
+You describe a diagram as a small YAML file, or write the Mermaid yourself. merrow writes it as Mermaid in a house style, ready to drop into Markdown, renders that Mermaid to light and dark SVG for places that don't run Mermaid, and checks it against a diagram standard. Agents get the same loop people do: write, render, lint, fix.
 
-## Install
+## What it does
 
-merrow is a CLI, installed with uv. It needs Python 3.14. Linux and macOS are supported, Windows is best effort.
+- Draws a graph of nodes, groups and arrows as Mermaid, in a profile's look. No hand-typed colours or `style` lines.
+- Keeps a library of objects (`aws.s3`, or your `shop.orders`) so a thing looks the same in every diagram that uses it.
+- Builds icon packs from what AWS, Kubernetes, GCP and others publish, and draws AWS diagrams with AWS's icons and group styles.
+- Renders light and dark SVGs, and lints each diagram for size, crossed lines, skip arrows, labels and captions.
+- Reads draw.io, PPTX, Visio, Excalidraw, Graphviz and Structurizr files into the same graph.
+
+## Quick start
+
+It's a CLI, installed with uv. It runs on Linux, macOS and Windows, on the Python version `pyproject.toml` asks for.
 
 ```bash
 uv tool install git+https://github.com/hyperi-io/merrow
-merrow tools ensure    # fetches the pinned Mermaid bundle and its browser, once
+merrow tools ensure          # the pinned Mermaid bundle and a headless browser
+merrow graph render demo.yaml --out out
 ```
 
-## Use
+With a `demo.yaml` like this one:
 
-```bash
-merrow source list                      # the publisher sources and their pinned versions
-merrow pack build aws-icons             # fetch the pinned download, build the icon pack
-merrow diagram render arch.md --out svg # every mermaid fence, light and dark, icons registered
-merrow diagram lint arch.md             # the standard's checks, rendered; exit 1 on a miss
-merrow diagram apply arch.md            # set the profile's frontmatter and class block
-merrow graph validate path.yaml         # a diagram file: a Graph, or a pattern and its objects
-merrow graph render path.yaml --out svg # the file as Mermaid, light and dark
-merrow profile show                     # the blocks the house profile generates
-merrow skill install                    # the agent skill, into Claude Code's skills dir
-merrow config get                       # every setting, all layers merged
+```yaml
+title: L2 Services -- Log pipeline
+description: Shippers send logs to a collector, which writes them to a store.
+nodes:
+  - {id: shippers, label: Log shippers}
+  - {id: collector, label: Collector}
+  - {id: store, label: Log store}
+edges:
+  - {source: shippers, target: collector, label: logs}
+  - {source: collector, target: store}
 ```
 
-A command that reports prints JSON, or does with `--json`. Logs go to stderr.
+you get the Mermaid and a light and a dark SVG:
 
-## Two repos: the tool and your reference data
+```text
+{"diagram": "demo", "theme": "light", "svg": "out/demo-light.svg"}
+{"diagram": "demo", "theme": "dark", "svg": "out/demo-dark.svg"}
+```
 
-merrow is general purpose. Org and personal data lives in reference repos, loaded as layers:
+`merrow diagram lint out/demo.mmd` then measures it. `merrow --help` lists the rest.
 
-1. merrow base (this repo)
-2. an org reference repo
-3. a personal reference repo
+## Configuration
 
-A later layer overrides an earlier one. Config lists the reference repos in layer order, under any name. Ours, for example, is `hyperi-merrow`: the standards we add on top of merrow's defaults. See [reference/](reference/).
+Settings come in layers: merrow's defaults, then the reference repos you list, then `settings.yaml` in the working directory, then `MERROW_*` environment variables. A reference repo is where your company's objects, profiles and brand live, so merrow itself stays neutral. Ours is `hyperi-merrow`.
 
-## Nothing is hard-coded
-
-Sources, icon naming rules, aliases, size limits, themes and pinned versions are config: `defaults.yaml`, `sources.yaml` and `sources.lock.yaml` in [src/merrow/](src/merrow/). A reference repo adds or overrides any of them. A new publisher in a known format is a config entry. A new release from one arrives as a PR the weekly Sources workflow opens.
-
-`font` forces one font stack onto every profile, for a company font or a standard one a reader such as PowerPoint has: `font: [Arial, Helvetica, sans-serif]` in settings.yaml, or `MERROW_FONT=Arial,sans-serif`.
-
-## Icon packs are never committed
-
-Icon packs are fetched from their publisher at build time and cached outside the repo. Most publishers allow diagrams drawn with their icons but grant no right to redistribute the icons. A rendered diagram is fine to commit. The pack is not. Terms per publisher: [docs/icon-sources.md](docs/icon-sources.md).
-
-## Layout
-
-| Path | What goes there |
+| Setting | What it does |
 |---|---|
-| [src/merrow/](src/merrow/) | The CLI and its config: sources, converters, render, lint |
-| [style/](style/) | The diagram standard and house style |
-| [reference/](reference/) | How a reference repo plugs in |
-| [docs/](docs/) | Design notes and the icon licence verdicts |
-| [tests/](tests/) | pytest, run with `hyperi-ci check` |
+| `references` | Your reference repo directories, org first, then personal |
+| `profile` | The look to draw in: `house`, `aws`, or one a reference repo adds |
+| `font` | One font stack for every profile, such as `[Arial, Helvetica, sans-serif]` for PowerPoint and Visio |
+| `packs_dir`, `cache_dir` | Where built icon packs and downloads go. Neither is ever in a repo |
+
+`merrow config get` prints every setting with all the layers merged.
+
+## Documentation
+
+- [docs/architecture.md](docs/architecture.md) -- how the pieces fit, with diagrams.
+- [style/diagrams.md](style/diagrams.md) -- the diagram standard lint holds you to, and [style/diagram-templates.md](style/diagram-templates.md) to start from.
+- [src/merrow/skill/SKILL.md](src/merrow/skill/SKILL.md) -- the agent loop. `merrow skill install` puts it where Claude Code loads skills.
+- [docs/icon-sources.md](docs/icon-sources.md) and [docs/source-register.md](docs/source-register.md) -- icon publishers and their terms. Publisher packs never go in a repo.
+
+## Getting help
+
+Open an issue: https://github.com/hyperi-io/merrow/issues
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Start with its Context section.
+
+## Licence
+
+Apache-2.0. See [LICENSE](LICENSE).
 
 Why Merrow? Because Lee, SQUIRREL!

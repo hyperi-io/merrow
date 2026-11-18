@@ -1,7 +1,7 @@
 [project]
 name = "merrow"
 version = "0.1.0"
-description = "Diagram automation on Mermaid: house style, vendor icon packs, SVG render and lint"
+description = "Mermaid diagram automation for people, now updated for AI too."
 readme = "README.md"
 requires-python = ">=3.14"
 license = "Apache-2.0"
