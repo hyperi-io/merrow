@@ -181,14 +181,22 @@ def members(source, max_bytes=len(ICON) + 50):
 
 
 @pytest.mark.parametrize("kind", ["zip", "tar", "dir"])
-def test_pack_reads_every_container_and_reports_what_it_dropped(tmp_path, kind):
+@pytest.mark.parametrize(
+    ("titles", "title"),
+    [(None, "Amazon EC2"), ({"amazon-ec2": "EC2 instance"}, "EC2 instance")],
+    ids=["rule_title", "configured_title_wins"],
+)
+def test_pack_reads_every_container_and_reports_what_it_dropped(
+    tmp_path, kind, titles, title
+):
     source = write_archive(kind, tmp_path)
-    pack, report = svg.pack(members(source), "aws", RULES)
+    pack, report = svg.pack(members(source), "aws", RULES, titles=titles)
     assert pack["prefix"] == "aws"
     icons = pack["icons"]
     assert isinstance(icons, dict)
     assert list(icons) == ["amazon-ec2"]
-    assert pack["titles"] == {"amazon-ec2": "Amazon EC2"}
+    assert pack["titles"] == {"amazon-ec2": title}
+    assert report.titled == 1
     assert report.icons == 1
     assert len(report.duplicates) == 1
     assert len(report.failed) == 1

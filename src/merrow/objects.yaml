@@ -5,6 +5,7 @@
 # the publisher's name, its hyphens and underscores read as spaces. An entry under `objects` wins over one made here.
 generated_objects:
   - {pack: aws, id_prefix: aws.}
+  - {pack: k8s, id_prefix: k8s.}
 
 objects:
   aws.cloud: {label: AWS Cloud, icon: "aws:group-aws-cloud-logo", group_style: aws-cloud}
