@@ -1,0 +1,20 @@
+title: L2 Services -- OpenShift platform
+description: The control plane machines run Operators that manage the cluster, hold its state in etcd and schedule pods onto the compute machines. The Cluster Version Operator upgrades the cluster Operators, and Operator Lifecycle Manager installs optional add-on Operators. Redrawn from the OpenShift Container Platform control plane architecture documentation.
+groups:
+  - {id: controlplane, label: Control plane machines}
+  - {id: compute, label: Compute machines}
+nodes:
+  - {id: cvo, object: ocp.cvo, group: controlplane}
+  - {id: clusterops, object: ocp.cluster-operators, group: controlplane}
+  - {id: etcd, object: ocp.etcd, group: controlplane}
+  - {id: olm, object: ocp.olm, group: controlplane}
+  - {id: addons, object: ocp.add-ons, group: controlplane}
+  - {id: scheduler, object: ocp.scheduler, group: controlplane}
+  - {id: kubelet, object: ocp.kubelet, group: compute}
+  - {id: crio, object: ocp.crio, group: compute}
+  - {id: proxy, object: ocp.proxy, group: compute}
+edges:
+  - {source: cvo, target: clusterops}
+  - {source: clusterops, target: etcd}
+  - {source: olm, target: addons}
+  - {source: controlplane, target: compute}
