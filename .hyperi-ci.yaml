@@ -26,6 +26,3 @@ build:
 release:
   enabled: true
   channel: alpha
-  # Private until Derek flips it public: install from git, never PyPI.
-  destinations:
-    python: false
