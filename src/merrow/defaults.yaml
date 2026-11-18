@@ -134,6 +134,32 @@ readers:
     # LinePattern values that draw dashed or dotted: an optional path.
     optional_patterns: 2,3,4,9,10
     skip_labels: ["%[^%]+%", "\\d{1,2}"]
+  pdf:
+    # Lengths are points (1/72 inch). A filled outline no thicker than this is a
+    # line, not a box.
+    line_width: 3
+    # Line points this close are one vertex, folding an outline onto its centre.
+    join: 3
+    # A small filled shape this size, smallest and largest side, is an arrowhead.
+    arrowhead: [3, 14]
+    # A line end this close to a box, or to a group's border, attaches to it.
+    snap: 8
+    # A closed shape with a side shorter than this is decoration, not a box.
+    min_box: 10
+    # An image or form of this size, longest side, is an icon. A bigger form is
+    # opened and read for what it holds.
+    icon: [12, 120]
+    # An icon this close to a box's top-left corner is the box's badge.
+    badge: 3
+    # Text this close below or beside an icon names it.
+    label_gap: 12
+    # Runs on one baseline join across a gap up to this many text heights.
+    word_gap: 0.6
+    # Lines join a block across a gap up to this many text heights.
+    line_gap: 1.0
+    # A box holding more lines than this is prose, such as a legend.
+    max_label_lines: 4
+    skip_labels: ["%[^%]+%", "\\d{1,2}"]
   dot:
     # A subgraph is a group when its name starts with this, as Graphviz draws it.
     cluster_prefix: cluster
