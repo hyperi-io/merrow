@@ -14,6 +14,8 @@ from typing import Any
 from merrow import browser, bundle, config, post
 
 _ICONIFY_ID = re.compile(r"IconifyId[0-9a-f]+")
+_PATH_DATA = re.compile(r'( d=")([^"]*)(")')
+_LONG_DECIMAL = re.compile(r"(-?\d+\.\d{2})\d+")
 
 FENCE = re.compile(r"^```mermaid[^\n]*\n(.*?)^```", re.MULTILINE | re.DOTALL)
 
@@ -71,6 +73,16 @@ def icon_packs(packs: Iterable[Path]) -> list[dict[str, Any]]:
     return found
 
 
+def _trimmed(svg: str) -> str:
+    """Return the SVG with path coordinates cut to 2 decimals, a hundredth of a pixel.
+
+    Mermaid's stadium and neo-look paths carry 15-digit coordinates, half the file.
+    """
+    return _PATH_DATA.sub(
+        lambda found: found[1] + _LONG_DECIMAL.sub(r"\1", found[2]) + found[3], svg
+    )
+
+
 def _stable_ids(svg: str, prefix: str) -> str:
     """Return the SVG with Iconify's random per-render ids renamed in order, so a render repeats byte for byte."""
     names: dict[str, str] = {}
@@ -125,6 +137,7 @@ def render(
                         svg = post.group_icons(page, svg, groups, packs, suffix)
                     target = out_dir / f"{item.name}-{theme}.svg"
                     svg = _stable_ids(svg, f"d{number}{theme}")
+                    svg = _trimmed(svg)
                     target.write_text(svg, encoding="utf-8", newline="\n")
                     written.append(
                         {"diagram": item.name, "theme": theme, "svg": str(target)}
