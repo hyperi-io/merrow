@@ -141,6 +141,24 @@ def test_a_shape_outside_the_profile_is_refused(monkeypatch, tmp_path):
         written(settings, Graph([Node("x", object="demo.x")]))
 
 
+@pytest.mark.parametrize(
+    ("shape", "drawn"),
+    [("diamond", 'x{"<b>X</b>"}'), ("subroutine", 'x[["<b>X</b>"]]')],
+    ids=str,
+)
+def test_house_draws_the_decision_and_drill_down_shapes(
+    monkeypatch, tmp_path, shape, drawn
+):
+    settings = settings_with(
+        monkeypatch,
+        tmp_path,
+        f"objects:\n  demo.x: {{class: decision, label: X, shape: {shape}}}\n",
+    )
+    source, problems = written(settings, Graph([Node("x", object="demo.x")]))
+    assert problems == []
+    assert drawn in source
+
+
 def test_a_node_with_no_object_takes_the_profile_default_class(monkeypatch, tmp_path):
     settings = settings_with(monkeypatch, tmp_path, LIBRARY)
     graph = Graph([Node("repo", "Deploy repo"), Node("web", object="demo.web")])

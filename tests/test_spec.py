@@ -3,6 +3,7 @@ import json
 import pytest
 from typer.testing import CliRunner
 
+from merrow import spec
 from merrow.cli import app
 
 LIBRARY = """objects:
@@ -67,6 +68,10 @@ def test_a_pattern_file_validates(realm):
         (GOOD.replace("description: Agents", "summary: Agents"), "description"),
         (GOOD.replace("  store: [x.clickhouse]\n", ""), "needs slot store"),
         ("title: [unclosed\n", "flow sequence"),
+        (
+            GOOD + "nodes: [{id: q, label: Archive invoice?, subtitle: s}]\n",
+            "quote a value",
+        ),
     ],
     ids=[
         "misspelt_key",
@@ -77,6 +82,7 @@ def test_a_pattern_file_validates(realm):
         "missing_description",
         "empty_required_slot",
         "not_yaml",
+        "bare_question_mark",
     ],
 )
 def test_a_bad_file_is_named(realm, text, said):
@@ -144,3 +150,17 @@ def test_skill_install_copies_the_packaged_skill(realm):
     text = installed.read_text(encoding="utf-8")
     assert text.startswith("---\nname: merrow-diagrams\n")
     assert "merrow graph validate" in text
+
+
+def test_yes_no_and_on_stay_labels(tmp_path):
+    path = tmp_path / "d.yaml"
+    path.write_text(
+        "title: L4 Detail -- Ask\ndescription: A choice.\n"
+        "nodes:\n  - {id: a, label: yes}\n  - {id: b, label: on}\n"
+        "edges:\n  - {source: a, target: b, label: no, optional: true}\n",
+        encoding="utf-8",
+    )
+    read = spec.read(path)
+    assert [n.label for n in read.nodes] == ["yes", "on"]
+    assert read.edges[0].label == "no"
+    assert read.edges[0].optional is True, "true and false stay booleans"

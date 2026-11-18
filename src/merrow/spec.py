@@ -3,6 +3,7 @@
 The JSON Schema comes from these types, so it can't drift from what merrow reads.
 """
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypedDict
@@ -12,6 +13,21 @@ from pydantic import ConfigDict, TypeAdapter, with_config
 
 from merrow.graph import Edge, Graph, Group, Node
 from merrow.patterns import Pattern, expand
+
+_BOOL = "tag:yaml.org,2002:bool"
+
+
+class _Loader(yaml.SafeLoader):
+    """YAML 1.2 booleans: only true and false, so a label of `yes` or `on` stays text."""
+
+
+_Loader.yaml_implicit_resolvers = {
+    first: [(tag, pattern) for tag, pattern in resolvers if tag != _BOOL]
+    for first, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
+_Loader.add_implicit_resolver(
+    _BOOL, re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$"), list("tTfF")
+)
 
 
 @with_config(ConfigDict(extra="forbid"))
@@ -61,9 +77,14 @@ def read(path: Path) -> Spec:
 
     Raises:
         pydantic.ValidationError: A field is missing, mistyped or unknown.
-        yaml.YAMLError: The file isn't YAML (JSON is YAML).
+        ValueError: The file isn't YAML (JSON is YAML), with a hint to quote.
     """
-    return _ADAPTER.validate_python(yaml.safe_load(path.read_text(encoding="utf-8")))
+    try:
+        data = yaml.load(path.read_text(encoding="utf-8"), Loader=_Loader)  # noqa: S506 -- a SafeLoader subclass
+    except yaml.YAMLError as error:
+        hint = "quote a value that holds ': ', ' #' or '?', or starts with '-'"
+        raise ValueError(f"{error}\n{hint}") from error
+    return _ADAPTER.validate_python(data)
 
 
 def graph(spec: Spec, patterns: dict[str, Pattern]) -> Graph:

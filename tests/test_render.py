@@ -1,4 +1,5 @@
 import json
+import re
 
 import pytest
 
@@ -52,7 +53,8 @@ def test_render_writes_one_svg_per_theme_with_local_icons(tmp_path, monkeypatch)
     monkeypatch.setenv("MERROW_PACKS_DIR", str(packs))
     source = tmp_path / "d.mmd"
     source.write_text(
-        'flowchart LR\n  a@{ icon: "demo:box", label: "A" }\n', encoding="utf-8"
+        'flowchart LR\n  a@{ icon: "demo:box", label: "A" }\n  a --> b\n  b --> c\n  a --> c\n',
+        encoding="utf-8",
     )
     settings = config.load()
 
@@ -66,6 +68,7 @@ def test_render_writes_one_svg_per_theme_with_local_icons(tmp_path, monkeypatch)
         svg = (tmp_path / "out" / name).read_text(encoding="utf-8")
         assert "<svg" in svg
         assert "IconifyId" not in svg, "icon ids are renamed in order"
+        assert not re.search(r' d="[^"]*\d\.\d{3}', svg), "path data to 2 decimals"
         assert svg == (tmp_path / "again" / name).read_text(encoding="utf-8")
 
 
