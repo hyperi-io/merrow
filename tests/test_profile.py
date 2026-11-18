@@ -3,8 +3,10 @@ import json
 import pytest
 from typer.testing import CliRunner
 
-from merrow import config, profile
+from merrow import config, objects, profile, write
 from merrow.cli import app
+from merrow.graph import Edge, Graph, Group, Node
+from merrow.lint import diagram_check as dc
 
 REALM = {"color": {"role": {"load": {"$type": "color", "$value": "#123456"}}}}
 
@@ -175,3 +177,51 @@ def test_profile_show_prints_the_blocks_lint_holds_diagrams_to(monkeypatch, tmp_
     other = runner.invoke(app, ["profile", "show", "house", "--family", "other"])
     assert other.output == house.fronts["other"] + "\n"
     assert runner.invoke(app, ["profile", "show", "--family", "gantt"]).exit_code == 2
+
+
+KUBE = """profiles:
+  k8s:
+    extends: house
+    icon_node: '@{ icon: "{node.icon}", label: "{node.text}", pos: "b", h: {node.size} }'
+    icon_packs: [k8s]
+objects:
+  k8s.api: {label: API server, icon: "k8s:api"}
+  k8s.kubelet: {label: kubelet, icon: "k8s:kubelet"}
+  k8s.k-proxy: {label: kube-proxy, icon: "k8s:k-proxy"}
+"""
+
+
+def test_a_reference_repo_draws_another_publishers_icons_in_the_house_look(
+    monkeypatch, tmp_path
+):
+    packs = tmp_path / "packs"
+    packs.mkdir()
+    icon = {"body": "<rect/>", "height": 17}
+    pack = {
+        "prefix": "k8s",
+        "icons": dict.fromkeys(["api", "kubelet", "k-proxy"], icon),
+    }
+    (packs / "k8s.json").write_text(json.dumps(pack), encoding="utf-8")
+    monkeypatch.setenv("MERROW_PACKS_DIR", str(packs))
+    settings = realm(monkeypatch, tmp_path, KUBE)
+    graph = Graph(
+        [
+            Node("kubelet", object="k8s.kubelet", group="nodes"),
+            Node("kproxy", object="k8s.k-proxy", group="nodes"),
+            Node("api", object="k8s.api", group="cp"),
+        ],
+        [Edge("nodes", "api")],
+        [Group("nodes", "Nodes x2"), Group("cp", "Control plane")],
+    )
+    shown = profile.load(settings, "k8s")
+    source = write.diagram(
+        graph,
+        shown,
+        objects.library(settings),
+        "L2 Services -- Cluster",
+        "Nodes call the API server.",
+    )
+    assert 'api@{ icon: "k8s:api", label: "API server", pos: "b", h: 17 }' in source
+    assert "direction LR" in source and "kubelet ~~~ kproxy" in source
+    block = dc.Block("cluster.mmd", source, None, None)
+    assert dc.source_problems(block, frozenset(), shown) == []
