@@ -27,6 +27,10 @@ dependencies = [
 [project.scripts]
 merrow = "merrow.cli:run"
 
+[project.urls]
+Homepage = "https://github.com/hyperi-io/merrow"
+Issues = "https://github.com/hyperi-io/merrow/issues"
+
 [dependency-groups]
 dev = [
     "pytest>=9",
