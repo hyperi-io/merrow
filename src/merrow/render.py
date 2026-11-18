@@ -13,6 +13,8 @@ from typing import Any
 
 from merrow import browser, bundle, config, post
 
+_ICONIFY_ID = re.compile(r"IconifyId[0-9a-f]+")
+
 FENCE = re.compile(r"^```mermaid[^\n]*\n(.*?)^```", re.MULTILINE | re.DOTALL)
 
 # Runs in the page with [source, id, Mermaid config, background colour]. Mermaid's
@@ -69,6 +71,14 @@ def icon_packs(packs_dir: Path) -> list[dict[str, Any]]:
     return found
 
 
+def _stable_ids(svg: str, prefix: str) -> str:
+    """Return the SVG with Iconify's random per-render ids renamed in order, so a render repeats byte for byte."""
+    names: dict[str, str] = {}
+    return _ICONIFY_ID.sub(
+        lambda found: names.setdefault(found[0], f"{prefix}-icon{len(names)}"), svg
+    )
+
+
 def render(
     items: list[Diagram],
     out_dir: Path,
@@ -114,6 +124,7 @@ def render(
                     if groups:
                         svg = post.group_icons(page, svg, groups, packs_dir, suffix)
                     target = out_dir / f"{item.name}-{theme}.svg"
+                    svg = _stable_ids(svg, f"d{number}{theme}")
                     target.write_text(svg, encoding="utf-8", newline="\n")
                     written.append(
                         {"diagram": item.name, "theme": theme, "svg": str(target)}

@@ -40,22 +40,33 @@ def test_render_writes_one_svg_per_theme_with_local_icons(tmp_path, monkeypatch)
     pack = {
         "prefix": "demo",
         "icons": {
-            "box": {"body": "<rect width='8' height='8'/>", "width": 8, "height": 8}
+            "box": {
+                "body": '<defs><linearGradient id="g"/></defs>'
+                '<rect width="8" height="8" fill="url(#g)"/>',
+                "width": 8,
+                "height": 8,
+            }
         },
     }
     (packs / "demo.json").write_text(json.dumps(pack), encoding="utf-8")
     monkeypatch.setenv("MERROW_PACKS_DIR", str(packs))
     source = tmp_path / "d.mmd"
-    source.write_text("architecture-beta\n  service a(demo:box)[A]\n", encoding="utf-8")
+    source.write_text(
+        'flowchart LR\n  a@{ icon: "demo:box", label: "A" }\n', encoding="utf-8"
+    )
     settings = config.load()
 
     written = render.render(list(render.diagrams(source)), tmp_path / "out", settings)
 
     themes = settings.get("render")["themes"]
     assert [w["theme"] for w in written] == list(themes)
+    render.render(list(render.diagrams(source)), tmp_path / "again", settings)
     for entry in written:
-        svg = (tmp_path / "out" / f"d-{entry['theme']}.svg").read_text(encoding="utf-8")
+        name = f"d-{entry['theme']}.svg"
+        svg = (tmp_path / "out" / name).read_text(encoding="utf-8")
         assert "<svg" in svg
+        assert "IconifyId" not in svg, "icon ids are renamed in order"
+        assert svg == (tmp_path / "again" / name).read_text(encoding="utf-8")
 
 
 def test_render_names_the_diagram_mermaid_rejects(tmp_path, monkeypatch):

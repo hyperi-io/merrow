@@ -85,6 +85,17 @@ def test_a_profile_extending_house_restyles_it_per_theme(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize(
+    ("theme", "icon"), [("light", "#334155"), ("dark", "#CBD5E1")], ids=str
+)
+def test_house_paints_monochrome_icons_for_each_theme(
+    monkeypatch, tmp_path, theme, icon
+):
+    monkeypatch.chdir(tmp_path)
+    house = profile.load(config.load(), "house", theme)
+    assert f'nodeBorder: "{icon}"' in house.fronts["flowchart"]
+
+
+@pytest.mark.parametrize(
     ("merrow_yaml", "said"),
     [
         (

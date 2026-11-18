@@ -82,6 +82,14 @@ SODI = 'xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"'
             {},
             ["script-dropped"],
         ),
+        (
+            f'<svg {NS} viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            'class="x"><path d="M1"/></svg>',
+            ['<g fill="none" stroke="currentColor"><path d="M1" /></g>'],
+            ["class="],
+            {},
+            [],
+        ),
     ],
     ids=[
         "metadata",
@@ -91,6 +99,7 @@ SODI = 'xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"'
         "offset-complex-css",
         "script-dropped",
         "script-in-css-dropped",
+        "root-presentation-kept",
     ],
 )
 def test_clean_keeps_artwork_and_isolates_each_icon(
@@ -105,6 +114,21 @@ def test_clean_keeps_artwork_and_isolates_each_icon(
     for name, value in fields.items():
         assert icon[name] == value
     assert found == notes
+
+
+@pytest.mark.parametrize(
+    ("root", "wrapper"),
+    [
+        ("", '<g fill="currentColor">'),
+        (' fill="#F90"', '<g fill="#F90">'),
+    ],
+    ids=["fill_applied", "artwork_fill_wins"],
+)
+def test_a_source_fill_paints_a_monochrome_icon(root, wrapper):
+    icon, _ = svg.clean(
+        f'<svg {NS} viewBox="0 0 8 8"{root}><path/></svg>'.encode(), "k", "currentColor"
+    )
+    assert str(icon["body"]).startswith(wrapper)
 
 
 def test_clean_rejects_malformed_xml():
@@ -311,5 +335,47 @@ def test_every_shipped_alias_and_target_is_in_slug_form(limits):
 )
 def test_the_shipped_aws_rules_name_and_title_icons(path, key, title):
     rules = naming.rules(config.sources(config.load())["aws-icons"].options["names"])
+    assert naming.key_for(path, rules) == key
+    assert naming.title_for(path, rules) == title
+
+
+@pytest.mark.parametrize(
+    ("source", "path", "key", "title"),
+    [
+        ("carbon-icons", "package/svg/32/router.svg", "router", "Router"),
+        ("carbon-icons", "package/svg/32/ibm-cloud.svg", None, None),
+        ("carbon-icons", "package/svg/32/logo-github.svg", None, None),
+        ("carbon-icons", "package/svg/16/router.svg", None, None),
+        ("hashicorp-icons", "package/svg/vault-24.svg", "vault", "Vault"),
+        ("hashicorp-icons", "package/svg/vault-16.svg", None, None),
+        ("tabler-icons", "package/icons/outline/server-2.svg", "server-2", "Server 2"),
+        ("tabler-icons", "package/icons/outline/brand-github.svg", None, None),
+        ("tabler-icons", "package/icons/filled/server.svg", None, None),
+        (
+            "redhat-icons",
+            "r-2.3.1/src/standard/data-center.svg",
+            "data-center",
+            "Data center",
+        ),
+        ("redhat-icons", "r-2.3.1/src/social/github.svg", None, None),
+        ("shownet-icons", "s-HEAD/svg/L3-box.svg", "l3-box", "L3 box"),
+    ],
+    ids=[
+        "carbon",
+        "carbon_ibm_mark",
+        "carbon_logo",
+        "carbon_16",
+        "hashicorp",
+        "hashicorp_16",
+        "tabler",
+        "tabler_brand",
+        "tabler_filled",
+        "redhat",
+        "redhat_social",
+        "shownet",
+    ],
+)
+def test_the_open_sources_name_and_title_icons(source, path, key, title):
+    rules = naming.rules(config.sources(config.load())[source].options["names"])
     assert naming.key_for(path, rules) == key
     assert naming.title_for(path, rules) == title

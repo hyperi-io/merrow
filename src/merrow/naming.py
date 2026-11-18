@@ -68,11 +68,12 @@ def key_for(path: str, rules: Sequence[NameRule]) -> str | None | bool:
 
 
 def title_for(path: str, rules: Sequence[NameRule]) -> str | None:
-    """Return the publisher's name the first matching rule gives, if it gives one."""
+    """Return the publisher's name the first matching rule gives, first letter upper-cased."""
     hit = _first(path, rules)
     if hit is None:
         return None
     rule, found = hit
     if rule.title is None:
         return None
-    return " ".join(re.split(r"[-_\s]+", found.expand(rule.title))).strip()
+    title = " ".join(re.split(r"[-_\s]+", found.expand(rule.title))).strip()
+    return title[:1].upper() + title[1:]

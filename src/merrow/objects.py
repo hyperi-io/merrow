@@ -1,8 +1,10 @@
 """L1 objects: a thing drawn the same way everywhere, defined once in config."""
 
+import functools
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any
 
 from scalo.logger import logger
@@ -34,6 +36,15 @@ class L1Object:
     group_style: str | None = None
 
 
+@functools.cache
+def _titles(path: Path, mtime: float) -> dict[str, str] | None:
+    """Return a built pack's titles by icon key, None for a pack with none.
+
+    `mtime` keys the cache: a library load reads every pack, several MB.
+    """
+    return json.loads(path.read_text(encoding="utf-8")).get("titles")
+
+
 def generated(settings: Any) -> dict[str, L1Object]:
     """Return one object per titled icon in each `generated_objects` pack that is built.
 
@@ -45,11 +56,11 @@ def generated(settings: Any) -> dict[str, L1Object]:
         path = config.packs_dir(settings) / f"{entry['pack']}.json"
         if not path.is_file():
             continue
-        built = json.loads(path.read_text(encoding="utf-8"))
-        if "titles" not in built:
+        titles = _titles(path, path.stat().st_mtime)
+        if titles is None:
             logger.warning("pack has no titles, rebuild it", pack=str(path))
         prefix = str(entry["id_prefix"])
-        for key, title in (built.get("titles") or {}).items():
+        for key, title in (titles or {}).items():
             icon = f"{entry['pack']}:{key}"
             found[prefix + key] = L1Object(prefix + key, "", title, icon=icon)
     return found
