@@ -53,6 +53,9 @@ profiles:
     layout:
       max_ranks: 4
       stage_title: "Stage {n}"
+      # A group of like things with no arrow between them reads as a row, not
+      # the column Mermaid stacks it in.
+      row_groups: true
     # A node's label from its `{node.*}` fields, inside its shape's brackets.
     node_label: &node_label
       subtitle: '{shape.open}"<b>{node.label}</b><br/><span>{node.subtitle}</span>"{shape.close}'

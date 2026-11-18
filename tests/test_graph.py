@@ -90,3 +90,47 @@ def test_score_counts_what_a_reader_recovered():
         "edges": 0.5,
         "contains": 1.0,
     }
+
+
+@pytest.mark.parametrize(
+    ("graph", "expected"),
+    [
+        (
+            Graph(
+                [Node("a", "A", group="g"), Node("b", "B", group="g"), Node("c", "C")],
+                [Edge("c", "a")],
+                [Group("g", "G")],
+            ),
+            {"g": ["a", "b"]},
+        ),
+        (
+            Graph(
+                [Node("a", "A", group="g"), Node("b", "B", group="g")],
+                [Edge("a", "b")],
+                [Group("g", "G")],
+            ),
+            {},
+        ),
+        (
+            Graph(
+                [
+                    Node("a", "A", group="g"),
+                    Node("b", "B", group="g"),
+                    Node("c", "C", group="h"),
+                ],
+                [],
+                [Group("g", "G"), Group("h", "H", "g")],
+            ),
+            {},
+        ),
+        (Graph([Node("a", "A", group="g")], [], [Group("g", "G")]), {}),
+    ],
+    ids=["row", "linked_inside", "has_subgroup", "single_member"],
+)
+def test_a_group_of_unlinked_members_is_drawn_as_a_row(graph, expected):
+    assert write.rows(graph) == expected
+    text = write.flowchart(
+        graph, "LR", inner=dict.fromkeys(expected, "LR"), rows=list(expected.values())
+    )
+    assert ("a ~~~ b" in text) is bool(expected)
+    assert ("direction LR" in text) is bool(expected)
