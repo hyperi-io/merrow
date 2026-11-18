@@ -1,0 +1,11 @@
+title: L4 Detail -- Create invoice sub-process
+description: Inside the sub-process, one external task creates the invoice. Redrawn from the Camunda BPM order-handling example (Apache-2.0).
+groups:
+  - {id: invoicing, label: Create invoice}
+nodes:
+  - {id: start, object: bpmn.start, group: invoicing}
+  - {id: create, object: bpmn.task, label: Create invoice, subtitle: "external task: invoiceCreator", group: invoicing}
+  - {id: end, object: bpmn.end, group: invoicing}
+edges:
+  - {source: start, target: create}
+  - {source: create, target: end}

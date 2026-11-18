@@ -12,16 +12,26 @@ EXAMPLES = Path(__file__).parent.parent / "docs" / "examples"
 
 
 @pytest.mark.parametrize(
-    ("diagram", "reference"),
+    ("diagram", "reference", "profile"),
     [
-        ("pipeline/pipeline.yaml", None),
-        ("c4-big-bank/context.yaml", "c4-big-bank/reference"),
-        ("c4-big-bank/containers.yaml", "c4-big-bank/reference"),
+        ("pipeline/pipeline.yaml", None, "house"),
+        ("c4-big-bank/context.yaml", "c4-big-bank/reference", "house"),
+        ("c4-big-bank/containers.yaml", "c4-big-bank/reference", "house"),
+        ("bpmn-order/order.yaml", "bpmn-order/reference", "bpmn"),
+        ("bpmn-order/create-invoice.yaml", "bpmn-order/reference", "bpmn"),
+        ("campus-network/campus.yaml", "campus-network/reference", "house"),
     ],
-    ids=["pipeline", "c4_context", "c4_containers"],
+    ids=[
+        "pipeline",
+        "c4_context",
+        "c4_containers",
+        "bpmn_order",
+        "bpmn_create_invoice",
+        "campus_network",
+    ],
 )
 def test_a_worked_example_matches_what_merrow_writes(
-    monkeypatch, tmp_path, diagram, reference
+    monkeypatch, tmp_path, diagram, reference, profile
 ):
     monkeypatch.chdir(tmp_path)
     if reference:
@@ -29,7 +39,8 @@ def test_a_worked_example_matches_what_merrow_writes(
         monkeypatch.setenv("MERROW_REFERENCES", references)
     path = EXAMPLES / diagram
     result = CliRunner().invoke(
-        app, ["graph", "write", str(path), "--out", str(tmp_path)]
+        app,
+        ["graph", "write", "--profile", profile, str(path), "--out", str(tmp_path)],
     )
     assert result.exit_code == 0, result.output
     written = (tmp_path / f"{path.stem}.mmd").read_text(encoding="utf-8")

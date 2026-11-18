@@ -1,0 +1,5 @@
+# Things a streaming platform diagram draws as plain icons, each in the colour of its role.
+objects:
+  flink.client: {class: ext, label: Client, icon: "carbon:terminal"}
+  flink.source: {class: bus, label: Kafka topics, subtitle: source, icon: "starter:stream"}
+  flink.sink: {class: store, label: Iceberg tables, subtitle: sink, icon: "starter:object-storage"}

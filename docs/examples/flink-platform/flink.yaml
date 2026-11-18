@@ -1,0 +1,19 @@
+title: L2 Services -- Streaming data platform
+description: A client submits a job to the Flink JobManager, whose Dispatcher starts a JobMaster for it. The JobMaster assigns tasks to the TaskManagers' task slots, which read events from Kafka topics and write Iceberg tables. Redrawn from the Flink Architecture documentation on apache.org.
+groups:
+  - {id: jobmanager, label: JobManager}
+  - {id: taskmanagers, label: TaskManagers}
+nodes:
+  - {id: client, object: flink.client, subtitle: sends the dataflow}
+  - {id: dispatcher, object: icon.api, label: Dispatcher, subtitle: REST interface and WebUI, group: jobmanager}
+  - {id: jobmaster, object: icon.scheduler, label: JobMaster, subtitle: one per job, group: jobmanager}
+  - {id: resources, object: icon.cluster, label: ResourceManager, subtitle: owns the task slots, group: jobmanager}
+  - {id: slots, object: icon.server, label: Task slots, subtitle: one thread per task, group: taskmanagers}
+  - {id: source, object: flink.source}
+  - {id: sink, object: flink.sink}
+edges:
+  - {source: client, target: dispatcher, label: job}
+  - {source: dispatcher, target: jobmaster}
+  - {source: jobmanager, target: taskmanagers, label: tasks}
+  - {source: source, target: taskmanagers, label: events}
+  - {source: taskmanagers, target: sink, label: rows}
