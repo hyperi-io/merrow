@@ -282,7 +282,8 @@ def load(settings: Any, name: str | None = None, theme: str | None = None) -> Pr
 
     A profile that `extends` another overrides that one's entries, and a
     `theme` the profile lists under `themes` overrides its own, a mapping entry
-    key by key. A `font` setting replaces every fontFamily token.
+    key by key. A `font` setting replaces every fontFamily token. `{page.background}`
+    is the render theme's page colour, the first theme's with no `theme`.
 
     Raises:
         ProfileError: The profile, or a token it names, isn't defined.
@@ -291,7 +292,9 @@ def load(settings: Any, name: str | None = None, theme: str | None = None) -> Pr
     name = name or str(settings.get("profile"))
     entry = _entry(settings.get("profiles") or {}, name)
     entry = _merge(entry, (entry.get("themes") or {}).get(theme) or {})
-    scope: dict[str, str] = {}
+    pages = settings.get("render")["themes"]
+    page = pages.get(theme) or next(iter(pages.values()))
+    scope: dict[str, str] = {"page.background": str(page["background"])}
     font = _font(settings)
     for relative in entry["tokens"]:
         path = config.data_file(settings, relative)

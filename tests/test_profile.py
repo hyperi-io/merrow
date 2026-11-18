@@ -85,14 +85,20 @@ def test_a_profile_extending_house_restyles_it_per_theme(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("theme", "icon"), [("light", "#334155"), ("dark", "#CBD5E1")], ids=str
+    ("theme", "page_ink", "page"),
+    [("light", "#0F172A", "#FFFFFF"), ("dark", "#E2E8F0", "#1B1B1D")],
+    ids=["light", "dark"],
 )
-def test_house_paints_monochrome_icons_for_each_theme(
-    monkeypatch, tmp_path, theme, icon
+def test_house_draws_icons_on_a_card_and_text_in_the_page_colour(
+    monkeypatch, tmp_path, theme, page_ink, page
 ):
     monkeypatch.chdir(tmp_path)
     house = profile.load(config.load(), "house", theme)
-    assert f'nodeBorder: "{icon}"' in house.fronts["flowchart"]
+    flow, other = house.fronts["flowchart"], house.fronts["other"]
+    assert 'nodeBorder: "#334155"' in flow, "icons stay slate on their card"
+    assert f".icon-shape p{{background:transparent!important;color:{page_ink}}}" in flow
+    assert f'signalTextColor: "{page_ink}"' in other
+    assert f".messageText{{paint-order:stroke;stroke:{page}" in other
 
 
 @pytest.mark.parametrize(

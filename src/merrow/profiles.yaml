@@ -120,6 +120,8 @@ profiles:
             span.edgeLabel{display:inline-block;background:{color.paper}!important;color:{color.ink-edge};border:{stroke.pill} solid {color.rule};border-radius:999px;padding:2px 10px;font-size:{font.size.edge};font-weight:500}
             span.edgeLabel p{background:transparent!important}
             .label-icon{width:20px;height:20px;vertical-align:-4px;margin-right:6px}
+            .icon-shape path[stroke-width="0"][fill="none"]{fill:{color.paper};stroke:{color.paper};stroke-width:12px;stroke-linejoin:round}
+            .icon-shape p{background:transparent!important;color:{color.page-ink}}
             {profile.icon_css}
         ---
       # Sequence, state, ER and class diagrams.
@@ -137,9 +139,12 @@ profiles:
             actorTextColor: "{color.ink}"
             actorLineColor: "{color.line}"
             signalColor: "{color.line}"
-            signalTextColor: "{color.ink}"
+            signalTextColor: "{color.page-ink}"
+            noteBkgColor: "{color.paper}"
+            noteBorderColor: "{color.rule}"
+            noteTextColor: "{color.ink}"
           themeCSS: >-
-            .messageText{paint-order:stroke;stroke:{color.paper};stroke-width:3px;stroke-linejoin:round}
+            .messageText{paint-order:stroke;stroke:{page.background};stroke-width:3px;stroke-linejoin:round}
         ---
   aws:
     # AWS's look: icon nodes and AWS group borders. Your own boxes inside an

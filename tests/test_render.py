@@ -2,8 +2,10 @@ import json
 import re
 
 import pytest
+from typer.testing import CliRunner
 
 from merrow import config, render
+from merrow.cli import app
 
 ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><rect width="8" height="8"/></svg>'
 
@@ -78,3 +80,22 @@ def test_render_names_the_diagram_mermaid_rejects(tmp_path, monkeypatch):
     bad.write_text("flowchart LR\n  a -->\n", encoding="utf-8")
     with pytest.raises(render.RenderError, match="bad"):
         render.render(list(render.diagrams(bad)), tmp_path / "out", config.load())
+
+
+def test_diagram_render_draws_each_theme_in_its_own_look(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    page = tmp_path / "page.md"
+    page.write_text(
+        "# Login\n\n```mermaid\nsequenceDiagram\n"
+        "    accTitle: L4 Detail -- Login\n    accDescr: A sign-in.\n"
+        "    a->>b: hi\n```\n",
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(app, ["diagram", "render", str(page), "--out", "out"])
+    assert result.exit_code == 0, result.output
+    pages = config.load().get("render")["themes"]
+    for theme, look in pages.items():
+        svg = (tmp_path / "out" / f"page-1-{theme}.svg").read_text(encoding="utf-8")
+        hexed = look["background"].lstrip("#")
+        rgb = ", ".join(str(int(hexed[i : i + 2], 16)) for i in (0, 2, 4))
+        assert f"stroke:rgb({rgb})" in svg, f"{theme} halo is its page"

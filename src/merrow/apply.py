@@ -78,6 +78,17 @@ def apply(source: str, profile: Profile, by_ref: Mapping[str, L1Object]) -> str:
     return f"{front}\n" + "\n".join(out) + "\n"
 
 
+def managed(source: str, by_ref: Mapping[str, L1Object]) -> bool:
+    """Return whether a diagram takes the profile.
+
+    It does when it names an object, carries the class block, or is a sequence,
+    ER or class diagram, which can name no object.
+    """
+    names = {m["ref"] for ln in source.splitlines() if (m := _REF.match(ln.strip()))}
+    front_only = diagram_type(split_front(source)[1])[0] in _FRONT_ONLY
+    return BEGIN in source or bool(names & set(by_ref)) or front_only
+
+
 def apply_file(path: Path, profile: Profile, by_ref: Mapping[str, L1Object]) -> bool:
     """Apply the profile to a `.mmd` file, or to each managed fence in Markdown.
 
@@ -95,11 +106,7 @@ def apply_file(path: Path, profile: Profile, by_ref: Mapping[str, L1Object]) -> 
 
         def one(fence: re.Match[str]) -> str:
             body = fence.group(1)
-            names = {
-                m["ref"] for ln in body.splitlines() if (m := _REF.match(ln.strip()))
-            }
-            front_only = diagram_type(split_front(body)[1])[0] in _FRONT_ONLY
-            if BEGIN not in body and not names & set(by_ref) and not front_only:
+            if not managed(body, by_ref):
                 return fence.group(0)
             return fence.group(0).replace(body, apply(body, profile, by_ref), 1)
 
