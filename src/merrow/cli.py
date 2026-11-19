@@ -261,7 +261,10 @@ def _written(
     library |= {
         key: objects.entry(key, fields) for key, fields in found.objects.items()
     }
-    return write.diagram(graph, shown, library, found.title, found.description), shown
+    source = write.diagram(
+        graph, shown, library, found.title, found.description, found.direction
+    )
+    return source, shown
 
 
 @graph_app.command("schema")

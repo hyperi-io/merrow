@@ -146,7 +146,6 @@ def test_a_diagram_to_the_standard_has_no_source_problems(caption):
     [
         ("flowchart LR", "graph LR", "R2 `graph`"),
         ("flowchart LR", "flowchart TD", "R2 direction `TD`"),
-        ("flowchart LR", "flowchart TB", "a vertical chain"),
         ("flowchart LR", "gantt", "`gantt` is not one of the five"),
         ("flowchart LR", "stateDiagram-v2", "needs `direction LR`"),
         ("    accTitle: L2 Services -- Pipeline\n", "", "R7 no `accTitle`"),
@@ -191,6 +190,21 @@ def test_a_source_fault_is_named(old, new, said):
     assert old in GOOD
     found = _problems(GOOD.replace(old, new))
     assert any(said in problem for problem in found), found
+
+
+CHAIN = '\n    topic -->|rows| loader["Loader"]'
+PAIR = '\n    apps["Apps"] -->|logs| logs[("Logs")]'
+
+
+@pytest.mark.parametrize(
+    ("extra", "chain"), [("", False), (PAIR, False), (CHAIN, True)]
+)
+def test_tb_draws_two_rows_but_never_a_chain(extra, chain):
+    source = GOOD.replace("flowchart LR", "flowchart TB").replace(
+        'topic[("Topic")]', 'topic[("Topic")]' + extra, 1
+    )
+    found = any("a vertical chain" in problem for problem in _problems(source))
+    assert found is chain
 
 
 @pytest.mark.parametrize(
