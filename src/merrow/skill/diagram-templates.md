@@ -1,0 +1,1 @@
+../../../style/diagram-templates.md
