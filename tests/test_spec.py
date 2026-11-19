@@ -1,10 +1,13 @@
 import json
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
 from merrow import spec
 from merrow.cli import app
+
+ROOT = Path(__file__).resolve().parents[1]
 
 LIBRARY = """objects:
   x.agent: {class: ext, label: Agent}
@@ -150,6 +153,10 @@ def test_skill_install_copies_the_packaged_skill(realm):
     text = installed.read_text(encoding="utf-8")
     assert text.startswith("---\nname: merrow-diagrams\n")
     assert "merrow graph validate" in text
+    for name in ("diagrams.md", "diagram-templates.md"):
+        rules = installed.parent / name
+        assert not rules.is_symlink(), f"{name} is a copy, not a link into the checkout"
+        assert rules.read_bytes() == (ROOT / "style" / name).read_bytes()
 
 
 def test_yes_no_and_on_stay_labels(tmp_path):

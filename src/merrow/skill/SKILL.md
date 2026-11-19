@@ -5,7 +5,7 @@ description: Draw, render and lint a diagram with merrow, from a diagram file or
 
 # Drawing a diagram with merrow
 
-An agent writes a diagram file, never Mermaid styling. merrow turns the file into Mermaid in the profile's look, renders it and lints it. The rules are style/diagrams.md in the merrow repo (https://github.com/hyperi-io/merrow/blob/main/style/diagrams.md), and lint holds a diagram to them. This page is the loop.
+An agent writes a diagram file, never Mermaid styling. merrow turns the file into Mermaid in the profile's look, renders it and lints it. The rules are [diagrams.md](diagrams.md) beside this file, with a template a level in [diagram-templates.md](diagram-templates.md), and lint holds a diagram to them. This page is the loop.
 
 1. Pick the level (L0 to L4) and a pattern. `merrow config get | jq '.patterns | keys'` lists them. A path through several components is `data-path`, and config flowing to a runtime is `gitops-control`. Nothing fits: write the graph yourself.
 2. Pick the objects. `merrow config get | jq '.objects | keys'` lists them, such as `aws.msk`, and a reference repo adds its own. `icon.server`, `icon.database`, `icon.queue` and 31 more always draw, from the icon pack merrow ships. A thing only this diagram needs, such as a decision with `shape: diamond`, goes in the file's own `objects:` block, with merrow.yaml's keys. An object brings its `label`, `subtitle`, `class` and `shape`. A thing with no object is a fill or node with a `label` alone, drawn in the profile's plain `part` class.

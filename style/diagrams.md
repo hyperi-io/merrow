@@ -9,7 +9,7 @@ A picture beats a paragraph: if relating components takes more than two sentence
 
 One look across every project that takes this standard. The same kind of content uses the same diagram type, direction, node outlines and colours in every doc, so a reader who learned one diagram has learned them all. An improvement is a change to this file, or to your own reference repo's, never a private style for one doc.
 
-This file is self-contained. Why each rule exists, with sources and test evidence, is in [docs/diagrams-research.md](../docs/diagrams-research.md).
+This file is self-contained. Why each rule exists, with sources and test evidence, is in [docs/diagrams-research.md](https://github.com/hyperi-io/merrow/blob/main/docs/diagrams-research.md).
 
 ## The rules
 
@@ -476,7 +476,7 @@ Review the rendered diagram, never the source. Every answer is yes, or the diagr
 
 ## For agents
 
-merrow ships the agent procedure as a skill, [src/merrow/skill/SKILL.md](../src/merrow/skill/SKILL.md), which `merrow skill install` puts where Claude Code loads skills.
+merrow ships the agent procedure as a skill, [src/merrow/skill/SKILL.md](https://github.com/hyperi-io/merrow/blob/main/src/merrow/skill/SKILL.md). `merrow skill install` puts it, this file and the templates where Claude Code loads skills.
 
 ## Common mistakes
 
