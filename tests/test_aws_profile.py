@@ -101,6 +101,23 @@ def test_config_get_lists_generated_objects_beside_configured_ones(settings):
     assert found["aws.lambda"]["label"] == "AWS Lambda", "a configured object"
 
 
+@pytest.mark.parametrize(("key", "first"), [("", "LR"), ("direction: TB\n", "TB")])
+def test_a_files_direction_sets_the_flowchart(settings, tmp_path, key, first):
+    (tmp_path / "demo.yaml").write_text(key + FILE, encoding="utf-8")
+    written = CliRunner().invoke(app, ["graph", "write", "demo.yaml", "--out", "out"])
+    assert written.exit_code == 0, written.output
+    source = (tmp_path / "out" / "demo.mmd").read_text(encoding="utf-8")
+    assert f"\nflowchart {first}\n" in source
+    assert (
+        dc.source_problems(
+            dc.Block("demo.mmd", source, None, None),
+            frozenset(),
+            profile.load(settings, "aws"),
+        )
+        == []
+    )
+
+
 @pytest.mark.parametrize(
     ("flag", "aws_drawn"), [([], True), (["--profile", "house"], False)]
 )
@@ -235,6 +252,10 @@ def test_a_dark_theme_takes_the_dark_slide_and_ink(settings):
         "a box on the dark slide"
     )
     assert plain.format("#FFFFFF", "#0F172A") in light.class_lines
+    assert dark.boundary.endswith("color:#FFFFFF"), (
+        "a plain group's title on the dark slide"
+    )
+    assert light.boundary.endswith("color:#000000")
     house, house_dark = (
         profile.load(settings, "house"),
         profile.load(settings, "house", "dark"),

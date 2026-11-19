@@ -6,7 +6,7 @@ The JSON Schema comes from these types, so it can't drift from what merrow reads
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Required, TypedDict
+from typing import Any, Literal, Required, TypedDict
 
 import yaml
 from pydantic import ConfigDict, TypeAdapter, with_config
@@ -73,12 +73,15 @@ class Spec:
         objects: One-off objects for this file, merrow.yaml's keys, over the library.
         profile: The profile it is drawn in. A `--profile` flag wins over it, and
             none takes the configured one.
+        direction: LR, or TB for two rows, such as pairs: no arrow may leave a
+            box an arrow enters.
     """
 
     title: str
     description: str
     pattern: str | None = None
     profile: str | None = None
+    direction: Literal["LR", "TB"] = "LR"
     fills: dict[str, list[str | Fill]] = field(default_factory=dict)
     nodes: list[Node] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)

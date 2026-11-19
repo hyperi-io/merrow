@@ -282,8 +282,11 @@ def _title_anchors(path: Path, caption: str | None) -> list[str]:
 
 
 def diagram_type(source: str) -> tuple[str, str]:
-    """Return the diagram's type keyword and the direction beside it, each empty when absent."""
-    for line in source.splitlines():
+    """Return the diagram's type keyword and the direction beside it, each empty when absent.
+
+    Frontmatter is skipped, so a source with it reads as its body does.
+    """
+    for line in split_front(source)[1].splitlines():
         words = line.split()
         if words and not line.strip().startswith("%%"):
             return words[0], words[1] if len(words) > 1 else ""
@@ -375,9 +378,11 @@ def source_problems(
         problems.append(
             f"R2 direction `{direction}`: `flowchart LR`, or `TB` for the stacked forms"
         )
-    if flow and direction == "TB" and "direction LR" not in lines:
+    two_rows = flow and not {a for a, _ in pairs} & {b for _, b in pairs}
+    if flow and direction == "TB" and "direction LR" not in lines and not two_rows:
         problems.append(
-            "R2 a vertical chain: `flowchart LR`, or stage subgraphs with `direction LR`"
+            "R2 a vertical chain: `flowchart LR`, stage subgraphs with `direction LR`,"
+            " or TB for two rows, where no arrow leaves a box an arrow enters"
         )
     if kind == "stateDiagram-v2" and "direction LR" not in lines:
         problems.append("R2 a state diagram needs `direction LR`")

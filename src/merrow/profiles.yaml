@@ -158,6 +158,7 @@ profiles:
       fill: none
       stroke: "{aws.line}"
       stroke-width: "{stroke.boundary}"
+      color: "{aws.ink}"
     # Each AWS group's border from the built pack of AWS's deck, its dash names
     # as SVG dasharrays. An object picks one by `group_style`, the pack's `key`.
     group_styles:
@@ -185,7 +186,7 @@ profiles:
     lint:
       <<: *lint
       # AWS deployment diagrams run arrows every way, as AWS's own deck does.
-      layout_waive: '^(skip arrow|a solid arrow against the flow)'
+      layout_waive: '^(skip arrow|a solid arrow against the flow|more than one arrow against the flow)'
     layout:
       max_ranks: 8
       stage_title: "Stage {n}"

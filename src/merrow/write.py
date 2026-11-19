@@ -8,7 +8,7 @@ colour is named here.
 import re
 from collections.abc import Callable, Mapping, Sequence
 
-from merrow.compose import stacked, stages
+from merrow.compose import Layout, stacked, stages
 from merrow.graph import Graph, Group, Node
 from merrow.objects import L1Object, bind
 from merrow.profile import Profile, fill
@@ -200,12 +200,14 @@ def diagram(
     library: Mapping[str, L1Object],
     title: str,
     description: str,
+    direction: str = "LR",
 ) -> str:
     """Return the graph as a flowchart in `profile`'s look, its objects bound.
 
     `title` is the `accTitle` (`L<n> <Level> -- <scope>`), `description` the
     `accDescr`. A chain past the profile's `max_ranks` is drawn as pattern B.
     Where the profile draws icons, a node whose object has one is drawn as it.
+    `direction` TB draws it down the page, which lays pairs out as two rows.
 
     Raises:
         ValueError: The graph has problems, names an unknown object, or an
@@ -231,9 +233,12 @@ def diagram(
         style = (known.style if known else "") or profile.default_class
         styles.setdefault(style, []).append(node.id)
         labels[node.id] = profile_label(profile, node, known.shape if known else None)
-    layout = stages(bound, profile.max_ranks, profile.stage_title)
-    if layout.direction == "LR" and not layout.inner:
-        layout = stacked(layout.graph, profile.stack_after) or layout
+    if direction == "TB":
+        layout = Layout(bound, "TB")
+    else:
+        layout = stages(bound, profile.max_ranks, profile.stage_title)
+        if layout.direction == "LR" and not layout.inner:
+            layout = stacked(layout.graph, profile.stack_after) or layout
     group_objects = {
         g.id: library.get(g.object) if g.object else None for g in layout.graph.groups
     }
