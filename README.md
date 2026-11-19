@@ -17,7 +17,7 @@ The point is one look from many sources. Your diagrams arrive as Visio pages, Po
 
 ## Quick start
 
-It's a CLI for Linux and macOS. The installer adds uv if it's missing, then merrow, the pinned Mermaid bundle and a headless browser. On Debian and Ubuntu it also asks sudo for the browser's system libraries.
+It's a CLI for Linux and macOS. The installer uses your uv, or fetches a pinned uv release and checks its SHA256 when you have none. Then it installs merrow, the pinned Mermaid bundle and a headless browser. On Debian and Ubuntu it also asks sudo for the browser's system libraries.
 
 ```bash
 git clone https://github.com/hyperi-io/merrow
@@ -25,7 +25,9 @@ git clone https://github.com/hyperi-io/merrow
 merrow graph render demo.yaml --out out
 ```
 
-Windows is best effort, and we guarantee nothing there because we don't run it. Install [uv](https://docs.astral.sh/uv/) yourself, then run `uv tool install --python 3.14 git+https://github.com/hyperi-io/merrow` and `merrow tools ensure`.
+Already have uv? `uv tool install --python 3.14 merrow` takes the release from PyPI, then run `merrow tools ensure`.
+
+Windows is best effort, and we guarantee nothing there because we don't run it. Install [uv](https://docs.astral.sh/uv/) yourself, then run the same two commands.
 
 With a `demo.yaml` like this one:
 
