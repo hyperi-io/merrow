@@ -98,7 +98,7 @@ Each box in Figure 1, where its code lives and what it decides.
 |---|---|---|
 | Sources | `src/merrow/sources/`, `sources.yaml`, `sources.lock.yaml` | Which publisher download, pinned by version and checksum, and when a release is out |
 | Icon packs | `src/merrow/convert/`, `naming.py` | Each publisher file's icon key and title. The artwork is never changed |
-| Config cascade | `config.py`, `profile.py`, `objects.py` | merrow's defaults, then each reference repo, then `settings.yaml` and `MERROW_*` |
+| Config cascade | `config.py`, `profile.py`, `destination.py`, `objects.py` | merrow's defaults, then each reference repo, then `settings.yaml` and `MERROW_*` |
 | Writer | `write.py`, `compose.py`, `spec.py`, `patterns.py` | Node labels, classes, groups, rows, stacked boundaries and long chains in stages |
 | Render | `render.py`, `post.py`, `bundle.py`, `browser.py` | Mermaid drawn by playwright in light and dark, then group icons placed |
 | Lint | `lint/diagram_check.py` | The standard's source checks, then size, crossings and skip arrows on the render |
@@ -184,6 +184,10 @@ flowchart LR
 ## A profile is the whole look, and a reference repo can extend one
 
 A profile is a set of DTCG token files plus templates in `profiles.yaml`. `house` is merrow's neutral look. `aws` draws AWS icons at their artwork size with the group styles from AWS's deck. A reference repo adds a token file to restyle a profile, or defines a profile with `extends:` and names just what changes.
+
+## A destination is where the diagram is published
+
+A destination in `destinations.yaml` holds what depends on the page: the column, the width and height limits, and the themes rendered to SVG. `page` is a docs page and the default, and `slide` is a deck. The profile and the destination are set separately, so `aws` lints for a page or a slide with no second profile. A reference repo defines a destination with `extends:`, such as a docs site with a 692 px column.
 
 ## Objects are drawn the same everywhere
 

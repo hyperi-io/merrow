@@ -3,6 +3,7 @@
 import json
 import shutil
 import sys
+from collections.abc import Mapping
 from dataclasses import asdict
 from importlib.resources import files
 from pathlib import Path
@@ -18,6 +19,7 @@ from merrow import (
     browser,
     bundle,
     config,
+    destination,
     objects,
     patterns,
     profile,
@@ -211,24 +213,28 @@ def diagram_render(
         help="`.mmd` files, or Markdown whose mermaid fences render"
     ),
     out_dir: Path = Option(..., "--out", help="Directory for the SVGs"),
+    where: str = Option(
+        "", "--destination", help="Destination, default the configured one"
+    ),
 ) -> None:
-    """Render each diagram once per configured theme. Prints one JSON line per SVG.
+    """Render each diagram once per theme of the destination. Prints one JSON line per SVG.
 
     A diagram the profile manages takes that theme's look first, so a dark
     render isn't the light frontmatter on a dark page.
     """
     settings = config.load()
+    pages = destination.load(settings, where or None).themes
     items = [diagram for path in files for diagram in render.diagrams(path)]
     by_ref = objects.by_class_name(objects.library(settings))
-    for theme in settings.get("render")["themes"]:
-        shown = profile.load(settings, None, theme)
+    for theme in pages:
+        shown = profile.load(settings, None, theme, pages)
         themed = [
             render.Diagram(d.name, apply.apply(d.source, shown, by_ref))
             if apply.managed(d.source, by_ref)
             else d
             for d in items
         ]
-        for written in render.render(themed, out_dir, settings, [theme]):
+        for written in render.render(themed, out_dir, settings, [theme], pages):
             print(json.dumps(written))
 
 
@@ -241,11 +247,12 @@ def _written(
     name: str,
     loaded: Loaded,
     theme: str | None = None,
+    pages: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> tuple[str, profile.Profile]:
     """Return a diagram file as Mermaid and the profile it's drawn in.
 
     The profile is `name`, else the file's own, else the configured one, and
-    `loaded` caches each by name and theme.
+    `loaded` caches each by name and theme. `pages` is a destination's themes.
 
     Raises:
         ValueError: The file, its graph or its objects can't be drawn.
@@ -254,7 +261,7 @@ def _written(
     found = spec.read(path)
     key = (name or found.profile, theme)
     if key not in loaded:
-        loaded[key] = profile.load(settings, key[0], theme)
+        loaded[key] = profile.load(settings, key[0], theme, pages)
     shown = loaded[key]
     graph = spec.graph(found, patterns.library(settings))
     library = objects.library(settings)
@@ -356,23 +363,28 @@ def graph_render(
     files: list[Path] = Argument(help="Diagram files, YAML or JSON"),
     out_dir: Path = Option(..., "--out", help="Directory for the .mmd and SVGs"),
     name: str = Option("", "--profile", help="Profile, default the configured one"),
+    where: str = Option(
+        "", "--destination", help="Destination, default the configured one"
+    ),
 ) -> None:
     """Write each file as Mermaid, then render it. Prints one JSON line per SVG.
 
-    Each render theme draws from the profile in that theme, and `<file>.mmd`
-    is the profile with no theme, for a page.
+    Each theme of the destination draws from the profile in that theme, and
+    `<file>.mmd` is the profile with no theme, the same for every destination.
     """
     _one_output_each(files)
     settings = config.load()
     out_dir.mkdir(parents=True, exist_ok=True)
-    themes = [str(theme) for theme in settings.get("render")["themes"]]
+    pages = destination.load(settings, where or None).themes
+    themes = list(pages)
     loaded: Loaded = {}
     for path in files:
         try:
-            sources = {
-                theme: _written(path, settings, name, loaded, theme)[0]
-                for theme in [None, *themes]
+            sources: dict[str | None, str] = {
+                None: _written(path, settings, name, loaded)[0]
             }
+            for theme in themes:
+                sources[theme] = _written(path, settings, name, loaded, theme, pages)[0]
         except (ValueError, yaml.YAMLError) as error:
             raise BadParameter(f"{path}: {error}") from error
         (out_dir / f"{path.stem}.mmd").write_text(
@@ -380,7 +392,7 @@ def graph_render(
         )
         for theme in themes:
             item = render.Diagram(path.stem, sources[theme])
-            for written in render.render([item], out_dir, settings, [theme]):
+            for written in render.render([item], out_dir, settings, [theme], pages):
                 print(json.dumps(written))
 
 
@@ -438,10 +450,14 @@ def diagram_lint(
     ),
     as_json: bool = Option(False, "--json", help="Print the results as JSON"),
     name: str = Option("", "--profile", help="Profile, default the configured one"),
+    where: str = Option(
+        "", "--destination", help="Destination, default the configured one"
+    ),
 ) -> None:
     """Check diagrams against the standard and the built packs. Exits 1 on any failure."""
     argv = [str(path) for path in files]
     argv += ["--profile", name] if name else []
+    argv += ["--destination", where] if where else []
     argv += ["--no-render"] if no_render else []
     argv += ["--json"] if as_json else []
     code = diagram_check.main(argv)

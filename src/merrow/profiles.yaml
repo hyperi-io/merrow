@@ -43,9 +43,6 @@ profiles:
       stroke-width: "{stroke.boundary}"
       stroke-dasharray: "{dash.boundary}"
     icon_css: ".{class.name} .label-icon{color:{class.icon}}"
-    # Rendered limits in px. A diagram wider than `column` is shown scaled to
-    # it, and `max_height` is measured at that scale.
-    limits: {column: 860, max_width: 1250, max_height: 600}
     # A node whose object has an icon is drawn as the icon, its label under it,
     # from every pack merrow ships or has built.
     icon_node: '@{ icon: "{node.icon}", label: "{node.text}", pos: "b", h: {node.size} }'
@@ -182,9 +179,9 @@ profiles:
     icon_packs: [aws]
     # After render: each group's icon flush top-left, its title beside it.
     group_icons: true
-    # A page's limits, as house: a docs column is 700 to 860 px wide. A slide
-    # profile can extend this one with larger limits.
-    limits: {column: 860, max_width: 1250, max_height: 600, nodes: 30, subgraphs: 8}
+    # A deployment diagram lists more boxes and groups than the standard
+    # allows, and an icon node is small.
+    limits: {nodes: 30, subgraphs: 8}
     lint:
       <<: *lint
       # AWS deployment diagrams run arrows every way, as AWS's own deck does.

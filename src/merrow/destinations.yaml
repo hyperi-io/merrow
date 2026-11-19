@@ -1,0 +1,23 @@
+# Destinations: where a diagram is published. A profile is what a diagram is
+# about, and a destination is the page it lands on. A destination with
+# `extends: <destination>` takes that one's entries under its own, so a
+# reference repo's docs site names what differs from `page`.
+
+destination: page
+
+destinations:
+  # A docs page: Markdown on GitHub or a docs site.
+  page:
+    # Rendered limits in px. A diagram wider than `column` is shown scaled to
+    # it, and `max_height` is measured at that scale.
+    limits: {column: 860, max_width: 1250, max_height: 600}
+    # The `render.themes` it renders to SVG. A `themes` entry beside this one
+    # changes a theme for the destination, such as a dark page of another
+    # colour: `themes: {dark: {background: "#0D1117"}}`.
+    images:
+      themes: [light, dark]
+  # A slide in a deck: no live Mermaid, one theme, a wide page.
+  slide:
+    limits: {column: 1600, max_width: 2400, max_height: 1600}
+    images:
+      themes: [light]

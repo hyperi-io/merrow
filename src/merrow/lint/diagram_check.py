@@ -32,14 +32,14 @@ import argparse
 import json
 import re
 import sys
-from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
 from merrow import bundle as pinned
-from merrow import config
+from merrow import config, destination
 from merrow.browser import launch
+from merrow.destination import Destination
 from merrow.lint import icons
 from merrow.objects import by_class_name, library
 from merrow.profile import Profile, ProfileError, load
@@ -487,23 +487,29 @@ def source_problems(
 
 
 def layout_problems(
-    result: dict, limits: Mapping[str, int], landscape: bool = True
+    result: dict, where: Destination, profile: Profile, landscape: bool = True
 ) -> list[str]:
     """Return what the rendered diagram breaks in the standard, from the page's measurements.
 
-    ``limits`` is the profile's ``column``, ``max_width`` and ``max_height``, and optionally ``nodes`` and ``subgraphs``.
+    The width, height and column are the destination's. The node and subgraph
+    limits are the standard's unless the profile sets them, and a finding names
+    the destination or profile that set its limit.
     ``landscape`` is False for the types that are not held to the proportion: sequence, ER and class.
     """
     if not result["ok"]:
         return [f"R10 does not parse: {result['error']}"]
     problems: list[str] = []
     width, height = result["width"], result["height"]
+    page, limits = where.limits, profile.limits
+    by_page, by_profile = f" (destination {where.name})", f" (profile {profile.name})"
     # A diagram wider than the column is scaled down to it, and its height with it.
-    shown = round(height * min(1, limits["column"] / max(width, 1)))
-    if width > limits["max_width"]:
-        problems.append(f"{width} px wide, limit {limits['max_width']}")
-    if shown > limits["max_height"]:
-        problems.append(f"{shown} px tall on the page, limit {limits['max_height']}")
+    shown = round(height * min(1, page["column"] / max(width, 1)))
+    if width > page["max_width"]:
+        problems.append(f"{width} px wide, limit {page['max_width']}{by_page}")
+    if shown > page["max_height"]:
+        problems.append(
+            f"{shown} px tall on the page, limit {page['max_height']}{by_page}"
+        )
     if landscape and width < MIN_RATIO * height:
         problems.append(
             f"R2 not landscape: width is {width / max(height, 1):.2f} x height, minimum {MIN_RATIO}"
@@ -511,9 +517,11 @@ def layout_problems(
     max_nodes = limits.get("nodes", MAX_NODES)
     max_groups = limits.get("subgraphs", MAX_SUBGRAPHS)
     if result["nodes"] > max_nodes:
-        problems.append(f"R3 {result['nodes']} nodes, limit {max_nodes}")
+        set_by = by_profile if "nodes" in limits else ""
+        problems.append(f"R3 {result['nodes']} nodes, limit {max_nodes}{set_by}")
     if result["groups"] > max_groups:
-        problems.append(f"{result['groups']} subgraphs, limit {max_groups}")
+        set_by = by_profile if "subgraphs" in limits else ""
+        problems.append(f"{result['groups']} subgraphs, limit {max_groups}{set_by}")
     if result["edges"] > result["nodes"] + EXTRA_ARROWS:
         problems.append(
             f"{result['edges']} arrows on {result['nodes']} nodes, limit is nodes plus {EXTRA_ARROWS}"
@@ -768,6 +776,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--profile", default="", help="profile, default the configured one"
     )
+    parser.add_argument(
+        "--destination", default="", help="destination, default the configured one"
+    )
     args = parser.parse_args(argv)
 
     blocks: list[Block] = []
@@ -777,6 +788,7 @@ def main(argv: list[str] | None = None) -> int:
         blocks += found
         page_level += problems
     settings = config.load()
+    where = destination.load(settings, args.destination or None)
     default = load(settings, args.profile or None)
     loaded: dict[str, Profile | None] = {}
     chosen = (
@@ -788,12 +800,8 @@ def main(argv: list[str] | None = None) -> int:
     how = "source only, not rendered"
     if not args.no_render:
         script = args.mermaid or pinned.path(settings)
-        for name in dict.fromkeys(profile.name for profile in chosen):
-            at = [i for i, profile in enumerate(chosen) if profile.name == name]
-            column = chosen[at[0]].limits["column"]
-            group = [blocks[i] for i in at]
-            for i, result in zip(at, render(group, script, column, settings, args.png)):
-                measured[i] = result
+        column = where.limits["column"]
+        measured[:] = render(blocks, script, column, settings, args.png)
         how = (
             f"rendered with {args.mermaid.name}"
             if args.mermaid
@@ -812,7 +820,7 @@ def main(argv: list[str] | None = None) -> int:
         ]
         if result:
             found = layout_problems(
-                result, profile.limits, diagram_type(block.source)[0] in _LANDSCAPE
+                result, where, profile, diagram_type(block.source)[0] in _LANDSCAPE
             )
             waive = profile.layout_waive
             problems += [p for p in found if not (waive and waive.search(p))]
@@ -822,6 +830,7 @@ def main(argv: list[str] | None = None) -> int:
             json.dumps(
                 {
                     "how": how,
+                    "destination": where.name,
                     "page": page_level,
                     "diagrams": [asdict(entry) for entry in report],
                 },

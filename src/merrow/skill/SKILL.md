@@ -25,7 +25,7 @@ An agent writes a diagram file, never Mermaid styling. merrow turns the file int
 
 4. `merrow graph validate file.yaml`. Fix every line it prints and run it again.
 5. `merrow graph render file.yaml --out out/` writes `out/file.mmd` and a light and a dark SVG.
-6. `merrow diagram lint out/file.mmd` renders it and measures it against the profile's column, height, node and arrow limits. Fix a layout finding in the file: split the diagram, move detail down a level, or mark a path optional. Never fix it with styling.
+6. `merrow diagram lint out/file.mmd` renders it and measures it against the destination's column, width and height and the profile's node and arrow limits. A diagram for a deck takes `--destination slide` on both commands. Fix a layout finding in the file: split the diagram, move detail down a level, or mark a path optional. Never fix it with styling.
 7. Open both SVGs. Lint can't see contrast, lines drawn on top of each other, or a box that isn't in the code.
 8. Put the Mermaid from `out/file.mmd` in a `mermaid` fence, with a caption under it: `*Figure N. <title>.* Up: <parent>.` A diagram with icon nodes on a page GitHub renders goes in as its two SVGs instead, `#gh-light-mode-only` and `#gh-dark-mode-only`, with the diagram file beside them. GitHub can't load an icon pack ([diagrams.md](diagrams.md), "Page wrapper").
 

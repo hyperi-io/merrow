@@ -101,14 +101,18 @@ def test_a_bad_file_is_named(realm, text, said):
 
 @pytest.mark.parametrize(
     ("command", "svgs"),
-    [("render", ["demo-dark.svg", "demo-light.svg"]), ("write", [])],
-    ids=["render_both", "write_mermaid_only"],
+    [
+        (["render"], ["demo-dark.svg", "demo-light.svg"]),
+        (["render", "--destination", "slide"], ["demo-light.svg"]),
+        (["write"], []),
+    ],
+    ids=["render_both", "render_for_a_slide", "write_mermaid_only"],
 )
 def test_graph_writes_the_mermaid_and_renders_only_when_asked(realm, command, svgs):
     path = realm / "demo.yaml"
     path.write_text(GOOD, encoding="utf-8")
     out = realm / "out"
-    result = runner.invoke(app, ["graph", command, str(path), "--out", str(out)])
+    result = runner.invoke(app, ["graph", *command, str(path), "--out", str(out)])
     assert result.exit_code == 0, result.output
     assert "<span>schema-free insert</span>" in (out / "demo.mmd").read_text(
         encoding="utf-8"

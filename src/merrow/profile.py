@@ -16,7 +16,7 @@ _FILL = re.compile(r'fill="(#[0-9A-Fa-f]{6})"')
 
 
 class ProfileError(ValueError):
-    """A profile names a profile, token or field that isn't defined."""
+    """A profile or destination names something that isn't defined, or a key it can't take."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,7 +35,8 @@ class Profile:
         default_class: The class of a node with no object.
         max_ranks: The longest chain drawn left to right before pattern B.
         stage_title: A pattern B stage's title, `{n}` its number.
-        limits: Rendered `column`, `max_width` and `max_height`, in px.
+        limits: `nodes` and `subgraphs` where the profile sets them over the
+            standard's. The page's limits are the destination's.
         label_styling: Styling lint fails inside a quoted label.
         caption_styling: Styling lint fails when a caption names it.
         layout_waive: Render findings lint drops for this profile.
@@ -257,42 +258,74 @@ def _merge(base: Mapping[str, Any], over: Mapping[str, Any]) -> dict[str, Any]:
     return merged
 
 
-def _entry(
-    profiles: Mapping[str, Any], name: str, seen: tuple[str, ...] = ()
+def extended(
+    entries: Mapping[str, Any],
+    name: str,
+    kind: str = "profile",
+    seen: tuple[str, ...] = (),
 ) -> dict[str, Any]:
-    """Return a profile's entry over the profile it `extends`, if any.
+    """Return a named entry over the one it `extends`, if any.
+
+    `kind` is what the entries are, for the error: a profile or a destination.
 
     Raises:
-        ProfileError: The profile, or one it extends, isn't defined, or they loop.
+        ProfileError: The entry, or one it extends, isn't defined, or they loop.
     """
-    entry = profiles.get(name)
-    if not entry:
-        raise ProfileError(f"no profile {name}")
-    parent = entry.get("extends")
+    found = entries.get(name)
+    if not found:
+        raise ProfileError(f"no {kind} {name}")
+    parent = found.get("extends")
     if not parent:
-        return dict(entry)
+        return dict(found)
     if parent in (*seen, name):
         chain = " -> ".join((*seen, name, parent))
-        raise ProfileError(f"profiles extend in a loop: {chain}")
-    return _merge(_entry(profiles, parent, (*seen, name)), entry)
+        raise ProfileError(f"{kind}s extend in a loop: {chain}")
+    return _merge(extended(entries, parent, kind, (*seen, name)), found)
 
 
-def load(settings: Any, name: str | None = None, theme: str | None = None) -> Profile:
+# The limits a profile may set. A page's width and height are a destination's.
+_LIMITS = ("nodes", "subgraphs")
+
+
+def _limits(name: str, limits: Mapping[str, Any]) -> dict[str, int]:
+    """Return a profile's limits as numbers.
+
+    Raises:
+        ProfileError: It sets a limit that isn't a profile's.
+    """
+    for key in limits:
+        if key not in _LIMITS:
+            raise ProfileError(
+                f"profile {name} sets limits.{key}: a profile's limits are "
+                f"{' and '.join(_LIMITS)}, and a page's go in "
+                f"destinations.<name>.limits.{key}"
+            )
+    return {key: int(value) for key, value in limits.items()}
+
+
+def load(
+    settings: Any,
+    name: str | None = None,
+    theme: str | None = None,
+    pages: Mapping[str, Mapping[str, Any]] | None = None,
+) -> Profile:
     """Return the named profile, else the configured one, generated from its tokens.
 
     A profile that `extends` another overrides that one's entries, and a
     `theme` the profile lists under `themes` overrides its own, a mapping entry
     key by key. A `font` setting replaces every fontFamily token. `{page.background}`
     is the render theme's page colour, the first theme's with no `theme`.
+    `pages` is a destination's themes, in place of `render.themes`.
 
     Raises:
-        ProfileError: The profile, or a token it names, isn't defined.
+        ProfileError: The profile, or a token it names, isn't defined, or it
+            sets a page limit.
         FileNotFoundError: A token file is in no reference repo and not in merrow.
     """
     name = name or str(settings.get("profile"))
-    entry = _entry(settings.get("profiles") or {}, name)
+    entry = extended(settings.get("profiles") or {}, name)
     entry = _merge(entry, (entry.get("themes") or {}).get(theme) or {})
-    pages = settings.get("render")["themes"]
+    pages = pages or settings.get("render")["themes"]
     page = pages.get(theme) or next(iter(pages.values()))
     scope: dict[str, str] = {"page.background": str(page["background"])}
     font = _font(settings)
@@ -329,7 +362,7 @@ def load(settings: Any, name: str | None = None, theme: str | None = None) -> Pr
         str(entry["default_class"]),
         int(entry["layout"]["max_ranks"]),
         str(entry["layout"]["stage_title"]),
-        {key: int(value) for key, value in entry["limits"].items()},
+        _limits(name, entry.get("limits") or {}),
         re.compile(str(entry["lint"]["label_styling"])),
         re.compile(str(entry["lint"]["caption_styling"])),
         _partial(str(entry["icon_node"]), scope) if entry.get("icon_node") else None,

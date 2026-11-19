@@ -4,7 +4,7 @@ import re
 import pytest
 from typer.testing import CliRunner
 
-from merrow import config, render
+from merrow import config, destination, render
 from merrow.cli import app
 
 ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><rect width="8" height="8"/></svg>'
@@ -82,8 +82,21 @@ def test_render_names_the_diagram_mermaid_rejects(tmp_path, monkeypatch):
         render.render(list(render.diagrams(bad)), tmp_path / "out", config.load())
 
 
-def test_diagram_render_draws_each_theme_in_its_own_look(tmp_path, monkeypatch):
+GITHUB = """destinations:
+  github:
+    extends: page
+    themes:
+      dark: {background: "#0D1117"}
+"""
+
+
+@pytest.mark.parametrize("where", ["page", "github", "slide"])
+def test_diagram_render_draws_each_theme_in_its_own_look(tmp_path, monkeypatch, where):
     monkeypatch.chdir(tmp_path)
+    repo = tmp_path / "realm"
+    repo.mkdir()
+    (repo / "merrow.yaml").write_text(GITHUB, encoding="utf-8")
+    monkeypatch.setenv("MERROW_REFERENCES", json.dumps([str(repo)]))
     page = tmp_path / "page.md"
     page.write_text(
         "# Login\n\n```mermaid\nsequenceDiagram\n"
@@ -91,9 +104,18 @@ def test_diagram_render_draws_each_theme_in_its_own_look(tmp_path, monkeypatch):
         "    a->>b: hi\n```\n",
         encoding="utf-8",
     )
-    result = CliRunner().invoke(app, ["diagram", "render", str(page), "--out", "out"])
+    command = ["diagram", "render", str(page), "--out", "out", "--destination", where]
+    result = CliRunner().invoke(app, command)
     assert result.exit_code == 0, result.output
-    pages = config.load().get("render")["themes"]
+    pages = destination.load(config.load(), where).themes
+    wanted = {
+        "page": {"light": "#FFFFFF", "dark": "#1B1B1D"},
+        "github": {"light": "#FFFFFF", "dark": "#0D1117"},
+        "slide": {"light": "#FFFFFF"},
+    }[where]
+    assert {theme: look["background"] for theme, look in pages.items()} == wanted
+    written = sorted(path.name for path in (tmp_path / "out").iterdir())
+    assert written == sorted(f"page-1-{theme}.svg" for theme in wanted)
     for theme, look in pages.items():
         svg = (tmp_path / "out" / f"page-1-{theme}.svg").read_text(encoding="utf-8")
         hexed = look["background"].lstrip("#")
