@@ -3,6 +3,12 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.3](https://github.com/hyperi-io/merrow/compare/v0.1.2...v0.1.3) (2026-11-19)
+
+### Bug Fixes
+
+* **lint:** narrow the R6 icon exception ([4e414c9](https://github.com/hyperi-io/merrow/commit/4e414c9efd948d67e754f6c93c7074378914ee9d))
+
 ## [0.1.2](https://github.com/hyperi-io/merrow/compare/v0.1.1...v0.1.2) (2026-11-19)
 
 ### Bug Fixes
