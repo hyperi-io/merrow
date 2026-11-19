@@ -555,5 +555,6 @@ Rules for a tool that EMITS Mermaid, on top of everything above.
 5. A graph too large for one diagram is split. Its membership, the nodes grouped by an attribute a node holds once, is a generated table: one row per group, its members in one cell. An overview diagram per group can sit beside the table, never in place of it. The arrows go in one diagram per producer, each inside the node limit. A hand-drawn dependency graph past the limits is the same: a diagram of its tiers, and a table of edges (from, to) for the exact arrows.
 6. A drift check regenerates every block and compares. It runs in CI, and runs the checker's source pass (`--no-render`) on the page.
 7. Ship tests for an idempotent render, an empty pair rendering, an unmatched marker raising, class lines byte-identical to this file, no `(` or `"` in a pipe label, and the live page in sync.
+8. A generator takes the house block from `merrow profile show <profile>` when it runs, never from a copy in its code. A copy goes stale when the profile changes, and `merrow diagram apply` on the page alone leaves the page out of step with its generator.
 
 Prose beside a generated diagram says what the picture cannot: why an arrow is lockstep, which member is optional, what is not drawn.
