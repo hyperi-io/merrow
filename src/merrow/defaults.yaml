@@ -74,8 +74,11 @@ render:
       background: "#1B1B1D"
       # An icon with a variant of this name drawn for dark, as AWS ships.
       icon_suffix: "-dark"
-  # Mermaid's initialize() config. useMaxWidth shrinks wide diagrams.
+  # Mermaid's initialize() config. useMaxWidth shrinks wide diagrams. Mermaid
+  # draws a stadium or a circle from a random seed unless one is set, so a
+  # render wouldn't repeat byte for byte.
   mermaid_config:
+    handDrawnSeed: 1
     flowchart:
       useMaxWidth: false
     architecture:
