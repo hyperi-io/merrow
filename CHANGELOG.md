@@ -3,6 +3,12 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.7](https://github.com/hyperi-io/merrow/compare/v0.1.6...v0.1.7) (2026-11-19)
+
+### Bug Fixes
+
+* **aws:** limit diagram width and add a hint for unquoted commas ([af78874](https://github.com/hyperi-io/merrow/commit/af78874117fcd0305a9513a93939b0dfad932754))
+
 ## [0.1.6](https://github.com/hyperi-io/merrow/compare/v0.1.5...v0.1.6) (2026-11-19)
 
 ### Bug Fixes
