@@ -1,0 +1,21 @@
+title: L2 Services -- Adobe Commerce on AWS, edge
+description: Route 53 resolves shoppers to CloudFront behind AWS WAF. A public load balancer spreads requests over Varnish in two Availability Zones, which passes misses to the application tier.
+profile: aws
+groups:
+  - {id: cloud, label: "", object: aws.cloud}
+  - {id: region, label: "", object: aws.region, parent: cloud}
+  - {id: vpc, label: "", object: aws.vpc, parent: region}
+  - {id: az, label: "Availability Zones x2", object: aws.az, parent: vpc}
+nodes:
+  - {id: users, object: aws.users, label: Shoppers}
+  - {id: r53, object: aws.amazon-route-53, group: cloud}
+  - {id: waf, object: aws.aws-waf, group: cloud}
+  - {id: cf, object: aws.amazon-cloudfront, group: cloud}
+  - {id: alb, object: aws.alb, label: Public load balancer, group: vpc}
+  - {id: varnish, object: aws.ec2, label: Varnish Cache, subtitle: Auto Scaling group, group: az}
+edges:
+  - {source: users, target: r53, label: "1"}
+  - {source: r53, target: cf}
+  - {source: waf, target: cf, label: "2"}
+  - {source: cf, target: alb, label: "3"}
+  - {source: alb, target: varnish, label: "4"}

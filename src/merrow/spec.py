@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Literal, Required, TypedDict
 
 import yaml
-from pydantic import ConfigDict, TypeAdapter, with_config
+from pydantic import ConfigDict, TypeAdapter, ValidationError, with_config
 
 from merrow.graph import Edge, Graph, Group, Node
 from merrow.patterns import Pattern, expand
@@ -101,15 +101,26 @@ def read(path: Path) -> Spec:
     """Return the diagram a YAML or JSON file describes.
 
     Raises:
-        pydantic.ValidationError: A field is missing, mistyped or unknown.
-        ValueError: The file isn't YAML (JSON is YAML), with a hint to quote.
+        pydantic.ValidationError: A field is missing or mistyped.
+        ValueError: The file isn't YAML (JSON is YAML), or a key is unknown,
+            each with a hint to quote.
     """
     try:
         data = yaml.load(path.read_text(encoding="utf-8"), Loader=_Loader)  # noqa: S506 -- a SafeLoader subclass
     except yaml.YAMLError as error:
         hint = "quote a value that holds ': ', ' #' or '?', or starts with '-'"
         raise ValueError(f"{error}\n{hint}") from error
-    return _ADAPTER.validate_python(data)
+    try:
+        return _ADAPTER.validate_python(data)
+    except ValidationError as error:
+        unknown = {"unexpected_keyword_argument", "extra_forbidden"}
+        if not any(found["type"] in unknown for found in error.errors()):
+            raise
+        hint = (
+            "an unknown key is often half of a value: a comma in an unquoted value"
+            ' inside {...} splits it, so quote the value: subtitle: "pulls, SaaS Kafka"'
+        )
+        raise ValueError(f"{error}\n{hint}") from error
 
 
 def graph(spec: Spec, patterns: dict[str, Pattern]) -> Graph:

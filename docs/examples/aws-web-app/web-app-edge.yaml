@@ -1,0 +1,22 @@
+title: L2 Services -- Web application on AWS, edge
+description: Route 53 sends web clients through AWS WAF to CloudFront, which serves static content from S3 and passes the rest to the public load balancer. AWS Certificate Manager holds the load balancer's certificate.
+profile: aws
+groups:
+  - {id: cloud, label: "", object: aws.cloud}
+  - {id: vpc, label: "", object: aws.vpc, parent: cloud}
+  - {id: pub, label: Public subnets, object: aws.public-subnet, parent: vpc}
+nodes:
+  - {id: client, object: aws.client, label: Web client}
+  - {id: r53, object: aws.route53, subtitle: DNS, group: cloud}
+  - {id: waf, object: aws.waf, group: cloud}
+  - {id: cf, object: aws.cloudfront, group: cloud}
+  - {id: s3, object: aws.s3, subtitle: static content, group: cloud}
+  - {id: acm, object: aws.acm, group: cloud}
+  - {id: alb, object: aws.alb, group: pub}
+edges:
+  - {source: client, target: r53, label: "1"}
+  - {source: r53, target: waf}
+  - {source: waf, target: cf}
+  - {source: cf, target: s3}
+  - {source: cf, target: alb}
+  - {source: acm, target: alb, optional: true}

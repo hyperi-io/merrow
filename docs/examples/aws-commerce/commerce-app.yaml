@@ -1,0 +1,21 @@
+title: L2 Services -- Adobe Commerce on AWS, application tier
+description: The internal load balancer spreads requests over Magento in two Availability Zones. Magento uses OpenSearch, ElastiCache for Redis, Aurora and EFS, and Aurora keeps its standby in the second zone.
+profile: aws
+groups:
+  - {id: cloud, label: "", object: aws.cloud}
+  - {id: region, label: "", object: aws.region, parent: cloud}
+  - {id: vpc, label: "", object: aws.vpc, parent: region}
+  - {id: az, label: "Availability Zones x2", object: aws.az, parent: vpc}
+nodes:
+  - {id: ialb, object: aws.alb, label: Internal load balancer, group: vpc}
+  - {id: magento, object: aws.ec2, label: Magento, subtitle: Auto Scaling group, group: az}
+  - {id: search, object: aws.amazon-opensearch-service, subtitle: catalog search, group: vpc}
+  - {id: redis, object: aws.res-amazon-elasticache-elasticache-for-redis, label: ElastiCache for Redis, subtitle: sessions and query cache, group: vpc}
+  - {id: aurora, object: aws.amazon-aurora, label: Aurora, subtitle: primary and standby, group: az}
+  - {id: efs, object: aws.amazon-efs, subtitle: shared content, group: vpc}
+edges:
+  - {source: ialb, target: magento, label: "5"}
+  - {source: magento, target: search, label: "6"}
+  - {source: magento, target: redis, label: "7"}
+  - {source: magento, target: aurora, label: "8"}
+  - {source: magento, target: efs, label: "9"}

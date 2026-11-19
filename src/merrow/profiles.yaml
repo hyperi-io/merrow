@@ -182,7 +182,9 @@ profiles:
     icon_packs: [aws]
     # After render: each group's icon flush top-left, its title beside it.
     group_icons: true
-    limits: {column: 1600, max_width: 2400, max_height: 1600, nodes: 30, subgraphs: 8}
+    # A page's limits, as house: a docs column is 700 to 860 px wide. A slide
+    # profile can extend this one with larger limits.
+    limits: {column: 860, max_width: 1250, max_height: 600, nodes: 30, subgraphs: 8}
     lint:
       <<: *lint
       # AWS deployment diagrams run arrows every way, as AWS's own deck does.
