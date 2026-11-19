@@ -279,7 +279,10 @@ def test_pack_build_cli_writes_the_pack_where_config_says(monkeypatch, tmp_path)
     [
         (["nope", "--from"], "no source 'nope'"),
         (["aws-icons", "nope"], "no source 'nope'"),
-        (["aws-icons", "aws-groups", "--from"], "--from builds one source"),
+        (
+            ["aws-icons", "aws-groups", "--from"],
+            "builds one source: name only that one",
+        ),
     ],
     ids=["unknown", "unknown-second-fetches-nothing", "from-with-two"],
 )
