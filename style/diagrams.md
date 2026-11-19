@@ -15,7 +15,7 @@ This file is self-contained. Why each rule exists, with sources and test evidenc
 
 | Rule | What it says |
 |---|---|
-| R1 | Diagrams are Mermaid, in a fenced `mermaid` block. No ASCII boxes, no box-drawing characters, no image of a diagram. One exception: a diagram with icon nodes, on a page whose renderer can't load the icon pack, is published as merrow's light and dark SVGs beside its diagram file ("Page wrapper"). GitHub can't load one. |
+| R1 | Diagrams are Mermaid, in a fenced `mermaid` block. No ASCII boxes, no box-drawing characters, no image of a diagram. One exception: a diagram its destination's renderer can't draw is published as merrow's SVGs beside its diagram file ("Page wrapper"). On a docs page that is a diagram with icon nodes, because GitHub loads no icon pack. |
 | R2 | Diagrams are landscape and read top-left to bottom-right: `flowchart LR`. `flowchart TB` is for the stacked forms, and for two rows such as pairs, where no box both receives and sends an arrow. |
 | R3 | 12 nodes or fewer, 5 columns or fewer, one idea, one level. |
 | R4 | Zero crossed lines, zero lines through boxes, zero overlapping labels. |
@@ -122,6 +122,7 @@ Expand a box only where the docs explain it. Not every box gets a child.
 - The proportion holds flowcharts and state diagrams. A sequence, ER or class diagram is held by the width and height limits alone. A `classDiagram` lays out top to bottom: past the height limit, `direction LR` under its first line lays it across.
 - A sequence diagram has 6 participants or fewer, and fits 8 messages under the height limit. Past 8, draw one diagram per path, and write a path of 3 steps or fewer as prose.
 - Height is measured as shown on the page: a diagram wider than the 860 px column is scaled down to it.
+- The width, height and column are the `page` destination's. A deck is checked with `--destination slide`, and a reference repo defines a destination for a page of another width.
 - Start top-left and finish bottom-right. The main path is one straight line. Mermaid centres a node between the branches it feeds, so that line can sit below the top row.
 - Branches and failure paths sit below the main path. Parallel things stack vertically in one column.
 - A subgraph marks a boundary that exists: a system, a stage, a group of like things. Every subgraph has an ID and a quoted title.
@@ -375,7 +376,7 @@ flowchart LR
 - A repo whose formatter rewrites `*...*` emphasis to `_..._`, as prettier does, writes the caption in italics its way. The checker reads both forms.
 - An `Up` or `Down` link to a page's top diagram links the page itself, never its H1 anchor: a docs site turns the H1 into the page title, and the anchor does not exist there.
 
-A diagram with icon nodes, on a page GitHub renders, is two images in place of the fence. GitHub shows the one whose fragment matches the reader's theme. The alt text is the title and the `accDescr` sentences. A docs site shows both until its CSS hides one. Docusaurus needs this rule in its custom CSS:
+A diagram the destination's renderer can't draw goes in as images in place of the fence, one a theme. On a docs page that is a diagram with icon nodes. `merrow graph render --page` prints the lines. GitHub shows the one whose fragment matches the reader's theme. The alt text is the title and the `accDescr` sentences. A docs site shows both until its CSS hides one. Docusaurus needs this rule in its custom CSS:
 
 ```css
 [data-theme='light'] img[src$='#gh-dark-mode-only'],
@@ -389,6 +390,7 @@ A diagram with icon nodes, on a page GitHub renders, is two images in place of t
 
 - The diagram file sits beside the SVGs and is the source. `merrow graph render` writes both SVGs and the `.mmd` from it, and lint runs on that `.mmd`.
 - Change the file and render again. Never edit an SVG.
+- A link to the diagram file names the file, never its directory: Docusaurus fails its build on a directory link.
 
 ## Templates
 
@@ -467,7 +469,7 @@ merrow diagram lint docs/page.md
 
 | Pass | Reads | Reports |
 |---|---|---|
-| Source | The Mermaid text and the page lines around it | Type and direction, `accTitle` and `accDescr`, intro sentence and caption, class lines against "Colour", banned syntax, text diagrams (box borders or arrow chains) in `text` and untagged fences |
+| Source | The Mermaid text and the page lines around it | Type and direction, `accTitle` and `accDescr`, intro sentence and caption, class lines against "Colour", banned syntax, a fence the destination's renderer can't draw, text diagrams (box borders or arrow chains) in `text` and untagged fences |
 | Render | The laid-out SVG | Size and proportion for every type. For flowcharts: node, subgraph and arrow counts, crossed lines, lines through boxes, overlapping labels, skip arrows, arrows against the flow, boxes with no arrow, no `~~~` link and no subgraph, and labels that wrap past 2 lines or break a name mid-word. State diagrams get the same line checks except the back-arrow limit, because a state machine loops. Sequence diagrams: an autonumber badge on a label or another badge |
 
 - A page has every `mermaid` fence checked. A `.mmd` file is one diagram with no wrapper.

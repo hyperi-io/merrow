@@ -11,13 +11,21 @@ destinations:
     # Rendered limits in px. A diagram wider than `column` is shown scaled to
     # it, and `max_height` is measured at that scale.
     limits: {column: 860, max_width: 1250, max_height: 600}
-    # The `render.themes` it renders to SVG. A `themes` entry beside this one
-    # changes a theme for the destination, such as a dark page of another
-    # colour: `themes: {dark: {background: "#0D1117"}}`.
+    # What the page's renderer draws from a `mermaid` fence: `all`, `no-icons`
+    # where it loads no icon pack, as GitHub's doesn't, or `none`. A diagram
+    # it can't draw is published as images.
+    mermaid: no-icons
     images:
+      # The `render.themes` it renders to SVG. A `themes` entry beside
+      # `images` changes a theme for the destination, such as a dark page of
+      # another colour: `themes: {dark: {background: "#0D1117"}}`.
       themes: [light, dark]
+      # An image's link. GitHub shows the one whose fragment is the reader's theme.
+      link: "{diagram.name}-{theme.name}.svg#gh-{theme.name}-mode-only"
   # A slide in a deck: no live Mermaid, one theme, a wide page.
   slide:
     limits: {column: 1600, max_width: 2400, max_height: 1600}
+    mermaid: none
     images:
       themes: [light]
+      link: "{diagram.name}-{theme.name}.svg"

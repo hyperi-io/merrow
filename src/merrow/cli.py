@@ -1,6 +1,7 @@
 """merrow command line: `merrow <noun> <verb>`."""
 
 import json
+import re
 import shutil
 import sys
 from collections.abc import Mapping
@@ -367,17 +368,24 @@ def graph_render(
     where: str = Option(
         "", "--destination", help="Destination, default the configured one"
     ),
+    page: bool = Option(
+        False, "--page", help="Print the Markdown that puts each diagram on a page"
+    ),
 ) -> None:
     """Write each file as Mermaid, then render it. Prints one JSON line per SVG.
 
     Each theme of the destination draws from the profile in that theme, and
     `<file>.mmd` is the profile with no theme, the same for every destination.
+    `--page` adds a JSON line a diagram with its `page`: the fence, or the
+    image lines where the destination's renderer can't draw it.
     """
     _one_output_each(files)
     settings = config.load()
     out_dir.mkdir(parents=True, exist_ok=True)
-    pages = destination.load(settings, where or None).themes
+    target = destination.load(settings, where or None)
+    pages = target.themes
     themes = list(pages)
+    icon_refs = [re.compile(p) for p in settings.get("lint")["icon_refs"]]
     loaded: Loaded = {}
     for path in files:
         try:
@@ -395,6 +403,10 @@ def graph_render(
             item = render.Diagram(path.stem, sources[theme])
             for written in render.render([item], out_dir, settings, [theme], pages):
                 print(json.dumps(written))
+        if page:
+            has_icon = any(found.search(sources[None]) for found in icon_refs)
+            block = target.page_block(path.stem, sources[None], has_icon)
+            print(json.dumps({"diagram": path.stem, "page": block}))
 
 
 @source_app.command("list")

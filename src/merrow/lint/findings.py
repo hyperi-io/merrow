@@ -22,6 +22,7 @@ IDS = frozenset(
         "crossing",
         "default-class",
         "direction",
+        "fence",
         "figure-numbers",
         "frontmatter",
         "graph-keyword",
