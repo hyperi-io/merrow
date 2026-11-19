@@ -3,6 +3,13 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.2](https://github.com/hyperi-io/merrow/compare/v0.1.1...v0.1.2) (2026-11-19)
+
+### Bug Fixes
+
+* **install:** fetch a pinned, hash-checked uv ([00ed30a](https://github.com/hyperi-io/merrow/commit/00ed30ab9471ac566a6be0a8d17ffd5efa102553))
+* **skill:** ship the diagram rules with the skill ([6f3717e](https://github.com/hyperi-io/merrow/commit/6f3717e4a829ee34a52db83951361d84b4bba0ff))
+
 ## [0.1.1](https://github.com/hyperi-io/merrow/compare/v0.1.0...v0.1.1) (2026-11-18)
 
 ### Bug Fixes
