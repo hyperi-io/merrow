@@ -3,6 +3,12 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.5](https://github.com/hyperi-io/merrow/compare/v0.1.4...v0.1.5) (2026-11-19)
+
+### Bug Fixes
+
+* **merrow:** list pack objects, use file profiles, fix dark boxes ([3ad8bd6](https://github.com/hyperi-io/merrow/commit/3ad8bd6f2e4698290319a4393c2430923f7740c5))
+
 ## [0.1.4](https://github.com/hyperi-io/merrow/compare/v0.1.3...v0.1.4) (2026-11-19)
 
 ### Bug Fixes
