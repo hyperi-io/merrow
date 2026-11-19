@@ -366,7 +366,7 @@ def source_problems(
         return [
             finding(
                 "frontmatter",
-                f"R9 frontmatter that is not the {profile.name} block, byte for byte: `merrow profile show {profile.name}` prints it",
+                f"R9 frontmatter that is not the {profile.name} block, byte for byte: `merrow diagram apply` sets it",
             )
         ]
     problems: list[str] = []

@@ -29,10 +29,18 @@ def _indent(line: str) -> str:
     return line[: len(line) - len(line.lstrip())]
 
 
+def _class_of(line: str) -> str:
+    """Return the class a `classDef` line defines, or "" for any other line."""
+    words = line.split()
+    return words[1] if len(words) > 1 and words[0] == "classDef" else ""
+
+
 def apply(source: str, profile: Profile, by_ref: Mapping[str, L1Object]) -> str:
     """Return one diagram with the profile's frontmatter and class block.
 
-    `by_ref` is `objects.by_class_name` of the object library.
+    `by_ref` is `objects.by_class_name` of the object library. A flowchart with
+    class lines pasted in, no object and no class block keeps its shape: each
+    class line is set in place.
 
     Raises:
         ValueError: An object styles as a class the profile doesn't define.
@@ -64,7 +72,14 @@ def apply(source: str, profile: Profile, by_ref: Mapping[str, L1Object]) -> str:
             subgraphs.append(found.group(1))
         out.append(line)
 
-    if flow:
+    lines = {ln.split()[1]: ln for ln in profile.class_lines}
+    pasted = BEGIN not in body and not styles and any(_class_of(ln) for ln in out)
+    if flow and pasted:
+        out = [
+            _indent(ln) + lines.get(_class_of(ln), ln.strip()) if _class_of(ln) else ln
+            for ln in out
+        ]
+    elif flow:
         indent = next((_indent(ln) for ln in out[1:] if ln.strip()), "    ")
         order = [ln.split()[1] for ln in profile.class_lines]
         block = [
@@ -81,19 +96,22 @@ def apply(source: str, profile: Profile, by_ref: Mapping[str, L1Object]) -> str:
 def managed(source: str, by_ref: Mapping[str, L1Object]) -> bool:
     """Return whether a diagram takes the profile.
 
-    It does when it names an object, carries the class block, or is a sequence,
-    ER or class diagram, which can name no object.
+    It does when it names an object, carries the class block or a frontmatter,
+    or is a sequence, ER or class diagram, which can name no object.
     """
     names = {m["ref"] for ln in source.splitlines() if (m := _REF.match(ln.strip()))}
-    front_only = diagram_type(split_front(source)[1])[0] in _FRONT_ONLY
-    return BEGIN in source or bool(names & set(by_ref)) or front_only
+    front, body = split_front(source)
+    front_only = diagram_type(body)[0] in _FRONT_ONLY
+    fronted = front is not None
+    return BEGIN in source or bool(names & set(by_ref)) or front_only or fronted
 
 
 def apply_file(path: Path, profile: Profile, by_ref: Mapping[str, L1Object]) -> bool:
     """Apply the profile to a `.mmd` file, or to each managed fence in Markdown.
 
-    A fence is managed once it names an object or carries the class block. A
-    sequence, ER or class diagram is always managed: it can name no object.
+    A fence is managed once it names an object or carries the class block or
+    a frontmatter. A sequence, ER or class diagram is always managed: it can
+    name no object.
     Returns whether the file changed.
 
     Raises:
