@@ -3,6 +3,15 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.8](https://github.com/hyperi-io/merrow/compare/v0.1.7...v0.1.8) (2026-11-19)
+
+### Bug Fixes
+
+* **config:** move page limits to destinations ([bdde135](https://github.com/hyperi-io/merrow/commit/bdde1356f8348e90c068c71d8702d30547bd9346))
+* **lint:** give every finding an id ([610eaac](https://github.com/hyperi-io/merrow/commit/610eaace08ba28c24e52830abc5fa39aacf992ed))
+* **lint:** pick diagram format by destination ([b6c044f](https://github.com/hyperi-io/merrow/commit/b6c044fe0e1df601752fac98205db6a4968dd867))
+* **render:** set a fixed seed for Mermaid ([d513ccd](https://github.com/hyperi-io/merrow/commit/d513ccd0693fc304bfa02d99076aaa2ab0e6c1fd))
+
 ## [0.1.7](https://github.com/hyperi-io/merrow/compare/v0.1.6...v0.1.7) (2026-11-19)
 
 ### Bug Fixes
