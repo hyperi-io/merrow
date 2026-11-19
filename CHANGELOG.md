@@ -3,6 +3,12 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.9](https://github.com/hyperi-io/merrow/compare/v0.1.8...v0.1.9) (2026-11-19)
+
+### Bug Fixes
+
+* **apply:** refresh a pasted house block in place ([054e703](https://github.com/hyperi-io/merrow/commit/054e703bc9fbcbc82fbf788ed6528349dd23fa75))
+
 ## [0.1.8](https://github.com/hyperi-io/merrow/compare/v0.1.7...v0.1.8) (2026-11-19)
 
 ### Bug Fixes
