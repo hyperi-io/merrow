@@ -3,7 +3,7 @@ import json
 import pytest
 from typer.testing import CliRunner
 
-from merrow import config, objects, profile, write
+from merrow import config, destination, objects, profile, write
 from merrow.cli import app
 from merrow.graph import Edge, Graph, Group, Node
 from merrow.lint import diagram_check as dc
@@ -167,13 +167,25 @@ def test_a_forced_font_replaces_every_font_family(
         ),
         ("profile: nothing\n", None, profile.ProfileError, "no profile nothing"),
         (
+            "profiles:\n  house:\n    limits: {column: 700}\n",
+            None,
+            profile.ProfileError,
+            r"profile house sets limits.column: .* destinations.<name>.limits.column",
+        ),
+        (
             "profiles:\n  house:\n    tokens: [missing.tokens.json]\n",
             None,
             FileNotFoundError,
             "missing.tokens.json",
         ),
     ],
-    ids=["unknown_token", "alias_loop", "unknown_profile", "missing_token_file"],
+    ids=[
+        "unknown_token",
+        "alias_loop",
+        "unknown_profile",
+        "page_limit_in_a_profile",
+        "missing_token_file",
+    ],
 )
 def test_a_broken_profile_is_named(
     monkeypatch, tmp_path, merrow_yaml, tokens, error, said
@@ -181,6 +193,75 @@ def test_a_broken_profile_is_named(
     settings = realm(monkeypatch, tmp_path, merrow_yaml, tokens)
     with pytest.raises(error, match=said):
         profile.load(settings)
+
+
+SITE = """destinations:
+  site:
+    extends: page
+    limits: {column: 692}
+    themes:
+      dark: {background: "#0D1117"}
+"""
+
+
+def test_a_destination_extending_page_changes_what_it_names(monkeypatch, tmp_path):
+    settings = realm(monkeypatch, tmp_path, SITE)
+    page = destination.load(settings)
+    assert (page.name, page.limits) == (
+        "page",
+        {"column": 860, "max_width": 1250, "max_height": 600},
+    ), "page is the default and holds the limits house had"
+    pages = settings.get("render")["themes"]
+    assert page.themes == pages, "page renders every configured theme as it is"
+    site = destination.load(settings, "site")
+    assert site.limits == page.limits | {"column": 692}
+    assert site.themes == {
+        "light": pages["light"],
+        "dark": pages["dark"] | {"background": "#0D1117"},
+    }
+    slide = destination.load(settings, "slide")
+    assert slide.limits == {"column": 1600, "max_width": 2400, "max_height": 1600}
+    assert list(slide.themes) == ["light"]
+    monkeypatch.setenv("MERROW_DESTINATION", "site")
+    assert destination.load(config.load()).name == "site"
+
+
+@pytest.mark.parametrize(
+    ("merrow_yaml", "said"),
+    [
+        ("{}\n", "no destination a"),
+        ("destinations:\n  a: {extends: a}\n", "destinations extend in a loop: a -> a"),
+        ("destinations:\n  a: {extends: nothing}\n", "no destination nothing"),
+        (
+            "destinations:\n  a:\n    limits: {column: 1, max_width: 2}\n",
+            "destination a has no limits.max_height",
+        ),
+        (
+            "destinations:\n  a:\n    extends: page\n    limits: {nodes: 30}\n",
+            "destination a sets limits.nodes: .* go in a profile",
+        ),
+        (
+            "destinations:\n  a:\n    extends: page\n    images: {themes: [sepia]}\n",
+            "destination a renders theme sepia, which render.themes doesn't define",
+        ),
+    ],
+    ids=[
+        "unknown",
+        "loop",
+        "missing_parent",
+        "missing_limit",
+        "a_profiles_limit",
+        "unknown_theme",
+    ],
+)
+def test_a_broken_destination_is_named(monkeypatch, tmp_path, merrow_yaml, said):
+    settings = realm(monkeypatch, tmp_path, merrow_yaml)
+    with pytest.raises(profile.ProfileError, match=said):
+        destination.load(settings, "a")
+    path = tmp_path / "flow.mmd"
+    path.write_text("flowchart LR\n    a --> b\n", encoding="utf-8")
+    with pytest.raises(profile.ProfileError, match=said):
+        dc.main([str(path), "--no-render", "--destination", "a"])
 
 
 def test_profile_show_prints_the_blocks_lint_holds_diagrams_to(monkeypatch, tmp_path):

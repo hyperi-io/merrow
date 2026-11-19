@@ -96,10 +96,12 @@ def render(
     out_dir: Path,
     settings: Any,
     themes: Sequence[str] | None = None,
+    pages: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> list[dict[str, str]]:
     """Render each diagram once per theme into `out_dir` and return what was written.
 
-    `themes` limits it to those configured themes.
+    `themes` limits it to those themes. `pages` is a destination's themes, in
+    place of `render.themes`.
 
     Raises:
         RenderError: Mermaid failed on a diagram.
@@ -120,7 +122,7 @@ def render(
             page.evaluate(_PACKS, icon_packs(packs.values()))
             for number, item in enumerate(items):
                 groups = post.marks(item.source)
-                for theme, look in options["themes"].items():
+                for theme, look in (pages or options["themes"]).items():
                     if themes is not None and theme not in themes:
                         continue
                     suffix = str(look.get("icon_suffix", ""))

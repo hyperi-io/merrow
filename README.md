@@ -60,6 +60,7 @@ Settings come in layers: merrow's defaults, then the reference repos you list, t
 |---|---|
 | `references` | Your reference repo directories, org first, then personal |
 | `profile` | The look to draw in: `house`, `aws`, or one a reference repo adds |
+| `destination` | Where it is published: `page`, `slide`, or one a reference repo adds. It sets the width and height limits and the themes rendered |
 | `font` | One font stack for every profile, such as `[Arial, Helvetica, sans-serif]` for PowerPoint and Visio |
 | `packs_dir`, `cache_dir` | Where built icon packs and downloads go. Neither is ever in a repo |
 

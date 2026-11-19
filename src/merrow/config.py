@@ -15,6 +15,7 @@ BASE_LAYERS = [
     Path(str(files("merrow") / "sources.yaml")),
     Path(str(files("merrow") / "sources.lock.yaml")),
     Path(str(files("merrow") / "profiles.yaml")),
+    Path(str(files("merrow") / "destinations.yaml")),
     Path(str(files("merrow") / "patterns.yaml")),
     Path(str(files("merrow") / "objects.yaml")),
 ]

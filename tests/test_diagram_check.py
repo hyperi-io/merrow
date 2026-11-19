@@ -10,15 +10,17 @@ The render pass needs Chrome and the pinned Mermaid bundle, so it runs by hand,
 not here.
 """
 
+import dataclasses
 import re
 from pathlib import Path
 
 import pytest
 
-from merrow import config, profile
+from merrow import config, destination, profile
 from merrow.lint import diagram_check as dc
 
 PROFILE = profile.load(config.load(), "house")
+PAGE = destination.load(config.load(), "page")
 FLOW_FRONT = PROFILE.fronts["flowchart"]
 OTHER_FRONT = PROFILE.fronts["other"]
 ROOT = Path(__file__).resolve().parents[1]
@@ -96,8 +98,8 @@ def test_every_template_in_the_standard_passes_the_source_pass():
     ("row", "limit"),
     [
         ("Proportion", dc.MIN_RATIO),
-        ("Rendered height", PROFILE.limits["max_height"]),
-        ("Natural width (SVG `viewBox`)", PROFILE.limits["max_width"]),
+        ("Rendered height", PAGE.limits["max_height"]),
+        ("Natural width (SVG `viewBox`)", PAGE.limits["max_width"]),
         ("Nodes", dc.MAX_NODES),
         ("Subgraphs", dc.MAX_SUBGRAPHS),
         ("Arrows", dc.EXTRA_ARROWS),
@@ -741,20 +743,20 @@ def test_a_mermaid_file_is_one_diagram_with_no_wrapper(tmp_path, monkeypatch):
 
 
 def test_a_diagram_inside_the_limits_has_no_layout_problems():
-    assert dc.layout_problems(MEASURED, PROFILE.limits) == []
+    assert dc.layout_problems(MEASURED, PAGE, PROFILE) == []
     assert (
-        dc.layout_problems(MEASURED | {"backward": ["Write -> Read"]}, PROFILE.limits)
+        dc.layout_problems(MEASURED | {"backward": ["Write -> Read"]}, PAGE, PROFILE)
         == []
     )
     # 1240 px is scaled to the 860 px column, so its 620 px shows as 430.
     assert (
-        dc.layout_problems(MEASURED | {"width": 1240, "height": 620}, PROFILE.limits)
+        dc.layout_problems(MEASURED | {"width": 1240, "height": 620}, PAGE, PROFILE)
         == []
     )
     # A sequence, ER or class diagram is not held to the proportion.
     assert (
         dc.layout_problems(
-            MEASURED | {"width": 389, "height": 300}, PROFILE.limits, landscape=False
+            MEASURED | {"width": 389, "height": 300}, PAGE, PROFILE, landscape=False
         )
         == []
     )
@@ -767,8 +769,11 @@ def test_a_diagram_inside_the_limits_has_no_layout_problems():
             {"ok": False, "error": "Parse error on line 3"},
             "R10 does not parse: Parse error on line 3",
         ),
-        ({"width": 1251}, "1251 px wide"),
-        ({"height": 601, "width": 800}, "601 px tall on the page"),
+        ({"width": 1251}, "1251 px wide, limit 1250 (destination page)"),
+        (
+            {"height": 601, "width": 800},
+            "601 px tall on the page, limit 600 (destination page)",
+        ),
         ({"width": 389, "height": 300}, "R2 not landscape"),
         ({"nodes": 13, "edges": 12}, "R3 13 nodes"),
         ({"groups": 5}, "5 subgraphs"),
@@ -794,8 +799,44 @@ def test_a_diagram_inside_the_limits_has_no_layout_problems():
     ],
 )
 def test_a_layout_fault_is_named(measured, said):
-    found = dc.layout_problems(MEASURED | measured, PROFILE.limits)
+    found = dc.layout_problems(MEASURED | measured, PAGE, PROFILE)
     assert any(said in problem for problem in found), found
+
+
+WIDE = MEASURED | {"width": 2000, "height": 900, "nodes": 20, "edges": 19}
+
+
+@pytest.mark.parametrize(
+    ("limits", "node_limits", "said"),
+    [
+        (
+            PAGE.limits,
+            {},
+            ["2000 px wide, limit 1250 (destination page)", "R3 20 nodes, limit 12"],
+        ),
+        (
+            {"column": 1600, "max_width": 2400, "max_height": 1600},
+            {},
+            ["R3 20 nodes, limit 12"],
+        ),
+        (
+            PAGE.limits,
+            {"nodes": 15},
+            [
+                "2000 px wide, limit 1250 (destination page)",
+                "R3 20 nodes, limit 15 (profile dense)",
+            ],
+        ),
+        ({"column": 1600, "max_width": 2400, "max_height": 1600}, {"nodes": 30}, []),
+    ],
+    ids=["page", "wider_destination", "page_and_profile", "both_allow_it"],
+)
+def test_a_limit_is_the_destinations_or_the_profiles_and_says_which(
+    limits, node_limits, said
+):
+    where = dataclasses.replace(PAGE, limits=limits)
+    dense = dataclasses.replace(PROFILE, name="dense", limits=node_limits)
+    assert dc.layout_problems(WIDE, where, dense) == said
 
 
 @pytest.mark.parametrize(
