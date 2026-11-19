@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from merrow import config
+from merrow.lint import findings
 
 # A DTCG alias: a dotted token path in braces. A CSS rule's braces never hold one.
 _ALIAS = re.compile(r"\{([A-Za-z][\w-]*(?:\.[\w-]+)+)\}")
@@ -39,7 +40,7 @@ class Profile:
             standard's. The page's limits are the destination's.
         label_styling: Styling lint fails inside a quoted label.
         caption_styling: Styling lint fails when a caption names it.
-        layout_waive: Render findings lint drops for this profile.
+        waive: The ids of the lint findings dropped for this profile.
         icon_node: How a node whose object has an icon is drawn, its `{node.*}`
             fields left for the writer. None draws every node as a box.
         group_boundaries: A group's style by the `group_style` its object names.
@@ -67,7 +68,7 @@ class Profile:
     label_styling: re.Pattern[str]
     caption_styling: re.Pattern[str]
     icon_node: str | None = None
-    layout_waive: re.Pattern[str] | None = None
+    waive: frozenset[str] = frozenset()
     group_boundaries: Mapping[str, str] = field(default_factory=dict)
     group_icons: bool = False
     icon_sizes: Mapping[str, int] = field(default_factory=dict)
@@ -303,6 +304,27 @@ def _limits(name: str, limits: Mapping[str, Any]) -> dict[str, int]:
     return {key: int(value) for key, value in limits.items()}
 
 
+def _waive(name: str, lint: Mapping[str, Any]) -> frozenset[str]:
+    """Return the finding ids a profile waives.
+
+    Raises:
+        ProfileError: It names an id that is no lint finding, or waives by the
+            `layout_waive` pattern, which reads the findings' text.
+    """
+    if "layout_waive" in lint:
+        raise ProfileError(
+            f"profile {name} sets lint.layout_waive: list the findings' ids "
+            "under lint.waive, such as [skip-arrow, back-arrow]"
+        )
+    waive = frozenset(str(key) for key in lint.get("waive") or ())
+    unknown = sorted(waive - findings.IDS)
+    if unknown:
+        raise ProfileError(
+            f"profile {name} waives {unknown[0]}, which is no lint finding"
+        )
+    return waive
+
+
 def load(
     settings: Any,
     name: str | None = None,
@@ -318,8 +340,8 @@ def load(
     `pages` is a destination's themes, in place of `render.themes`.
 
     Raises:
-        ProfileError: The profile, or a token it names, isn't defined, or it
-            sets a page limit.
+        ProfileError: The profile, or a token it names, isn't defined, it sets
+            a page limit, or it waives an id that is no lint finding.
         FileNotFoundError: A token file is in no reference repo and not in merrow.
     """
     name = name or str(settings.get("profile"))
@@ -366,9 +388,7 @@ def load(
         re.compile(str(entry["lint"]["label_styling"])),
         re.compile(str(entry["lint"]["caption_styling"])),
         _partial(str(entry["icon_node"]), scope) if entry.get("icon_node") else None,
-        re.compile(str(entry["lint"]["layout_waive"]))
-        if entry["lint"].get("layout_waive")
-        else None,
+        _waive(name, entry["lint"]),
         _group_boundaries(settings, entry["group_styles"], order, scope, fills)
         if entry.get("group_styles")
         else {},

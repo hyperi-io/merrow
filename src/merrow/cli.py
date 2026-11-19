@@ -28,7 +28,7 @@ from merrow import (
     write,
 )
 from merrow.convert import CONVERTERS
-from merrow.lint import diagram_check
+from merrow.lint import diagram_check, findings
 from merrow.model import Limits
 from merrow.sources import detect, fetch, lock
 
@@ -298,9 +298,10 @@ def graph_validate(
             report[str(path)] = [str(error)]
             continue
         block = diagram_check.Block(path.name, source, None, None)
-        report[str(path)] = diagram_check.source_problems(
+        found = diagram_check.source_problems(
             block, diagram_check.CLASS_LINES, shown, names
         )
+        report[str(path)] = findings.unwaived(found, shown.waive)
     if as_json:
         print(json.dumps(report, indent=1))
     else:
