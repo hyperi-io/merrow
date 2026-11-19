@@ -274,11 +274,28 @@ def test_pack_build_cli_writes_the_pack_where_config_says(monkeypatch, tmp_path)
     assert "amazon-ec2" in written["icons"]
 
 
-def test_pack_build_cli_names_an_unknown_source(monkeypatch, tmp_path):
+@pytest.mark.parametrize(
+    ("args", "says"),
+    [
+        (["nope", "--from"], "no source 'nope'"),
+        (["aws-icons", "nope"], "no source 'nope'"),
+        (
+            ["aws-icons", "aws-groups", "--from"],
+            "builds one source: name only that one",
+        ),
+    ],
+    ids=["unknown", "unknown-second-fetches-nothing", "from-with-two"],
+)
+def test_pack_build_cli_refuses_before_building(monkeypatch, tmp_path, args, says):
     monkeypatch.chdir(tmp_path)
-    result = CliRunner().invoke(app, ["pack", "build", "nope", "--from", str(tmp_path)])
+    monkeypatch.setenv("MERROW_PACKS_DIR", str(tmp_path / "packs"))
+    source = write_archive("zip", tmp_path)
+    if args[-1] == "--from":
+        args = [*args, str(source)]
+    result = CliRunner().invoke(app, ["pack", "build", *args])
     assert result.exit_code == 2
-    assert "no source 'nope'" in result.output
+    assert says in result.output
+    assert not (tmp_path / "packs").exists()
 
 
 def test_aliases_point_at_real_icons_and_broken_ones_are_reported(tmp_path):
