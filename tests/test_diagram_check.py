@@ -86,10 +86,19 @@ def test_the_render_bundle_is_the_version_merrows_lock_pins():
     )
 
 
-def test_every_template_in_the_standard_passes_the_source_pass():
-    blocks, page = dc.page_blocks(ROOT / "style" / "diagram-templates.md")
+@pytest.mark.parametrize(
+    ("path", "count"),
+    [
+        ("style/diagram-templates.md", 8),
+        ("docs/architecture.md", 2),
+        ("docs/examples/oidc-login/login.md", 1),
+    ],
+    ids=["the_standards_templates", "architecture", "oidc_example"],
+)
+def test_every_diagram_on_merrows_own_pages_passes_the_source_pass(path, count):
+    blocks, page = dc.page_blocks(ROOT / path)
     assert page == []
-    assert len(blocks) == 8
+    assert len(blocks) == count
     assert {
         block.name: dc.source_problems(block, CLASS_LINES, PROFILE) for block in blocks
     } == {block.name: [] for block in blocks}

@@ -30,6 +30,7 @@ starter:
 examples:
 	uv run merrow graph render docs/examples/pipeline/pipeline.yaml --out docs/examples/pipeline
 	uv run merrow graph render docs/examples/aws-web-app/web-app-edge.yaml docs/examples/aws-web-app/web-app-tiers.yaml --out docs/examples/aws-web-app
+	uv run merrow graph render docs/examples/aws-web-app/web-app-slide.yaml --out docs/examples/aws-web-app --destination slide
 	uv run merrow graph render docs/examples/aws-commerce/commerce-edge.yaml docs/examples/aws-commerce/commerce-app.yaml --out docs/examples/aws-commerce
 	env MERROW_REFERENCES='["docs/examples/kubernetes/reference"]' uv run merrow graph render --profile k8s docs/examples/kubernetes/components.yaml --out docs/examples/kubernetes
 	env MERROW_REFERENCES='["docs/examples/c4-big-bank/reference"]' uv run merrow graph render docs/examples/c4-big-bank/context.yaml docs/examples/c4-big-bank/containers.yaml --out docs/examples/c4-big-bank
