@@ -1,0 +1,89 @@
+---
+config:
+  theme: base
+  look: classic
+  fontFamily: Inter, Helvetica, Arial, sans-serif
+  flowchart:
+    curve: linear
+    nodeSpacing: 28
+    rankSpacing: 44
+    padding: 14
+    wrappingWidth: 280
+    htmlLabels: true
+  themeVariables:
+    fontSize: 14px
+    lineColor: "#545B64"
+    primaryTextColor: "#000000"
+    edgeLabelBackground: "#FFFFFF"
+    clusterBkg: transparent
+  themeCSS: >-
+    .nodeLabel span{font-size:12px;color:#334155}
+---
+flowchart LR
+  accTitle: L2 Services -- Web application on AWS, for a slide
+  accDescr: Route 53 sends web clients through AWS WAF to CloudFront and the public load balancer. Web servers call application servers through an internal load balancer, and the application servers use RDS, ElastiCache and EFS. Every tier runs in two Availability Zones.
+  client@{ icon: "aws:res-client", label: "Web client", pos: "b", h: 48 }
+  subgraph cloud["AWS Cloud"]
+    r53@{ icon: "aws:amazon-route-53", label: "Amazon Route 53<br/>DNS", pos: "b", h: 80 }
+    waf@{ icon: "aws:aws-waf", label: "AWS WAF", pos: "b", h: 80 }
+    cf@{ icon: "aws:amazon-cloudfront", label: "Amazon CloudFront", pos: "b", h: 80 }
+    s3@{ icon: "aws:amazon-simple-storage-service", label: "Amazon S3<br/>static content and backups", pos: "b", h: 80 }
+    acm@{ icon: "aws:aws-certificate-manager", label: "AWS Certificate Manager", pos: "b", h: 80 }
+    subgraph vpc["VPC"]
+      cache@{ icon: "aws:amazon-elasticache", label: "Amazon ElastiCache<br/>caching", pos: "b", h: 80 }
+      efs@{ icon: "aws:amazon-efs", label: "Amazon EFS<br/>shared storage", pos: "b", h: 80 }
+      subgraph az["Availability Zones x2"]
+        subgraph pub["Public subnets"]
+          alb@{ icon: "aws:res-elastic-load-balancing-application-load-balancer", label: "Application Load Balancer", pos: "b", h: 48 }
+          nat@{ icon: "aws:res-amazon-vpc-nat-gateway", label: "NAT gateway", pos: "b", h: 48 }
+        end
+        subgraph web["Web subnets"]
+          webs@{ icon: "aws:res-amazon-ec2-instances", label: "Web servers<br/>Auto Scaling group", pos: "b", h: 48 }
+        end
+        subgraph app["Application subnets"]
+          ialb@{ icon: "aws:res-elastic-load-balancing-application-load-balancer", label: "Internal Application Load Balancer", pos: "b", h: 48 }
+          apps@{ icon: "aws:res-amazon-ec2-instances", label: "Application servers<br/>Auto Scaling group", pos: "b", h: 48 }
+        end
+        subgraph db["Database subnets"]
+          rds@{ icon: "aws:amazon-rds", label: "Amazon RDS<br/>primary and standby", pos: "b", h: 80 }
+        end
+      end
+    end
+  end
+  client -->|"1"| r53
+  r53 --> waf
+  waf --> cf
+  cf --> s3
+  waf --> alb
+  acm -.-> alb
+  alb --> webs
+  webs --> ialb
+  ialb --> apps
+  apps --> rds
+  apps --> cache
+  apps --> efs
+  webs -.-> nat
+  classDef ingest fill:#FFFFFF,stroke:#0E8A7D,stroke-width:3px,color:#0F172A
+  classDef xform fill:#FFFFFF,stroke:#7B4FB0,stroke-width:3px,color:#0F172A
+  classDef load fill:#FFFFFF,stroke:#0072B2,stroke-width:3px,color:#0F172A
+  classDef bus fill:#FFFFFF,stroke:#A8517F,stroke-width:3px,color:#0F172A
+  classDef store fill:#FFFFFF,stroke:#00785A,stroke-width:3px,color:#0F172A
+  classDef ui fill:#FFFFFF,stroke:#D9480F,stroke-width:3px,color:#0F172A
+  classDef ext fill:#F4F6F8,stroke:#94A3B8,stroke-width:1.5px,stroke-dasharray:5 4,color:#0F172A
+  classDef decision fill:#FFFFFF,stroke:#9A6700,stroke-width:3px,color:#0F172A
+  classDef error fill:#FFFFFF,stroke:#C2410C,stroke-width:3px,color:#0F172A
+  classDef control fill:#FFFFFF,stroke:#334155,stroke-width:3px,color:#0F172A
+  classDef part fill:#FFFFFF,stroke:#94A3B8,stroke-width:1.5px,color:#0F172A
+  style cloud fill:none,stroke:#000000,stroke-width:1.5px,color:#000000
+  style vpc fill:none,stroke:#8C4FFF,stroke-width:1.5px,color:#000000
+  style az fill:none,stroke:#00A4A6,stroke-width:1.5px,stroke-dasharray:8 6,color:#000000
+  style pub fill:none,stroke:#7AA116,stroke-width:1.5px,color:#000000
+  style web fill:none,stroke:#00A4A6,stroke-width:1.5px,color:#000000
+  style app fill:none,stroke:#00A4A6,stroke-width:1.5px,color:#000000
+  style db fill:none,stroke:#00A4A6,stroke-width:1.5px,color:#000000
+  %% merrow:group-icon cloud aws:group-aws-cloud-logo
+  %% merrow:group-icon vpc aws:group-virtual-private-cloud-vpc
+  %% merrow:group-icon pub aws:group-public-subnet
+  %% merrow:group-icon web aws:group-private-subnet
+  %% merrow:group-icon app aws:group-private-subnet
+  %% merrow:group-icon db aws:group-private-subnet
