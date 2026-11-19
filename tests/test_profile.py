@@ -167,6 +167,18 @@ def test_a_forced_font_replaces_every_font_family(
         ),
         ("profile: nothing\n", None, profile.ProfileError, "no profile nothing"),
         (
+            "profiles:\n  house:\n    lint: {layout_waive: '^skip arrow'}\n",
+            None,
+            profile.ProfileError,
+            r"profile house sets lint.layout_waive: .* under lint.waive",
+        ),
+        (
+            "profiles:\n  house:\n    lint: {waive: [skip-arrow, skip-arow]}\n",
+            None,
+            profile.ProfileError,
+            "profile house waives skip-arow, which is no lint finding",
+        ),
+        (
             "profiles:\n  house:\n    limits: {column: 700}\n",
             None,
             profile.ProfileError,
@@ -183,6 +195,8 @@ def test_a_forced_font_replaces_every_font_family(
         "unknown_token",
         "alias_loop",
         "unknown_profile",
+        "waiver_by_text",
+        "waiver_of_no_finding",
         "page_limit_in_a_profile",
         "missing_token_file",
     ],

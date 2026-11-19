@@ -18,6 +18,7 @@ import pytest
 
 from merrow import config, destination, profile
 from merrow.lint import diagram_check as dc
+from merrow.lint import findings
 
 PROFILE = profile.load(config.load(), "house")
 PAGE = destination.load(config.load(), "page")
@@ -461,7 +462,7 @@ def test_an_up_or_down_link_to_the_pages_h1_anchor_is_named(tmp_path, monkeypatc
     )
     _, problems = dc.page_blocks(page)
     assert problems == [
-        "README.md:5 R8 a link to the page's H1 anchor `#extractors`: link the page itself"
+        "README.md:5 [h1-anchor] R8 a link to the page's H1 anchor `#extractors`: link the page itself"
     ]
 
 
@@ -629,7 +630,7 @@ def test_a_page_gives_its_diagrams_and_one_finding_a_text_box(tmp_path, monkeypa
     ]
     assert blocks[0].source == 'flowchart LR\n    a["A"]'
     assert problems == [
-        "page.md:18 R1 a text diagram: draw it in Mermaid, or a numbered list when it has no branches"
+        "page.md:18 [text-diagram] R1 a text diagram: draw it in Mermaid, or a numbered list when it has no branches"
     ]
 
 
@@ -801,6 +802,30 @@ def test_a_diagram_inside_the_limits_has_no_layout_problems():
 def test_a_layout_fault_is_named(measured, said):
     found = dc.layout_problems(MEASURED | measured, PAGE, PROFILE)
     assert any(said in problem for problem in found), found
+    ids = {problem[1 : problem.index("]")] for problem in found}
+    assert ids <= findings.IDS, "every finding opens with its id"
+
+
+def test_a_profile_waives_a_finding_by_its_id_whatever_its_text_says():
+    aws = dataclasses.replace(PROFILE, waive=frozenset({"skip-arrow", "back-arrow"}))
+    measured = MEASURED | {
+        "skips": ["Read -> Write"],
+        "backward": ["Write -> Read"],
+        "solid_back": ["Write -> Read"],
+        "nodes": 13,
+        "edges": 12,
+    }
+    found = dc.layout_problems(measured, PAGE, aws)
+    assert [problem.split("]")[0] for problem in found] == [
+        "[nodes",
+        "[skip-arrow",
+        "[back-arrow",
+    ]
+    kept = findings.unwaived([*found, "[skip-arrow] reworded"], aws.waive)
+    assert kept == ["[nodes] R3 13 nodes, limit 12"]
+    assert findings.unwaived(found, frozenset()) == found
+    with pytest.raises(KeyError, match="skip-arow"):
+        findings.finding("skip-arow", "a misspelt id never prints")
 
 
 WIDE = MEASURED | {"width": 2000, "height": 900, "nodes": 20, "edges": 19}
@@ -812,19 +837,22 @@ WIDE = MEASURED | {"width": 2000, "height": 900, "nodes": 20, "edges": 19}
         (
             PAGE.limits,
             {},
-            ["2000 px wide, limit 1250 (destination page)", "R3 20 nodes, limit 12"],
+            [
+                "[width] 2000 px wide, limit 1250 (destination page)",
+                "[nodes] R3 20 nodes, limit 12",
+            ],
         ),
         (
             {"column": 1600, "max_width": 2400, "max_height": 1600},
             {},
-            ["R3 20 nodes, limit 12"],
+            ["[nodes] R3 20 nodes, limit 12"],
         ),
         (
             PAGE.limits,
             {"nodes": 15},
             [
-                "2000 px wide, limit 1250 (destination page)",
-                "R3 20 nodes, limit 15 (profile dense)",
+                "[width] 2000 px wide, limit 1250 (destination page)",
+                "[nodes] R3 20 nodes, limit 15 (profile dense)",
             ],
         ),
         ({"column": 1600, "max_width": 2400, "max_height": 1600}, {"nodes": 30}, []),

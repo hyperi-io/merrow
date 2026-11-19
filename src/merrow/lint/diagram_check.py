@@ -41,6 +41,7 @@ from merrow import config, destination
 from merrow.browser import launch
 from merrow.destination import Destination
 from merrow.lint import icons
+from merrow.lint.findings import finding, unwaived
 from merrow.objects import by_class_name, library
 from merrow.profile import Profile, ProfileError, load
 
@@ -202,7 +203,11 @@ def page_blocks(path: Path) -> tuple[list[Block], list[str]]:
             if kind in _SCANNED and not boxed and drawn:
                 boxed = True
                 problems.append(
-                    f"{path}:{start} R1 a text diagram: draw it in Mermaid, or a numbered list when it has no branches"
+                    f"{path}:{start} "
+                    + finding(
+                        "text-diagram",
+                        "R1 a text diagram: draw it in Mermaid, or a numbered list when it has no branches",
+                    )
                 )
             continue
         if kind == "mermaid":
@@ -230,7 +235,11 @@ def page_blocks(path: Path) -> tuple[list[Block], list[str]]:
     ]
     if numbers and numbers != list(range(1, len(numbers) + 1)):
         problems.append(
-            f"{path} R7 figures are numbered {numbers}: number a page's figures from 1"
+            f"{path} "
+            + finding(
+                "figure-numbers",
+                f"R7 figures are numbered {numbers}: number a page's figures from 1",
+            )
         )
     return blocks, problems
 
@@ -276,7 +285,10 @@ def _title_anchors(path: Path, caption: str | None) -> list[str]:
             continue
         if slug and anchor == slug:
             found.append(
-                f"R8 a link to the page's H1 anchor `#{anchor}`: link the page itself"
+                finding(
+                    "h1-anchor",
+                    f"R8 a link to the page's H1 anchor `#{anchor}`: link the page itself",
+                )
             )
     return found
 
@@ -319,10 +331,13 @@ def _house_style_problems(
                 allowed.add(line)
             else:
                 problems.append(
-                    f"R9 a boundary line for `{match.group(1)}`, which is no subgraph: it draws a phantom node"
+                    finding(
+                        "boundary-phantom",
+                        f"R9 a boundary line for `{match.group(1)}`, which is no subgraph: it draws a phantom node",
+                    )
                 )
     problems += [
-        f"R9 subgraph `{name}` has no house boundary line"
+        finding("boundary-missing", f"R9 subgraph `{name}` has no house boundary line")
         for name in subgraphs
         if name not in styled
     ]
@@ -350,7 +365,10 @@ def source_problems(
     house = front is not None
     if house and front != profile.fronts["flowchart" if flow else "other"]:
         return [
-            f"R9 frontmatter that is not the {profile.name} block, byte for byte: `merrow profile show {profile.name}` prints it"
+            finding(
+                "frontmatter",
+                f"R9 frontmatter that is not the {profile.name} block, byte for byte: `merrow profile show {profile.name}` prints it",
+            )
         ]
     problems: list[str] = []
     house_lines: set[str] = set()
@@ -366,35 +384,52 @@ def source_problems(
             if (match := _EDGE.match(_QUOTED.sub("", line)))
         }
         problems += [
-            f"R4 arrows both ways between `{a}` and `{b}` lie on top of each other: split one box into an intake and a return box"
+            finding(
+                "two-way",
+                f"R4 arrows both ways between `{a}` and `{b}` lie on top of each other: split one box into an intake and a return box",
+            )
             for a, b in sorted(pairs)
             if a < b and (b, a) in pairs
         ]
     if kind == "graph":
-        problems.append("R2 `graph`: write `flowchart`")
+        problems.append(finding("graph-keyword", "R2 `graph`: write `flowchart`"))
     elif kind not in TYPES:
-        problems.append(f"`{kind}` is not one of the five diagram types")
+        problems.append(
+            finding("type", f"`{kind}` is not one of the five diagram types")
+        )
     if flow and direction not in ("LR", "TB"):
         problems.append(
-            f"R2 direction `{direction}`: `flowchart LR`, or `TB` for the stacked forms"
+            finding(
+                "direction",
+                f"R2 direction `{direction}`: `flowchart LR`, or `TB` for the stacked forms",
+            )
         )
     two_rows = flow and not {a for a, _ in pairs} & {b for _, b in pairs}
     if flow and direction == "TB" and "direction LR" not in lines and not two_rows:
         problems.append(
-            "R2 a vertical chain: `flowchart LR`, stage subgraphs with `direction LR`,"
-            " or TB for two rows, where no arrow leaves a box an arrow enters"
+            finding(
+                "vertical-chain",
+                "R2 a vertical chain: `flowchart LR`, stage subgraphs with `direction LR`,"
+                " or TB for two rows, where no arrow leaves a box an arrow enters",
+            )
         )
     if kind == "stateDiagram-v2" and "direction LR" not in lines:
-        problems.append("R2 a state diagram needs `direction LR`")
+        problems.append(
+            finding("state-direction", "R2 a state diagram needs `direction LR`")
+        )
 
     title = next((line for line in lines if line.startswith("accTitle:")), "")
     level = _TITLE.match(title)
     if not title:
-        problems.append("R7 no `accTitle`")
+        problems.append(finding("acc-title", "R7 no `accTitle`"))
     elif not level or level.group(1) not in LEVELS:
-        problems.append("R8 `accTitle` is not `L<n> <Level name> -- <scope>`")
+        problems.append(
+            finding(
+                "title-level", "R8 `accTitle` is not `L<n> <Level name> -- <scope>`"
+            )
+        )
     if not any(line.startswith("accDescr:") for line in lines):
-        problems.append("R7 no `accDescr`")
+        problems.append(finding("acc-descr", "R7 no `accDescr`"))
 
     bare = [
         _QUOTED.sub('""', line)
@@ -407,20 +442,28 @@ def source_problems(
         bare = [_ICON_NODE.sub('_[""]', line) for line in bare]
     for pattern, what in _BANNED + (_FLOW_BANNED if flow else ()):
         if any(pattern.search(line) for line in bare):
-            problems.append(f"{what} is not allowed")
+            problems.append(finding("banned-syntax", f"{what} is not allowed"))
     if any(_ENTITY.search(line) for line in lines):
-        problems.append("an HTML entity, which shows literally: write the character")
+        problems.append(
+            finding(
+                "html-entity",
+                "an HTML entity, which shows literally: write the character",
+            )
+        )
     labels = [text for line in lines for text in _QUOTED.findall(line)]
     if any(profile.label_styling.search(text) for text in labels):
         problems.append(
-            "R5 styling inside a label: colour and line come from the class lines"
+            finding(
+                "label-styling",
+                "R5 styling inside a label: colour and line come from the class lines",
+            )
         )
 
     defined = [line for line in lines if line.startswith("classDef ")]
     if defined and kind in UNCOLOURED:
-        problems.append(f"R5 a `{kind}` takes no colour")
+        problems.append(finding("uncoloured-type", f"R5 a `{kind}` takes no colour"))
     problems += [
-        f"R5 a class line differs from the standard: `{line}`"
+        finding("class-line", f"R5 a class line differs from the standard: `{line}`")
         for line in defined
         if line not in class_lines
     ]
@@ -429,17 +472,30 @@ def source_problems(
         missing = sorted(line.split()[1] for line in house_classes - set(defined))
         if missing:
             problems.append(
-                f"R5 the house class lines are incomplete, missing: {', '.join(missing)}"
+                finding(
+                    "class-lines-incomplete",
+                    f"R5 the house class lines are incomplete, missing: {', '.join(missing)}",
+                )
             )
     elif flow and "default" not in names:
-        problems.append("R5 the `default` class line is missing")
+        problems.append(
+            finding("default-class", "R5 the `default` class line is missing")
+        )
     if kind == "stateDiagram-v2" and "default" in names:
         problems.append(
-            "R5 a `stateDiagram-v2` takes no `default` class line: it fails to parse"
+            finding(
+                "state-default-class",
+                "R5 a `stateDiagram-v2` takes no `default` class line: it fails to parse",
+            )
         )
     colours = names - {"default", "group"}
     if len(colours) > MAX_COLOUR_CLASSES and not (house and flow):
-        problems.append(f"R5 {len(colours)} colour classes, limit {MAX_COLOUR_CLASSES}")
+        problems.append(
+            finding(
+                "colour-classes",
+                f"R5 {len(colours)} colour classes, limit {MAX_COLOUR_CLASSES}",
+            )
+        )
     if flow or kind == "stateDiagram-v2":
         applied = {
             words[2]
@@ -448,13 +504,19 @@ def source_problems(
         }
         applied |= {name for line in bare for name in _SHORTHAND.findall(line)}
         problems += [
-            f"R5 class `{name}` is applied and its class line is missing"
+            finding(
+                "class-undefined",
+                f"R5 class `{name}` is applied and its class line is missing",
+            )
             for name in sorted(applied - names - object_names)
         ]
     if kind == "sequenceDiagram":
         if any(_SEQUENCE_COLOUR.match(line) for line in lines):
             problems.append(
-                "R5 a coloured `box` or `rect`: write `box Title` with no colour"
+                finding(
+                    "sequence-colour",
+                    "R5 a coloured `box` or `rect`: write `box Title` with no colour",
+                )
             )
         people = {
             match.group(1) for line in lines if (match := _PARTICIPANT.match(line))
@@ -466,22 +528,40 @@ def source_problems(
             for name in match.groups()
         }
         if len(people) > MAX_PARTICIPANTS:
-            problems.append(f"{len(people)} participants, limit {MAX_PARTICIPANTS}")
+            problems.append(
+                finding(
+                    "participants",
+                    f"{len(people)} participants, limit {MAX_PARTICIPANTS}",
+                )
+            )
 
     if block.intro and _ANNOUNCES.search(block.intro):
         problems.append(
-            "R7 the intro announces the diagram: say what the picture cannot show"
+            finding(
+                "intro-announces",
+                "R7 the intro announces the diagram: say what the picture cannot show",
+            )
         )
     if block.caption is not None:
         if found := profile.caption_styling.search(block.caption):
             problems.append(
-                f"R7 the caption names styling (`{found.group()}`), which goes stale when the profile changes"
+                finding(
+                    "caption-styling",
+                    f"R7 the caption names styling (`{found.group()}`), which goes stale when the profile changes",
+                )
             )
         if not _CAPTION.match(block.caption):
-            problems.append("R7 no caption `*Figure N. <title>.*` under the diagram")
+            problems.append(
+                finding(
+                    "caption", "R7 no caption `*Figure N. <title>.*` under the diagram"
+                )
+            )
         elif level and level.group(1) != LEVELS[0] and not _UP.search(block.caption):
             problems.append(
-                "R8 the caption's `Up:` names no parent: a link, `top of <repo>.` or the parent's title"
+                finding(
+                    "caption-up",
+                    "R8 the caption's `Up:` names no parent: a link, `top of <repo>.` or the parent's title",
+                )
             )
     return problems
 
@@ -497,7 +577,7 @@ def layout_problems(
     ``landscape`` is False for the types that are not held to the proportion: sequence, ER and class.
     """
     if not result["ok"]:
-        return [f"R10 does not parse: {result['error']}"]
+        return [finding("parse", f"R10 does not parse: {result['error']}")]
     problems: list[str] = []
     width, height = result["width"], result["height"]
     page, limits = where.limits, profile.limits
@@ -505,52 +585,86 @@ def layout_problems(
     # A diagram wider than the column is scaled down to it, and its height with it.
     shown = round(height * min(1, page["column"] / max(width, 1)))
     if width > page["max_width"]:
-        problems.append(f"{width} px wide, limit {page['max_width']}{by_page}")
+        problems.append(
+            finding("width", f"{width} px wide, limit {page['max_width']}{by_page}")
+        )
     if shown > page["max_height"]:
         problems.append(
-            f"{shown} px tall on the page, limit {page['max_height']}{by_page}"
+            finding(
+                "height",
+                f"{shown} px tall on the page, limit {page['max_height']}{by_page}",
+            )
         )
     if landscape and width < MIN_RATIO * height:
         problems.append(
-            f"R2 not landscape: width is {width / max(height, 1):.2f} x height, minimum {MIN_RATIO}"
+            finding(
+                "landscape",
+                f"R2 not landscape: width is {width / max(height, 1):.2f} x height, minimum {MIN_RATIO}",
+            )
         )
     max_nodes = limits.get("nodes", MAX_NODES)
     max_groups = limits.get("subgraphs", MAX_SUBGRAPHS)
     if result["nodes"] > max_nodes:
         set_by = by_profile if "nodes" in limits else ""
-        problems.append(f"R3 {result['nodes']} nodes, limit {max_nodes}{set_by}")
+        problems.append(
+            finding("nodes", f"R3 {result['nodes']} nodes, limit {max_nodes}{set_by}")
+        )
     if result["groups"] > max_groups:
         set_by = by_profile if "subgraphs" in limits else ""
-        problems.append(f"{result['groups']} subgraphs, limit {max_groups}{set_by}")
+        problems.append(
+            finding(
+                "subgraphs", f"{result['groups']} subgraphs, limit {max_groups}{set_by}"
+            )
+        )
     if result["edges"] > result["nodes"] + EXTRA_ARROWS:
         problems.append(
-            f"{result['edges']} arrows on {result['nodes']} nodes, limit is nodes plus {EXTRA_ARROWS}"
+            finding(
+                "arrows",
+                f"{result['edges']} arrows on {result['nodes']} nodes, limit is nodes plus {EXTRA_ARROWS}",
+            )
         )
     if result["busiest"] > MAX_NODE_ARROWS:
         problems.append(
-            f"{result['busiest']} arrows on `{result['busiest_name']}`, limit {MAX_NODE_ARROWS}"
+            finding(
+                "node-arrows",
+                f"{result['busiest']} arrows on `{result['busiest_name']}`, limit {MAX_NODE_ARROWS}",
+            )
         )
-    problems += [f"R4 crossing: {line}" for line in result["crossings"]]
-    problems += [f"R4 line through a box: {line}" for line in result["through"]]
-    problems += [f"R4 overlap: {line}" for line in result["overlaps"]]
     problems += [
-        f"skip arrow, it jumps a box between its ends: {line}"
+        finding("crossing", f"R4 crossing: {line}") for line in result["crossings"]
+    ]
+    problems += [
+        finding("through-box", f"R4 line through a box: {line}")
+        for line in result["through"]
+    ]
+    problems += [
+        finding("overlap", f"R4 overlap: {line}") for line in result["overlaps"]
+    ]
+    problems += [
+        finding("skip-arrow", f"skip arrow, it jumps a box between its ends: {line}")
         for line in result["skips"]
     ]
     if len(result["backward"]) > 1:
         problems.append(
-            "more than one arrow against the flow: " + ", ".join(result["backward"])
+            finding("back-arrows", "more than one arrow against the flow: ")
+            + ", ".join(result["backward"])
         )
     elif result.get("solid_back"):
         problems.append(
-            f"a solid arrow against the flow, the one feedback arrow is dotted: {result['solid_back'][0]}"
+            finding(
+                "back-arrow",
+                f"a solid arrow against the flow, the one feedback arrow is dotted: {result['solid_back'][0]}",
+            )
         )
     problems += [
-        f"an orphan box, no arrow and no subgraph: {name}"
+        finding("orphan", f"an orphan box, no arrow and no subgraph: {name}")
         for name in result.get("orphans", [])
     ]
     problems += [
-        f"a label wraps past 2 lines or breaks a name mid-word: {name}"
+        finding(
+            "label-wrap",
+            f"a label wraps past 2 lines or breaks a name mid-word: {name}",
+        )
         for name in result.get("wrapped", [])
     ]
     return problems
@@ -815,16 +929,18 @@ def main(argv: list[str] | None = None) -> int:
     for block, result, profile in zip(blocks, measured, chosen, strict=True):
         problems = source_problems(block, CLASS_LINES, profile, object_names)
         problems += [
-            f"icon {key} is in no built pack: run `merrow pack build` for its source"
+            finding(
+                "icon-pack",
+                f"icon {key} is in no built pack: run `merrow pack build` for its source",
+            )
             for key in icons.unresolved(block.source, patterns, known)
         ]
         if result:
             found = layout_problems(
                 result, where, profile, diagram_type(block.source)[0] in _LANDSCAPE
             )
-            waive = profile.layout_waive
-            problems += [p for p in found if not (waive and waive.search(p))]
-        report.append(Verdict(block.name, problems, result))
+            problems += found
+        report.append(Verdict(block.name, unwaived(problems, profile.waive), result))
     if args.json:
         print(
             json.dumps(

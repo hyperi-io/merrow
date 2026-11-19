@@ -473,6 +473,7 @@ merrow diagram lint docs/page.md
 - A page has every `mermaid` fence checked. A `.mmd` file is one diagram with no wrapper.
 - Sequence, state, ER and class diagrams get the source pass and the size checks. Their lines are not measured.
 - `merrow graph render` writes a light and a dark SVG of each diagram to look at. `--no-render` runs the source pass alone, on a host with no Chrome.
+- Each finding opens with its id in brackets, such as `[skip-arrow]`. A profile drops a finding for its diagrams by listing the id under `lint.waive`.
 - Each verdict line gives a diagram's size and counts, and the last line names the Mermaid release they were laid out with. Layout differs between Mermaid releases, so merrow pins the release in its npm lock file.
 - It does not see lines that run on top of each other, contrast, or whether a node exists in the code. Those stay with the reviewer.
 

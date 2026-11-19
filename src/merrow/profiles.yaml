@@ -185,7 +185,8 @@ profiles:
     lint:
       <<: *lint
       # AWS deployment diagrams run arrows every way, as AWS's own deck does.
-      layout_waive: '^(skip arrow|a solid arrow against the flow|more than one arrow against the flow)'
+      # Lint prints each finding's id first, and a profile waives by id.
+      waive: [skip-arrow, back-arrow, back-arrows]
     layout:
       max_ranks: 8
       stage_title: "Stage {n}"
