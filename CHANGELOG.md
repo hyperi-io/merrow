@@ -3,6 +3,12 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.10](https://github.com/hyperi-io/merrow/compare/v0.1.9...v0.1.10) (2026-11-19)
+
+### Bug Fixes
+
+* **apply:** reject unpaired markers before writing ([6a0c61f](https://github.com/hyperi-io/merrow/commit/6a0c61f5502d5354097a4c4e7f486fd8be476de0))
+
 ## [0.1.9](https://github.com/hyperi-io/merrow/compare/v0.1.8...v0.1.9) (2026-11-19)
 
 ### Bug Fixes
