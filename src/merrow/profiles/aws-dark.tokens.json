@@ -4,5 +4,11 @@
     "ink": { "$type": "color", "$value": "#FFFFFF", "$description": "Label and title text" },
     "paper": { "$type": "color", "$value": "#232F3E", "$description": "Edge label background: AWS's dark slide" },
     "line": { "$type": "color", "$value": "#D5DBDB", "$description": "Edges, and a group with no AWS style" }
+  },
+  "color": {
+    "paper": { "$type": "color", "$value": "#232F3E", "$description": "A plain box's fill, AWS's dark slide in place of house's light card" },
+    "wash": { "$type": "color", "$value": "#2E3B4E", "$description": "An external box's fill" },
+    "ink": { "$type": "color", "$value": "#FFFFFF", "$description": "A plain box's label" },
+    "ink-muted": { "$type": "color", "$value": "#D5DBDB", "$description": "A subtitle" }
   }
 }

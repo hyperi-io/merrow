@@ -71,11 +71,14 @@ class Spec:
         edges: Edges drawn as given.
         groups: Groups drawn as given.
         objects: One-off objects for this file, merrow.yaml's keys, over the library.
+        profile: The profile it is drawn in. A `--profile` flag wins over it, and
+            none takes the configured one.
     """
 
     title: str
     description: str
     pattern: str | None = None
+    profile: str | None = None
     fills: dict[str, list[str | Fill]] = field(default_factory=dict)
     nodes: list[Node] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)

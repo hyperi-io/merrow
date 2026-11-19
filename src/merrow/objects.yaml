@@ -52,3 +52,15 @@ objects:
   aws.elasticache: {label: Amazon ElastiCache, icon: "aws:amazon-elasticache"}
   aws.efs: {label: Amazon EFS, icon: "aws:amazon-efs"}
   aws.asg: {label: Auto Scaling group, group_style: auto-scaling-group}
+  aws.lambda: {label: AWS Lambda, icon: "aws:aws-lambda"}
+  aws.eventbridge: {label: Amazon EventBridge, icon: "aws:amazon-eventbridge"}
+  aws.eip: {label: Elastic IP address, icon: "aws:res-amazon-ec2-elastic-ip-address"}
+  aws.iam: {label: AWS IAM, icon: "aws:aws-identity-and-access-management"}
+  aws.ebs: {label: Amazon EBS, icon: "aws:amazon-elastic-block-store"}
+  aws.ssm: {label: AWS Systems Manager, icon: "aws:aws-systems-manager"}
+  aws.session-manager: {label: Session Manager, icon: "aws:res-aws-systems-manager-session-manager"}
+  aws.internet: {label: Internet, icon: "aws:res-internet"}
+  aws.external: {label: External service, icon: "aws:res-generic-application"}
+  aws.server: {label: Server, icon: "aws:res-server"}
+  aws.database: {label: Database, icon: "aws:res-database"}
+  aws.office: {label: Corporate data centre, icon: "aws:res-office-building"}

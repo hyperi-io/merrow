@@ -63,9 +63,19 @@ def main(version: bool = version_option("merrow")) -> None:
 
 @config_app.command("get")
 def config_get() -> None:
-    """Print the resolved settings, every layer merged, as JSON on stdout."""
-    settings = config.load().as_dict()
-    print(json.dumps({key.lower(): value for key, value in settings.items()}))
+    """Print the resolved settings as JSON, `objects` with every built pack's icons."""
+    settings = config.load()
+    shown = {key.lower(): value for key, value in settings.as_dict().items()}
+    generated = {
+        key: {
+            field: value
+            for field, value in asdict(found).items()
+            if value and field != "id"
+        }
+        for key, found in objects.generated(settings).items()
+    }
+    shown["objects"] = generated | (shown.get("objects") or {})
+    print(json.dumps(shown))
 
 
 @profile_app.command("show")
@@ -222,20 +232,36 @@ def diagram_render(
             print(json.dumps(written))
 
 
-def _written(path: Path, settings: Any, shown: profile.Profile) -> str:
-    """Return a diagram file as Mermaid in the profile.
+Loaded = dict[tuple[str | None, str | None], profile.Profile]
+
+
+def _written(
+    path: Path,
+    settings: Any,
+    name: str,
+    loaded: Loaded,
+    theme: str | None = None,
+) -> tuple[str, profile.Profile]:
+    """Return a diagram file as Mermaid and the profile it's drawn in.
+
+    The profile is `name`, else the file's own, else the configured one, and
+    `loaded` caches each by name and theme.
 
     Raises:
         ValueError: The file, its graph or its objects can't be drawn.
         yaml.YAMLError: The file isn't YAML or JSON.
     """
     found = spec.read(path)
+    key = (name or found.profile, theme)
+    if key not in loaded:
+        loaded[key] = profile.load(settings, key[0], theme)
+    shown = loaded[key]
     graph = spec.graph(found, patterns.library(settings))
     library = objects.library(settings)
     library |= {
         key: objects.entry(key, fields) for key, fields in found.objects.items()
     }
-    return write.diagram(graph, shown, library, found.title, found.description)
+    return write.diagram(graph, shown, library, found.title, found.description), shown
 
 
 @graph_app.command("schema")
@@ -252,12 +278,12 @@ def graph_validate(
 ) -> None:
     """Check each file draws and passes lint's source pass. Exits 1 on any problem."""
     settings = config.load()
-    shown = profile.load(settings, name or None)
+    loaded: Loaded = {}
     names = frozenset(objects.by_class_name(objects.library(settings)))
     report = {}
     for path in files:
         try:
-            source = _written(path, settings, shown)
+            source, shown = _written(path, settings, name, loaded)
         except (ValueError, yaml.YAMLError) as error:
             report[str(path)] = [str(error)]
             continue
@@ -311,10 +337,10 @@ def graph_write(
     _one_output_each(files)
     settings = config.load()
     out_dir.mkdir(parents=True, exist_ok=True)
-    shown = profile.load(settings, name or None)
+    loaded: Loaded = {}
     for path in files:
         try:
-            source = _written(path, settings, shown)
+            source = _written(path, settings, name, loaded)[0]
         except (ValueError, yaml.YAMLError) as error:
             raise BadParameter(f"{path}: {error}") from error
         target = out_dir / f"{path.stem}.mmd"
@@ -337,12 +363,13 @@ def graph_render(
     settings = config.load()
     out_dir.mkdir(parents=True, exist_ok=True)
     themes = [str(theme) for theme in settings.get("render")["themes"]]
-    shown = {
-        theme: profile.load(settings, name or None, theme) for theme in [None, *themes]
-    }
+    loaded: Loaded = {}
     for path in files:
         try:
-            sources = {t: _written(path, settings, p) for t, p in shown.items()}
+            sources = {
+                theme: _written(path, settings, name, loaded, theme)[0]
+                for theme in [None, *themes]
+            }
         except (ValueError, yaml.YAMLError) as error:
             raise BadParameter(f"{path}: {error}") from error
         (out_dir / f"{path.stem}.mmd").write_text(
