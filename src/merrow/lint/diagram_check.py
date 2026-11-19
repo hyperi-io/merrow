@@ -121,8 +121,9 @@ _FLOW_BANNED = (
         "R6 an outline outside the five",
     ),
 )
-# An icon node `id@{ ... }`, allowed where the profile draws icons.
-_ICON_NODE = re.compile(r"\w@\{[^}]*\}")
+# An icon node `id@{ icon: ... }`, allowed where the profile draws icons. Any other
+# `@{ ... }` form, `shape:` included, stays an R6 outline.
+_ICON_NODE = re.compile(r"\w@\{\s*icon:[^}]*\}")
 # A house flowchart's rounded `id("...")` label, read after quoted labels are emptied.
 _ROUNDED = re.compile(r'\w\(""\)')
 _SUBGRAPH = re.compile(r"^subgraph\s+([A-Za-z_]\w*)")

@@ -239,7 +239,14 @@ def test_the_standard_shows_the_house_profiles_generated_blocks():
     assert PROFILE.boundary in _HOUSE
 
 
-@pytest.mark.parametrize("source", [HOUSE, OTHER], ids=["flowchart", "sequence"])
+ICON_NODE = 'topic@{ icon: "aws:amazon-msk", label: "Kafka", pos: "b", h: 48 }'
+
+
+@pytest.mark.parametrize(
+    "source",
+    [HOUSE, OTHER, HOUSE.replace('topic[("<b>Kafka</b>")]', ICON_NODE)],
+    ids=["flowchart", "sequence", "icon-node"],
+)
 def test_a_house_diagram_has_no_source_problems(source):
     assert _problems(source) == []
 
@@ -283,6 +290,12 @@ def test_a_house_diagram_has_no_source_problems(source):
         (HOUSE.replace(BOUNDARY, "style edge fill:#f00"), "R9 `style`"),
         (HOUSE.replace("-->|events|", "==>"), "a thick arrow"),
         (HOUSE.replace('topic[("', 'topic{{"').replace('")]', '"}}'), "R6 an outline"),
+        (
+            HOUSE.replace(
+                'topic[("<b>Kafka</b>")]', 'topic@{ shape: hex, label: "Kafka" }'
+            ),
+            "R6 an outline",
+        ),
         (OTHER + "    classDef x fill:#fff\n", "takes no colour"),
     ],
 )
