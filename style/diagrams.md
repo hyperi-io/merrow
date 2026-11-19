@@ -195,7 +195,8 @@ Never fix lines with `linkStyle`, curve settings, layout configuration, empty sp
 
 - Four outlines or fewer in one diagram.
 - External systems and people are rectangles with the `ext` class, whose dashed border marks them without colour.
-- Banned: rounded boxes, hexagons, circles, trapezoids, parallelograms, flags, icons, images and the `id@{ shape: ... }` syntax.
+- Banned: rounded boxes, hexagons, circles, trapezoids, parallelograms, flags, images and the `id@{ shape: ... }` syntax.
+- Icons only as merrow draws them. Where the profile draws icons, a node whose object has an icon in a built pack becomes `id@{ icon: ... }`, its label under it. Name the object in the diagram file and let merrow write the node. Lint passes an icon node only under such a profile, and only for an icon a built pack holds.
 
 ## Colour
 
@@ -346,7 +347,7 @@ A house flowchart ends with all eleven class lines:
 - Mermaid wraps a line again when it runs past the box's width, often at about 15 characters, so a 2-line label can show on 3. A name with no space breaks mid-word, often at a hyphen. Shorten the line, and let the checker confirm it.
 - Node IDs are meaningful and lowercase: `loader`, `dlq`. Never `A`, `B`, `C`. A generated ID is the name with `-` and `.` replaced by `_`. In a state diagram the state's name is its label, so it takes sentence case: `Open`.
 - Arrow labels are 1 to 2 words, with no parentheses or quotes. Every branch out of a decision is labelled. An arrow that crosses the diagram's boundary or touches the `core` box is labelled with what moves. No other arrow is labelled. A split chosen by configuration or by when it runs (local path or object store, every run or on release) is a decision: draw the diamond and label its branches.
-- No fonts, emoji, icons or HTML. `<br/>` is the one tag.
+- No fonts, emoji or HTML, and no icon except an icon node (Node outlines). `<br/>` is the one tag.
 - Notes and annotations go in a paragraph or a table under the caption, never in the diagram and never as extra caption sentences.
 
 ## Page wrapper
@@ -505,7 +506,8 @@ merrow ships the agent procedure as a skill, [src/merrow/skill/SKILL.md](https:/
 | Labels on every arrow | Branches and boundary arrows |
 | Notes as extra nodes | Caption |
 | Double-headed arrows | One arrow, the direction data moves |
-| Emoji, icons, HTML | Plain text and `<br/>` |
+| Emoji, HTML | Plain text and `<br/>` |
+| A hand-written icon or `@{ shape: ... }` node | The object in the diagram file, which merrow draws as an icon node |
 | No `Up` link | Every L1 to L4 diagram names its parent |
 
 ## Syntax traps
