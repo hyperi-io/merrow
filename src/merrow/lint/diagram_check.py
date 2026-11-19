@@ -186,8 +186,12 @@ def page_blocks(path: Path) -> tuple[list[Block], list[str]]:
     kind = ""
     start = 0
     boxed = False
+    numbers: list[int] = []
     for number, line in enumerate([*lines, None], 1):
         if not opener:
+            # A caption under an image or a table numbers a figure as one under a fence does.
+            if figure := _FIGURE.match((line or "").strip()):
+                numbers.append(int(figure[1]))
             fence = _FENCE.match(line) if line is not None else None
             if fence:
                 opener, kind, start, boxed = (
@@ -227,11 +231,6 @@ def page_blocks(path: Path) -> tuple[list[Block], list[str]]:
         f"{block.name} {problem}"
         for block in blocks
         for problem in _title_anchors(path, block.caption)
-    ]
-    numbers = [
-        int(found[1])
-        for block in blocks
-        if (found := _FIGURE.match(block.caption or ""))
     ]
     if numbers and numbers != list(range(1, len(numbers) + 1)):
         problems.append(
@@ -928,6 +927,21 @@ def main(argv: list[str] | None = None) -> int:
     report: list[Verdict] = []
     for block, result, profile in zip(blocks, measured, chosen, strict=True):
         problems = source_problems(block, CLASS_LINES, profile, object_names)
+        has_icon = any(pattern.search(block.source) for pattern in patterns)
+        # A block with a caption is a fence on a Markdown page, not a `.mmd` file.
+        if block.caption is not None and where.images(has_icon):
+            why = (
+                "a Mermaid fence: this destination draws no Mermaid"
+                if where.mermaid == "none"
+                else "an icon node in a fence: this page's renderer loads no icon pack"
+            )
+            problems.append(
+                finding(
+                    "fence",
+                    f"R1 {why}, so publish the SVGs `merrow graph render` writes "
+                    f"(destination {where.name})",
+                )
+            )
         problems += [
             finding(
                 "icon-pack",

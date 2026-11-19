@@ -213,6 +213,7 @@ SITE = """destinations:
   site:
     extends: page
     limits: {column: 692}
+    mermaid: all
     themes:
       dark: {background: "#0D1117"}
 """
@@ -228,7 +229,7 @@ def test_a_destination_extending_page_changes_what_it_names(monkeypatch, tmp_pat
     pages = settings.get("render")["themes"]
     assert page.themes == pages, "page renders every configured theme as it is"
     site = destination.load(settings, "site")
-    assert site.limits == page.limits | {"column": 692}
+    assert site.limits == {**page.limits, "column": 692}
     assert site.themes == {
         "light": pages["light"],
         "dark": pages["dark"] | {"background": "#0D1117"},
@@ -236,6 +237,63 @@ def test_a_destination_extending_page_changes_what_it_names(monkeypatch, tmp_pat
     slide = destination.load(settings, "slide")
     assert slide.limits == {"column": 1600, "max_width": 2400, "max_height": 1600}
     assert list(slide.themes) == ["light"]
+    # A fence stays a fence where the renderer draws it: (plain, with an icon node).
+    forms = {
+        where.name: (where.images(False), where.images(True))
+        for where in (page, site, slide)
+    }
+    assert forms == {
+        "page": (False, True),
+        "site": (False, False),
+        "slide": (True, True),
+    }
+
+
+ICON_PAGE = """# Deploy
+
+The cluster sits in one zone.
+
+```mermaid
+flowchart LR
+    accTitle: L4 Detail -- Deploy
+    accDescr: A server.
+    a@{ icon: "carbon:server", label: "A" }
+```
+
+*Figure 1. L4 Detail -- Deploy.* Up: top of demo.
+"""
+
+
+@pytest.mark.parametrize(
+    ("name", "where", "said"),
+    [
+        ("page.md", "page", "an icon node in a fence"),
+        ("page.md", "site", None),
+        ("page.md", "slide", "a Mermaid fence: this destination draws no Mermaid"),
+        ("page.mmd", "page", None),
+    ],
+    ids=["page", "a_site_that_loads_packs", "slide", "a_mmd_file_is_no_page"],
+)
+def test_a_fence_the_destination_cant_draw_is_named(
+    monkeypatch, tmp_path, capsys, name, where, said
+):
+    realm(monkeypatch, tmp_path, SITE)
+    path = tmp_path / name
+    path.write_text(ICON_PAGE, encoding="utf-8")
+    dc.main([str(path), "--no-render", "--json", "--destination", where])
+    report = json.loads(capsys.readouterr().out)
+    fences = [
+        problem
+        for entry in report["diagrams"]
+        for problem in entry["problems"]
+        if problem.startswith("[fence]")
+    ]
+    if said is None:
+        assert fences == []
+    else:
+        assert len(fences) == 1
+        assert said in fences[0]
+        assert fences[0].endswith(f"(destination {where})")
     monkeypatch.setenv("MERROW_DESTINATION", "site")
     assert destination.load(config.load()).name == "site"
 
@@ -255,6 +313,14 @@ def test_a_destination_extending_page_changes_what_it_names(monkeypatch, tmp_pat
             "destination a sets limits.nodes: .* go in a profile",
         ),
         (
+            "destinations:\n  a:\n    limits: {column: 1, max_width: 2, max_height: 3}\n",
+            "destination a has mermaid unset: one of all, no-icons, none",
+        ),
+        (
+            "destinations:\n  a:\n    extends: page\n    mermaid: sometimes\n",
+            "destination a has mermaid sometimes: one of all, no-icons, none",
+        ),
+        (
             "destinations:\n  a:\n    extends: page\n    images: {themes: [sepia]}\n",
             "destination a renders theme sepia, which render.themes doesn't define",
         ),
@@ -265,6 +331,8 @@ def test_a_destination_extending_page_changes_what_it_names(monkeypatch, tmp_pat
         "missing_parent",
         "missing_limit",
         "a_profiles_limit",
+        "no_mermaid",
+        "unknown_mermaid",
         "unknown_theme",
     ],
 )

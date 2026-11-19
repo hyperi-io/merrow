@@ -448,6 +448,28 @@ def test_a_pages_figures_number_from_one(tmp_path, monkeypatch, numbers, flagged
     assert any("figures are numbered" in problem for problem in problems) is flagged
 
 
+@pytest.mark.parametrize(
+    ("first", "flagged"),
+    [(3, False), (1, True)],
+    ids=["continues_the_images", "restarts_after_the_images"],
+)
+def test_a_caption_under_an_image_pair_numbers_a_figure(
+    tmp_path, monkeypatch, first, flagged
+):
+    monkeypatch.chdir(tmp_path)
+    page = Path("page.md")
+    images = "".join(
+        f"![T. D.](d{n}-light.svg#gh-light-mode-only)\n"
+        f"![T. D.](d{n}-dark.svg#gh-dark-mode-only)\n\n"
+        f"*Figure {n}. L4 Detail -- X.* Up: top of r.\n\n"
+        for n in (1, 2)
+    )
+    fence = f"Intro.\n\n```mermaid\nflowchart LR\n```\n\n*Figure {first}. L4 Detail -- Y.* Up: top of r.\n"
+    page.write_text(images + fence, encoding="utf-8")
+    _, problems = dc.page_blocks(page)
+    assert any("figures are numbered" in problem for problem in problems) is flagged
+
+
 def test_an_up_or_down_link_to_the_pages_h1_anchor_is_named(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "docs").mkdir()

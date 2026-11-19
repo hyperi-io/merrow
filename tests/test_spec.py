@@ -120,6 +120,59 @@ def test_graph_writes_the_mermaid_and_renders_only_when_asked(realm, command, sv
     assert sorted(p.name for p in out.glob("*.svg")) == svgs
 
 
+ICON = """title: L4 Detail -- Rack
+description: One server feeds a store.
+nodes:
+  - {id: host, object: icon.server}
+  - {id: store, label: Store}
+edges:
+  - {source: host, target: store}
+"""
+
+
+@pytest.mark.parametrize(
+    ("text", "where", "lines"),
+    [
+        (GOOD, "page", ["```mermaid"]),
+        (
+            ICON,
+            "page",
+            [
+                "![L4 Detail -- Rack. One server feeds a store.](rack-light.svg#gh-light-mode-only)",
+                "![L4 Detail -- Rack. One server feeds a store.](rack-dark.svg#gh-dark-mode-only)",
+                "",
+                "*Figure N. L4 Detail -- Rack.* Up: <parent>.",
+            ],
+        ),
+        (
+            GOOD,
+            "slide",
+            [
+                "![L2 Services -- Demo. Agents send events through Kafka to ClickHouse.](rack-light.svg)",
+                "",
+                "*Figure N. L2 Services -- Demo.* Up: <parent>.",
+            ],
+        ),
+    ],
+    ids=["a_fence", "images_for_icon_nodes", "one_image_for_a_slide"],
+)
+def test_graph_render_page_prints_the_fence_or_the_images(realm, text, where, lines):
+    path = realm / "rack.yaml"
+    path.write_text(text, encoding="utf-8")
+    command = ["graph", "render", str(path), "--out", "out", "--page"]
+    result = runner.invoke(app, [*command, "--destination", where])
+    assert result.exit_code == 0, result.output
+    printed = [json.loads(line) for line in result.output.splitlines()]
+    page = next(entry["page"] for entry in printed if "page" in entry)
+    assert page.splitlines()[: len(lines)] == lines
+    if lines == ["```mermaid"]:
+        mmd = (realm / "out" / "rack.mmd").read_text(encoding="utf-8")
+        assert (
+            page
+            == f"```mermaid\n{mmd.rstrip()}\n```\n\n*Figure N. L2 Services -- Demo.* Up: <parent>.\n"
+        )
+
+
 @pytest.mark.parametrize("command", ["write", "render"])
 @pytest.mark.parametrize(
     ("files", "said"),
