@@ -15,7 +15,7 @@ This file is self-contained. Why each rule exists, with sources and test evidenc
 
 | Rule | What it says |
 |---|---|
-| R1 | Diagrams are Mermaid, in a fenced `mermaid` block. No ASCII boxes, no box-drawing characters, no image of a diagram. |
+| R1 | Diagrams are Mermaid, in a fenced `mermaid` block. No ASCII boxes, no box-drawing characters, no image of a diagram. One exception: a diagram with icon nodes, on a page whose renderer can't load the icon pack, is published as merrow's light and dark SVGs beside its diagram file ("Page wrapper"). GitHub can't load one. |
 | R2 | Diagrams are landscape and read top-left to bottom-right: `flowchart LR`. |
 | R3 | 12 nodes or fewer, 5 columns or fewer, one idea, one level. |
 | R4 | Zero crossed lines, zero lines through boxes, zero overlapping labels. |
@@ -374,6 +374,16 @@ flowchart LR
 - The caption is `Figure N.`, the title, one sentence for any colour or line style the reader could not guess, then the links.
 - A repo whose formatter rewrites `*...*` emphasis to `_..._`, as prettier does, writes the caption in italics its way. The checker reads both forms.
 - An `Up` or `Down` link to a page's top diagram links the page itself, never its H1 anchor: a docs site turns the H1 into the page title, and the anchor does not exist there.
+
+A diagram with icon nodes, on a page GitHub renders, is two images in place of the fence. GitHub and Docusaurus show the one whose fragment matches the reader's theme. The alt text is the title and the `accDescr` sentences.
+
+```markdown
+![L4 Detail -- AWS deployment. The cluster's nodes sit in private subnets in each zone.](aws-deployment-light.svg#gh-light-mode-only)
+![L4 Detail -- AWS deployment. The cluster's nodes sit in private subnets in each zone.](aws-deployment-dark.svg#gh-dark-mode-only)
+```
+
+- The diagram file sits beside the SVGs and is the source. `merrow graph render` writes both SVGs and the `.mmd` from it, and lint runs on that `.mmd`.
+- Change the file and render again. Never edit an SVG.
 
 ## Templates
 

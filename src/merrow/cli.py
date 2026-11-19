@@ -112,31 +112,41 @@ def tools_ensure(
 
 @pack_app.command("build")
 def pack_build(
-    source_id: str = Argument(help="A source id from the `sources` config"),
+    source_ids: list[str] = Argument(help="Source ids from the `sources` config"),
     from_path: Path | None = Option(
         None,
         "--from",
-        help="A download to build from. Default: the locked download, fetched.",
+        help="A download to build from, with one source. Default: the locked download, fetched.",
     ),
 ) -> None:
-    """Build one source into the packs dir and print what was built as JSON."""
+    """Build each source into the packs dir and print a JSON line for each.
+
+    Raises:
+        BadParameter: An unknown source or format, or `--from` with several sources.
+    """
     settings = config.load()
-    source = config.sources(settings).get(source_id)
-    if source is None:
-        raise BadParameter(f"no source {source_id!r} in the sources config")
-    converter = CONVERTERS.get(source.format)
-    if converter is None:
-        known = ", ".join(sorted(CONVERTERS))
-        raise BadParameter(
-            f"source {source_id!r} has format {source.format!r}, not one of {known}"
-        )
+    sources = config.sources(settings)
+    if from_path and len(source_ids) > 1:
+        raise BadParameter("--from builds one source: name only that one")
+    for source_id in source_ids:
+        source = sources.get(source_id)
+        if source is None:
+            raise BadParameter(f"no source {source_id!r} in the sources config")
+        if source.format not in CONVERTERS:
+            known = ", ".join(sorted(CONVERTERS))
+            raise BadParameter(
+                f"source {source_id!r} has format {source.format!r}, not one of {known}"
+            )
     limits = config.limits(settings)
-    download = from_path or _fetch_locked(settings, source_id, limits)
-    built = converter(download, source, limits)
-    out = config.packs_dir(settings) / built.name
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(built.data, separators=(",", ":")), encoding="utf-8")
-    print(json.dumps({"pack": str(out), "bytes": out.stat().st_size, **built.report}))
+    for source_id in source_ids:
+        source = sources[source_id]
+        download = from_path or _fetch_locked(settings, source_id, limits)
+        built = CONVERTERS[source.format](download, source, limits)
+        out = config.packs_dir(settings) / built.name
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(built.data, separators=(",", ":")), encoding="utf-8")
+        report = {"pack": str(out), "bytes": out.stat().st_size, **built.report}
+        print(json.dumps(report))
 
 
 def _fetch_locked(settings: Any, source_id: str, limits: Limits) -> Path:
