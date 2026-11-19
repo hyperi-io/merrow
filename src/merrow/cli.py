@@ -441,16 +441,25 @@ def diagram_apply(
     files: list[Path] = Argument(help="`.mmd` files, or Markdown with mermaid fences"),
     name: str = Option("", "--profile", help="Profile, default the configured one"),
 ) -> None:
-    """Set each diagram's frontmatter and class block from the profile, in place."""
+    """Set each diagram's frontmatter and class block from the profile, in place.
+
+    Prints `changed` or `unchanged` a file and exits 0. A missing file or
+    profile, an object the profile can't style, or a class block marker with
+    no partner exits 2 with the reason, and no file is written.
+    """
     settings = config.load()
     shown = profile.load(settings, name or None)
     by_ref = objects.by_class_name(objects.library(settings))
+    planned = {}
     for path in files:
         try:
-            changed = apply.apply_file(path, shown, by_ref)
+            planned[path] = apply.applied(path, shown, by_ref)
         except ValueError as error:
             raise BadParameter(f"{path}: {error}") from error
-        print(f"{'changed' if changed else 'unchanged'}  {path}")
+    for path, (old, new) in planned.items():
+        if new != old:
+            path.write_text(new, encoding="utf-8", newline="\n")
+        print(f"{'changed' if new != old else 'unchanged'}  {path}")
 
 
 @diagram_app.command("lint")
