@@ -5,8 +5,8 @@ Each folder holds a diagram file, the Mermaid merrow writes from it, and light a
 | Example | Profile | What it shows |
 |---|---|---|
 | [pipeline/](pipeline/) | house | The README's quick start: three boxes and two arrows |
-| [aws-web-app/](aws-web-app/) | aws | A classic web app on AWS, two Availability Zones drawn as one zone x2 |
-| [aws-commerce/](aws-commerce/) | aws | An ecommerce deployment built mostly from the generated AWS objects |
+| [aws-web-app/](aws-web-app/) | aws | A classic web app on AWS in two diagrams, its edge and its tiers, two Availability Zones drawn as one zone x2 |
+| [aws-commerce/](aws-commerce/) | aws | An ecommerce deployment built mostly from the generated AWS objects, split into its edge and its application tier to fit a page |
 | [kubernetes/](kubernetes/) | k8s | Kubernetes icons through a profile a reference repo defines with `extends: house` |
 | [c4-big-bank/](c4-big-bank/) | house | A C4 system context and its services view, the second stacked around its boundary |
 | [bpmn-order/](bpmn-order/) | bpmn | A BPMN order process from Camunda's examples (Apache-2.0): a collapsed sub-process, a boundary path and its inside |

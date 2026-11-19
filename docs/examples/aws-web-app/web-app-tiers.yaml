@@ -1,0 +1,25 @@
+title: L2 Services -- Web application on AWS, tiers
+description: The web servers call the application servers through an internal load balancer. The application servers use RDS, ElastiCache and EFS, and every tier runs in two Availability Zones.
+profile: aws
+groups:
+  - {id: cloud, label: "", object: aws.cloud}
+  - {id: vpc, label: "", object: aws.vpc, parent: cloud}
+  - {id: az, label: "Availability Zones x2", object: aws.az, parent: vpc}
+  - {id: web, label: Web subnets, object: aws.private-subnet, parent: az}
+  - {id: app, label: Application subnets, object: aws.private-subnet, parent: az}
+  - {id: db, label: Database subnets, object: aws.private-subnet, parent: az}
+nodes:
+  - {id: nat, object: aws.nat-gateway, group: vpc}
+  - {id: webs, object: aws.ec2, label: Web servers, subtitle: Auto Scaling group, group: web}
+  - {id: ialb, object: aws.alb, label: Internal load balancer, group: app}
+  - {id: apps, object: aws.ec2, label: Application servers, subtitle: Auto Scaling group, group: app}
+  - {id: rds, object: aws.rds, subtitle: primary and standby, group: db}
+  - {id: cache, object: aws.elasticache, subtitle: caching, group: vpc}
+  - {id: efs, object: aws.efs, subtitle: shared storage, group: vpc}
+edges:
+  - {source: webs, target: ialb}
+  - {source: ialb, target: apps}
+  - {source: apps, target: rds}
+  - {source: apps, target: cache}
+  - {source: apps, target: efs}
+  - {source: webs, target: nat, optional: true}

@@ -75,6 +75,10 @@ def test_a_pattern_file_validates(realm):
             GOOD + "nodes: [{id: q, label: Archive invoice?, subtitle: s}]\n",
             "quote a value",
         ),
+        (
+            GOOD + "nodes: [{id: q, label: Kafka, subtitle: pulls, SaaS Kafka}]\n",
+            "a comma in an unquoted value",
+        ),
     ],
     ids=[
         "misspelt_key",
@@ -86,6 +90,7 @@ def test_a_pattern_file_validates(realm):
         "empty_required_slot",
         "not_yaml",
         "bare_question_mark",
+        "comma_splits_a_value",
     ],
 )
 def test_a_bad_file_is_named(realm, text, said):

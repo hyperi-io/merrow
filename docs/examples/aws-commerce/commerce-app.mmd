@@ -1,0 +1,61 @@
+---
+config:
+  theme: base
+  look: classic
+  fontFamily: Inter, Helvetica, Arial, sans-serif
+  flowchart:
+    curve: linear
+    nodeSpacing: 28
+    rankSpacing: 44
+    padding: 14
+    wrappingWidth: 280
+    htmlLabels: true
+  themeVariables:
+    fontSize: 14px
+    lineColor: "#545B64"
+    primaryTextColor: "#000000"
+    edgeLabelBackground: "#FFFFFF"
+    clusterBkg: transparent
+  themeCSS: >-
+    .nodeLabel span{font-size:12px;color:#334155}
+---
+flowchart LR
+  accTitle: L2 Services -- Adobe Commerce on AWS, application tier
+  accDescr: The internal load balancer spreads requests over Magento in two Availability Zones. Magento uses OpenSearch, ElastiCache for Redis, Aurora and EFS, and Aurora keeps its standby in the second zone.
+  subgraph cloud["AWS Cloud"]
+    subgraph region["Region"]
+      subgraph vpc["VPC"]
+        ialb@{ icon: "aws:res-elastic-load-balancing-application-load-balancer", label: "Internal load balancer", pos: "b", h: 48 }
+        search@{ icon: "aws:amazon-opensearch-service", label: "Amazon OpenSearch Service<br/>catalog search", pos: "b", h: 80 }
+        redis@{ icon: "aws:res-amazon-elasticache-elasticache-for-redis", label: "ElastiCache for Redis<br/>sessions and query cache", pos: "b", h: 48 }
+        efs@{ icon: "aws:amazon-efs", label: "Amazon EFS<br/>shared content", pos: "b", h: 80 }
+        subgraph az["Availability Zones x2"]
+          magento@{ icon: "aws:res-amazon-ec2-instances", label: "Magento<br/>Auto Scaling group", pos: "b", h: 48 }
+          aurora@{ icon: "aws:amazon-aurora", label: "Aurora<br/>primary and standby", pos: "b", h: 80 }
+        end
+      end
+    end
+  end
+  ialb -->|"5"| magento
+  magento -->|"6"| search
+  magento -->|"7"| redis
+  magento -->|"8"| aurora
+  magento -->|"9"| efs
+  classDef ingest fill:#FFFFFF,stroke:#0E8A7D,stroke-width:3px,color:#0F172A
+  classDef xform fill:#FFFFFF,stroke:#7B4FB0,stroke-width:3px,color:#0F172A
+  classDef load fill:#FFFFFF,stroke:#0072B2,stroke-width:3px,color:#0F172A
+  classDef bus fill:#FFFFFF,stroke:#A8517F,stroke-width:3px,color:#0F172A
+  classDef store fill:#FFFFFF,stroke:#00785A,stroke-width:3px,color:#0F172A
+  classDef ui fill:#FFFFFF,stroke:#D9480F,stroke-width:3px,color:#0F172A
+  classDef ext fill:#F4F6F8,stroke:#94A3B8,stroke-width:1.5px,stroke-dasharray:5 4,color:#0F172A
+  classDef decision fill:#FFFFFF,stroke:#9A6700,stroke-width:3px,color:#0F172A
+  classDef error fill:#FFFFFF,stroke:#C2410C,stroke-width:3px,color:#0F172A
+  classDef control fill:#FFFFFF,stroke:#334155,stroke-width:3px,color:#0F172A
+  classDef part fill:#FFFFFF,stroke:#94A3B8,stroke-width:1.5px,color:#0F172A
+  style cloud fill:none,stroke:#000000,stroke-width:1.5px,color:#000000
+  style region fill:none,stroke:#00A4A6,stroke-width:1.5px,stroke-dasharray:3 3,color:#000000
+  style vpc fill:none,stroke:#8C4FFF,stroke-width:1.5px,color:#000000
+  style az fill:none,stroke:#00A4A6,stroke-width:1.5px,stroke-dasharray:8 6,color:#000000
+  %% merrow:group-icon cloud aws:group-aws-cloud-logo
+  %% merrow:group-icon region aws:group-region
+  %% merrow:group-icon vpc aws:group-virtual-private-cloud-vpc
