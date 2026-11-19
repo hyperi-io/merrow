@@ -63,6 +63,53 @@ def test_apply_twice_changes_nothing(settings):
     assert twice == once
 
 
+PASTED = """flowchart LR
+    accTitle: L2 Services -- Pipeline
+    accDescr: A source feeds a store.
+    subgraph core["Core"]
+        a("<b>Source</b>")
+    end
+    b("<b>Store</b>")
+    a --> b
+    class a ingest
+    class b store
+    {classes}
+    style core {boundary}
+"""
+
+
+@pytest.mark.parametrize("stale", ["frontmatter", "class_line", "both"])
+def test_a_pasted_house_block_is_refreshed_in_place(settings, stale):
+    house = profile.load(settings, "house")
+    front = house.fronts["flowchart"]
+    classes = list(house.class_lines)
+    if stale in ("frontmatter", "both"):
+        front = front.replace('    nodeBorder: "#334155"\n', "")
+    if stale in ("class_line", "both"):
+        classes[0] = classes[0].replace("stroke-width:3px", "stroke-width:1px")
+    body = PASTED.format(classes="\n    ".join(classes), boundary=house.boundary)
+    source = f"{front}\n{body}"
+    assert front != house.fronts["flowchart"] or classes != list(house.class_lines)
+    assert apply.managed(source, {}), "a diagram with frontmatter takes the profile"
+    out, _, by_ref = applied(settings, source)
+    good = PASTED.format(
+        classes="\n    ".join(house.class_lines), boundary=house.boundary
+    )
+    assert out == f"{house.fronts['flowchart']}\n{good}", "same lines, same order"
+    assert apply.BEGIN not in out
+    assert applied(settings, out)[0] == out
+    block = dc.Block("pasted.mmd", out, None, None)
+    assert dc.source_problems(block, frozenset(), house, frozenset(by_ref)) == []
+    before = dc.Block("pasted.mmd", source, None, None)
+    found = dc.source_problems(before, frozenset(), house, frozenset(by_ref))
+    assert found, "lint names the stale block"
+    if stale != "class_line":
+        assert found == [
+            "[frontmatter] R9 frontmatter that is not the house block, byte for byte: "
+            "`merrow diagram apply` sets it"
+        ]
+
+
 def test_an_object_edit_restyles_on_the_next_apply(settings, tmp_path):
     once, _, _ = applied(settings, HAND)
     (tmp_path / "realm" / "merrow.yaml").write_text(
