@@ -4,8 +4,10 @@ from dataclasses import replace
 
 import pytest
 import yaml
+from typer.testing import CliRunner
 
 from merrow import config, objects, post, profile, render, write
+from merrow.cli import app
 from merrow.graph import Edge, Graph, Group, Node
 from merrow.lint import diagram_check as dc
 
@@ -77,6 +79,52 @@ def drawn(settings, name):
     return source, dc.source_problems(block, frozenset(), shown)
 
 
+FILE = """\
+title: L2 Services -- Demo
+description: Users reach our store.
+profile: aws
+groups:
+  - {id: region, label: "", object: aws.region}
+nodes:
+  - {id: users, object: aws.users}
+  - {id: store, object: aws.s3, group: region}
+edges:
+  - {source: users, target: store}
+"""
+
+
+def test_config_get_lists_generated_objects_beside_configured_ones(settings):
+    result = CliRunner().invoke(app, ["config", "get"])
+    assert result.exit_code == 0, result.output
+    found = json.loads(result.output)["objects"]
+    assert found["icon.server"]["icon"] == "starter:server", "a shipped pack's icon"
+    assert found["aws.lambda"]["label"] == "AWS Lambda", "a configured object"
+
+
+@pytest.mark.parametrize(
+    ("flag", "aws_drawn"), [([], True), (["--profile", "house"], False)]
+)
+def test_a_files_profile_draws_it_unless_a_flag_says_otherwise(
+    settings, tmp_path, flag, aws_drawn
+):
+    (tmp_path / "demo.yaml").write_text(FILE, encoding="utf-8")
+    runner = CliRunner()
+    validated = runner.invoke(app, ["graph", "validate", "demo.yaml", *flag])
+    assert validated.exit_code == 0, validated.output
+    written = runner.invoke(app, ["graph", "write", "demo.yaml", "--out", "out", *flag])
+    assert written.exit_code == 0, written.output
+    source = (tmp_path / "out" / "demo.mmd").read_text(encoding="utf-8")
+    assert ("style region fill:none,stroke:#00A4A6" in source) is aws_drawn
+
+
+@pytest.mark.parametrize("name", ["house", "aws"])
+def test_lint_takes_the_profile_from_the_diagrams_frontmatter(settings, tmp_path, name):
+    path = tmp_path / "demo.mmd"
+    path.write_text(drawn(settings, name)[0], encoding="utf-8")
+    assert dc.main([str(path), "--no-render"]) == 0
+    assert dc.main([str(path), "--no-render", "--profile", "house"]) == (name == "aws")
+
+
 def test_aws_group_borders_come_from_the_pack(settings):
     aws = profile.load(settings, "aws")
     assert aws.group_boundaries["region"] == (
@@ -135,13 +183,26 @@ def test_render_puts_each_group_icon_in_its_corner(settings, tmp_path):
     assert dark.startswith("<svg")
 
 
-def test_an_icon_in_no_built_pack_is_refused(settings):
-    graph = Graph([Node("q", object="aws.sqs")])
+@pytest.mark.parametrize(
+    ("icon", "says"),
+    [
+        ("aws:amazon-simple-queue-service", "is not in the built aws pack"),
+        (
+            "asf-kafka:kafka",
+            "the aws profile doesn't draw from. It draws from: aws.",
+        ),
+    ],
+    ids=["missing-from-its-pack", "pack-the-profile-skips"],
+)
+def test_an_icon_the_profile_cant_draw_is_refused(settings, icon, says):
+    library = objects.library(settings) | {
+        "x.q": objects.L1Object("x.q", "", "Q", icon=icon)
+    }
     shown = profile.load(settings, "aws")
-    with pytest.raises(
-        ValueError, match="aws:amazon-simple-queue-service is in no built pack"
-    ):
-        write.diagram(graph, shown, objects.library(settings), "L2 Services -- X", "X.")
+    with pytest.raises(ValueError, match=re.escape(says)):
+        write.diagram(
+            Graph([Node("q", object="x.q")]), shown, library, "L2 Services -- X", "X."
+        )
 
 
 def test_a_service_group_takes_its_icon_colour(settings):
@@ -169,6 +230,11 @@ def test_a_dark_theme_takes_the_dark_slide_and_ink(settings):
     assert 'primaryTextColor: "#FFFFFF"' in dark.fronts["flowchart"]
     light = profile.load(settings, "aws", "light")
     assert light.group_boundaries["region"].endswith("color:#000000")
+    plain = "classDef part fill:{},stroke:#94A3B8,stroke-width:1.5px,color:{}"
+    assert plain.format("#232F3E", "#FFFFFF") in dark.class_lines, (
+        "a box on the dark slide"
+    )
+    assert plain.format("#FFFFFF", "#0F172A") in light.class_lines
     house, house_dark = (
         profile.load(settings, "house"),
         profile.load(settings, "house", "dark"),

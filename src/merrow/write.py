@@ -159,6 +159,20 @@ def profile_label(profile: Profile, node: Node, shape: str | None = None) -> str
     return fill(form, fields)
 
 
+def _unbuilt(profile: Profile, object_id: str, icon: str) -> str:
+    """Return why the profile can't draw an object's icon, naming the packs it draws."""
+    pack = icon.split(":")[0]
+    drawn = sorted({key.split(":")[0] for key in profile.icon_sizes})
+    if pack in drawn:
+        return f"{object_id} icon {icon} is not in the built {pack} pack"
+    packs = ", ".join(drawn) or "none built"
+    return (
+        f"{object_id} icon {icon} is in the {pack} pack, which the {profile.name}"
+        f" profile doesn't draw from. It draws from: {packs}. Pick another object or"
+        " profile, or run `merrow pack build` if the pack isn't built"
+    )
+
+
 def _icon_node(form: str, node: Node, icon: str, size: int) -> str:
     text = _quoted(node.label) + (
         f"<br/>{_quoted(node.subtitle)}" if node.subtitle else ""
@@ -210,7 +224,7 @@ def diagram(
         if known is not None and known.icon and profile.icon_node:
             size = profile.icon_sizes.get(known.icon)
             if size is None:
-                problems.append(f"{known.id} icon {known.icon} is in no built pack")
+                problems.append(_unbuilt(profile, known.id, known.icon))
                 continue
             labels[node.id] = _icon_node(profile.icon_node, node, known.icon, size)
             continue

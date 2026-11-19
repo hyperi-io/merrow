@@ -42,7 +42,7 @@ from merrow import config
 from merrow.browser import launch
 from merrow.lint import icons
 from merrow.objects import by_class_name, library
-from merrow.profile import Profile, load
+from merrow.profile import Profile, ProfileError, load
 
 # The standard's Colour section, byte for byte. tests/test_diagram_check.py holds the two in step.
 CLASS_LINES = frozenset(
@@ -717,6 +717,29 @@ def render(
     return results
 
 
+def _profile_of(
+    block: Block, settings: Any, default: Profile, loaded: dict[str, Profile | None]
+) -> Profile:
+    """Return the profile whose frontmatter the diagram carries, else `default`.
+
+    A profile that can't load here, such as one whose pack isn't built, is skipped.
+    `loaded` caches each profile by name across a run.
+    """
+    front = split_front(block.source)[0]
+    if front is None or front in default.fronts.values():
+        return default
+    for name in settings.get("profiles") or {}:
+        if name not in loaded:
+            try:
+                loaded[name] = load(settings, name)
+            except ProfileError, FileNotFoundError:
+                loaded[name] = None
+        candidate = loaded[name]
+        if candidate and front in candidate.fronts.values():
+            return candidate
+    return default
+
+
 def main(argv: list[str] | None = None) -> int:
     """Check every diagram in the files named, print one verdict a diagram, and return the exit code."""
     parser = argparse.ArgumentParser(
@@ -749,13 +772,23 @@ def main(argv: list[str] | None = None) -> int:
         blocks += found
         page_level += problems
     settings = config.load()
-    profile = load(settings, args.profile or None)
+    default = load(settings, args.profile or None)
+    loaded: dict[str, Profile | None] = {}
+    chosen = (
+        [default] * len(blocks)
+        if args.profile
+        else [_profile_of(block, settings, default, loaded) for block in blocks]
+    )
     measured: list[dict | None] = [None] * len(blocks)
     how = "source only, not rendered"
     if not args.no_render:
-        column = profile.limits["column"]
         script = args.mermaid or pinned.path(settings)
-        measured = list(render(blocks, script, column, settings, args.png))
+        for name in dict.fromkeys(profile.name for profile in chosen):
+            at = [i for i, profile in enumerate(chosen) if profile.name == name]
+            column = chosen[at[0]].limits["column"]
+            group = [blocks[i] for i in at]
+            for i, result in zip(at, render(group, script, column, settings, args.png)):
+                measured[i] = result
         how = (
             f"rendered with {args.mermaid.name}"
             if args.mermaid
@@ -766,7 +799,7 @@ def main(argv: list[str] | None = None) -> int:
     known = icons.known_keys(config.pack_files(settings).values())
     object_names = frozenset(by_class_name(library(settings)))
     report: list[Verdict] = []
-    for block, result in zip(blocks, measured, strict=True):
+    for block, result, profile in zip(blocks, measured, chosen, strict=True):
         problems = source_problems(block, CLASS_LINES, profile, object_names)
         problems += [
             f"icon {key} is in no built pack: run `merrow pack build` for its source"
