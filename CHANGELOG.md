@@ -3,6 +3,12 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.6](https://github.com/hyperi-io/merrow/compare/v0.1.5...v0.1.6) (2026-11-19)
+
+### Bug Fixes
+
+* **lint:** check R2 and allow two-row pairs ([5d406d0](https://github.com/hyperi-io/merrow/commit/5d406d03c694a1bb71ac911bf58ae5bbcf8641cf))
+
 ## [0.1.5](https://github.com/hyperi-io/merrow/compare/v0.1.4...v0.1.5) (2026-11-19)
 
 ### Bug Fixes
