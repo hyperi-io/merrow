@@ -43,16 +43,24 @@ def apply(source: str, profile: Profile, by_ref: Mapping[str, L1Object]) -> str:
     class line is set in place.
 
     Raises:
-        ValueError: An object styles as a class the profile doesn't define.
+        ValueError: An object styles as a class the profile doesn't define, or
+            a class block marker has no partner.
     """
     _, body = split_front(source)
     flow = diagram_type(body)[0] in ("flowchart", "graph")
     kept, managed = [], False
     for line in body.splitlines():
-        if line.strip() in (BEGIN, END):
-            managed = line.strip() == BEGIN
+        mark = line.strip()
+        if mark == BEGIN and managed:
+            raise ValueError(f"a second `{BEGIN}` before `{END}`")
+        if mark == END and not managed:
+            raise ValueError(f"`{END}` with no `{BEGIN}` above it")
+        if mark in (BEGIN, END):
+            managed = mark == BEGIN
         elif not managed:
             kept.append(line)
+    if managed:
+        raise ValueError(f"`{BEGIN}` has no `{END}`: every line under it would go")
     while kept and not kept[-1].strip():
         kept.pop()
 
@@ -106,29 +114,28 @@ def managed(source: str, by_ref: Mapping[str, L1Object]) -> bool:
     return BEGIN in source or bool(names & set(by_ref)) or front_only or fronted
 
 
-def apply_file(path: Path, profile: Profile, by_ref: Mapping[str, L1Object]) -> bool:
-    """Apply the profile to a `.mmd` file, or to each managed fence in Markdown.
+def applied(
+    path: Path, profile: Profile, by_ref: Mapping[str, L1Object]
+) -> tuple[str, str]:
+    """Return a file's text and its text with the profile applied, writing nothing.
 
+    The profile goes on a `.mmd` file, or on each managed fence in Markdown.
     A fence is managed once it names an object or carries the class block or
     a frontmatter. A sequence, ER or class diagram is always managed: it can
     name no object.
-    Returns whether the file changed.
 
     Raises:
-        ValueError: An object styles as a class the profile doesn't define.
+        ValueError: An object styles as a class the profile doesn't define, or
+            a class block marker has no partner.
     """
     text = path.read_text(encoding="utf-8")
     if path.suffix != ".md":
-        new = apply(text, profile, by_ref)
-    else:
+        return text, apply(text, profile, by_ref)
 
-        def one(fence: re.Match[str]) -> str:
-            body = fence.group(1)
-            if not managed(body, by_ref):
-                return fence.group(0)
-            return fence.group(0).replace(body, apply(body, profile, by_ref), 1)
+    def one(fence: re.Match[str]) -> str:
+        body = fence.group(1)
+        if not managed(body, by_ref):
+            return fence.group(0)
+        return fence.group(0).replace(body, apply(body, profile, by_ref), 1)
 
-        new = FENCE.sub(one, text)
-    if new != text:
-        path.write_text(new, encoding="utf-8", newline="\n")
-    return new != text
+    return text, FENCE.sub(one, text)

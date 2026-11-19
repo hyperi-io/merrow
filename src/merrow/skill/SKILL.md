@@ -33,6 +33,8 @@ No Chrome on the host: `merrow diagram lint --no-render` runs the source pass al
 
 Hand-written Mermaid works too. Write the body with its `accTitle` and `accDescr` lines, and name each object as `bus:::aws-msk`, the object id with dots as hyphens, after a shape if you want your own label (`topics[("Raw topics")]:::aws-msk`). `merrow diagram apply page.md` adds the frontmatter and the class block, and fills in a bare object's label. A label you wrote stays. A sequence, ER or class diagram names no object, so apply gives it the frontmatter alone. Never type frontmatter, `classDef` or `style` lines.
 
+A tool that writes Mermaid does the same: the body, its `class a,b ingest` lines and an empty `%% merrow:begin` / `%% merrow:end` pair, then `merrow diagram apply`. Apply exits 0 and prints `changed` or `unchanged` a file. A missing file or profile, an object the profile can't style, or a marker with no partner exits 2 with the reason, and no file is written.
+
 ## What goes wrong
 
 - A home-made renderer or apply script. merrow's commands are the tooling.

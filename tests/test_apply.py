@@ -153,6 +153,34 @@ def test_an_object_styled_outside_the_profile_is_refused(settings, tmp_path):
     assert "styles as 'neon'" in result.output
 
 
+@pytest.mark.parametrize(
+    ("bad", "said"),
+    [
+        (HAND + "    %% merrow:begin\n    c --> d\n", "has no `%% merrow:end`"),
+        (HAND + "    %% merrow:end\n", "with no `%% merrow:begin` above it"),
+        (
+            HAND + "    %% merrow:begin\n    %% merrow:begin\n    %% merrow:end\n",
+            "a second `%% merrow:begin`",
+        ),
+        (None, "No such file"),
+    ],
+    ids=["no_end", "no_begin", "two_begins", "missing_file"],
+)
+def test_a_bad_file_exits_2_and_no_file_is_written(settings, tmp_path, bad, said):
+    good, other = tmp_path / "good.mmd", tmp_path / "bad.mmd"
+    good.write_text(HAND, encoding="utf-8")
+    if bad is not None:
+        other.write_text(bad, encoding="utf-8")
+    result = CliRunner().invoke(app, ["diagram", "apply", str(good), str(other)])
+    if bad is None:
+        assert isinstance(result.exception, FileNotFoundError), "run() exits 2 on it"
+    else:
+        assert result.exit_code == 2
+        assert said in " ".join(result.output.split())
+        assert other.read_text(encoding="utf-8") == bad
+    assert good.read_text(encoding="utf-8") == HAND, "the good file waits for the bad"
+
+
 def test_two_objects_with_one_class_name_are_refused():
     library = {
         "a.b-c": objects.L1Object("a.b-c", "load", "One"),
