@@ -3,6 +3,12 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.4](https://github.com/hyperi-io/merrow/compare/v0.1.3...v0.1.4) (2026-11-19)
+
+### Bug Fixes
+
+* **pack:** build multiple packs and publish icon diagrams as SVGs ([ef44d57](https://github.com/hyperi-io/merrow/commit/ef44d572a370bcead268668a6381a897c408155d))
+
 ## [0.1.3](https://github.com/hyperi-io/merrow/compare/v0.1.2...v0.1.3) (2026-11-19)
 
 ### Bug Fixes
