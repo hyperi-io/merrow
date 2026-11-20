@@ -1,5 +1,6 @@
 """merrow command line: `merrow <noun> <verb>`."""
 
+import importlib
 import json
 import re
 import shutil
@@ -28,12 +29,16 @@ from merrow import (
     spec,
     write,
 )
-from merrow.convert import CONVERTERS
 from merrow.lint import diagram_check, findings
 from merrow.model import Limits
-from merrow.sources import detect, fetch, lock
+from merrow.sources import lock
 
 app = Typer(help="Style, render and lint Mermaid diagrams.", no_args_is_help=True)
+# The modules each extra brings, which a core install lacks.
+EXTRAS = {
+    "render": ("playwright.sync_api", "scalo.http"),
+    "packs": ("nvchecker", "pypdfium2", "pydot", "scalo.http"),
+}
 config_app = Typer(help="The resolved configuration.", no_args_is_help=True)
 tools_app = Typer(
     help="The pinned Mermaid bundle and browser render runs on.", no_args_is_help=True
@@ -62,6 +67,24 @@ app.add_typer(skill_app, name="skill")
 @app.callback()
 def main(version: bool = version_option("merrow")) -> None:
     """Style, render and lint Mermaid diagrams."""
+
+
+def _needs(extra: str, command: str) -> None:
+    """Stop with the install line when an extra this command needs isn't installed.
+
+    Raises:
+        Exit: Code 2, a module of the extra is missing.
+    """
+    for module in EXTRAS[extra]:
+        try:
+            importlib.import_module(module)
+        except ModuleNotFoundError:
+            print(
+                f"merrow: {command} needs merrow[{extra}]: "
+                "uv tool install --python 3.14 'merrow[all]'",
+                file=sys.stderr,
+            )
+            raise Exit(2) from None
 
 
 @config_app.command("get")
@@ -110,6 +133,7 @@ def tools_ensure(
     ),
 ) -> None:
     """Fetch the pinned Mermaid bundle and install the browser if missing, then print them."""
+    _needs("render", "tools ensure")
     settings = config.load()
     browser.ensure(settings, deps=install_deps)
     print(
@@ -137,6 +161,9 @@ def pack_build(
     Raises:
         BadParameter: An unknown source or format, or `--from` with several sources.
     """
+    _needs("packs", "pack build")
+    from merrow.convert import CONVERTERS
+
     settings = config.load()
     sources = config.sources(settings)
     if from_path and len(source_ids) > 1:
@@ -168,6 +195,8 @@ def _fetch_locked(settings: Any, source_id: str, limits: Limits) -> Path:
         raise BadParameter(
             f"source {source_id!r} has no lock entry: run `merrow source update`"
         )
+    from merrow.sources import fetch
+
     return fetch.fetch(config.cache_dir(settings), source_id, pin, limits)
 
 
@@ -179,6 +208,9 @@ def source_update(
 
     Prints one JSON object per changed or failed source. Exits 1 when any failed.
     """
+    _needs("packs", "source update")
+    from merrow.sources import detect
+
     settings = config.load()
     limits = config.limits(settings)
     sources = list(config.sources(settings).values())
@@ -200,6 +232,7 @@ def source_fetch(
     ),
 ) -> None:
     """Download each locked source into the cache, checked against its SHA-256."""
+    _needs("packs", "source fetch")
     settings = config.load()
     pins = lock.pins(settings.get("lock"))
     limits = config.limits(settings)
@@ -223,6 +256,7 @@ def diagram_render(
     A diagram the profile manages takes that theme's look first, so a dark
     render isn't the light frontmatter on a dark page.
     """
+    _needs("render", "diagram render")
     settings = config.load()
     pages = destination.load(settings, where or None).themes
     items = [diagram for path in files for diagram in render.diagrams(path)]
@@ -379,6 +413,7 @@ def graph_render(
     `--page` adds a JSON line a diagram with its `page`: the fence, or the
     image lines where the destination's renderer can't draw it.
     """
+    _needs("render", "graph render")
     _one_output_each(files)
     settings = config.load()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -477,6 +512,8 @@ def diagram_lint(
     ),
 ) -> None:
     """Check diagrams against the standard and the built packs. Exits 1 on any failure."""
+    if not no_render:
+        _needs("render", "diagram lint (--no-render needs no extra)")
     argv = [str(path) for path in files]
     argv += ["--profile", name] if name else []
     argv += ["--destination", where] if where else []

@@ -25,7 +25,7 @@ git clone https://github.com/hyperi-io/merrow
 merrow graph render demo.yaml --out out
 ```
 
-Already have uv? `uv tool install --python 3.14 merrow` takes the release from PyPI, then run `merrow tools ensure`. uv caches PyPI's index, so for a version out in the last few minutes add `--refresh`.
+Already have uv? `uv tool install --python 3.14 'merrow[all]'` takes the release from PyPI, then run `merrow tools ensure`. Plain `merrow` is the core for a CI job or a generator: it writes, applies and source-lints diagrams (`diagram lint --no-render`), with no browser and no pack builds. `merrow[render]` adds rendering and `merrow[packs]` the icon pack builds. uv caches PyPI's index, so for a version out in the last few minutes add `--refresh`.
 
 Windows is best effort, and we guarantee nothing there because we don't run it. Install [uv](https://docs.astral.sh/uv/) yourself, then run the same two commands.
 

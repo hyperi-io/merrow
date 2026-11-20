@@ -319,15 +319,6 @@ wheels = [
 ]
 
 [[package]]
-name = "filelock"
-version = "4.2.10"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a1/cf/05bcdacabdc0aec7dc8e19d76281bd82325df62dae3b6430e9ba57397689/filelock-4.2.10.tar.gz", hash = "sha256:fcc3c0cb8bfe7f4b3bb0e231c04b15dbad068cb3c2515f343d8fde4dce93bd5d", size = 670595, upload-time = "2026-11-09T18:58:00.54Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/90/5d0096a325aa0f83ba7a3968bfb485b67e32c947bdf9cd0fcb4b485be718/filelock-4.2.10-py3-none-any.whl", hash = "sha256:9479aaeb4db20b5a53e3da28493edd24720b66b8a0b84030aa56ccdf243d6857", size = 218040, upload-time = "2026-11-09T18:57:59.088Z" },
-]
-
-[[package]]
 name = "greenlet"
 version = "3.5.6"
 source = { registry = "https://pypi.org/simple" }
@@ -477,20 +468,35 @@ name = "merrow"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "filelock" },
-    { name = "nvchecker" },
-    { name = "playwright" },
     { name = "pydantic" },
-    { name = "pydot" },
-    { name = "pypdfium2" },
     { name = "pyyaml" },
-    { name = "scalo", extra = ["http"] },
+    { name = "scalo" },
     { name = "tomli-w" },
     { name = "typer" },
 ]
 
+[package.optional-dependencies]
+all = [
+    { name = "nvchecker" },
+    { name = "playwright" },
+    { name = "pydot" },
+    { name = "pypdfium2" },
+    { name = "scalo", extra = ["http"] },
+]
+packs = [
+    { name = "nvchecker" },
+    { name = "pydot" },
+    { name = "pypdfium2" },
+    { name = "scalo", extra = ["http"] },
+]
+render = [
+    { name = "playwright" },
+    { name = "scalo", extra = ["http"] },
+]
+
 [package.dev-dependencies]
 dev = [
+    { name = "merrow", extra = ["all"] },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-xdist" },
@@ -500,20 +506,24 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "filelock", specifier = ">=4.2" },
-    { name = "nvchecker", specifier = ">=2.22" },
-    { name = "playwright", specifier = ">=1.64.1" },
+    { name = "merrow", extras = ["render", "packs"], marker = "extra == 'all'" },
+    { name = "nvchecker", marker = "extra == 'packs'", specifier = ">=2.22" },
+    { name = "playwright", marker = "extra == 'render'", specifier = ">=1.64.1" },
     { name = "pydantic", specifier = ">=2.14" },
-    { name = "pydot", specifier = ">=4.0.1" },
-    { name = "pypdfium2", specifier = ">=5.15.2" },
+    { name = "pydot", marker = "extra == 'packs'", specifier = ">=4.0.1" },
+    { name = "pypdfium2", marker = "extra == 'packs'", specifier = ">=5.15.2" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "scalo", extras = ["http"], specifier = ">=2.32.9" },
+    { name = "scalo", specifier = ">=2.32.9" },
+    { name = "scalo", extras = ["http"], marker = "extra == 'packs'", specifier = ">=2.32.9" },
+    { name = "scalo", extras = ["http"], marker = "extra == 'render'", specifier = ">=2.32.9" },
     { name = "tomli-w", specifier = ">=1.2.0" },
     { name = "typer", specifier = ">=0.27" },
 ]
+provides-extras = ["render", "packs", "all"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "merrow", extras = ["all"] },
     { name = "pytest", specifier = ">=9" },
     { name = "pytest-cov", specifier = ">=6" },
     { name = "pytest-xdist", specifier = ">=3.6" },

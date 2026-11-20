@@ -42,7 +42,7 @@ jobs:
       - name: Install (Windows)
         if: runner.os == 'Windows'
         shell: bash
-        run: uv tool install --python "$(cat .python-version)" .
+        run: uv tool install --python "$(cat .python-version)" ".[all]"
       - name: Run it
         shell: bash
         run: |
