@@ -325,6 +325,40 @@ def _waive(name: str, lint: Mapping[str, Any]) -> frozenset[str]:
     return waive
 
 
+# The keys a profile needs, its own or from the profile it extends.
+_REQUIRED = (
+    "tokens",
+    "class_properties",
+    "classes",
+    "front",
+    "boundary",
+    "node_label",
+    "shapes",
+    "default_shape",
+    "default_class",
+    "layout.max_ranks",
+    "layout.stage_title",
+    "lint.label_styling",
+    "lint.caption_styling",
+)
+
+
+def _required(name: str, entry: Mapping[str, Any]) -> None:
+    """Check a profile has every key in `_REQUIRED`.
+
+    Raises:
+        ProfileError: It lacks one.
+    """
+    for path in _REQUIRED:
+        found: Any = entry
+        for key in path.split("."):
+            if not isinstance(found, Mapping) or key not in found:
+                raise ProfileError(
+                    f"profile {name} has no {path}: set it, or extend a profile that does"
+                )
+            found = found[key]
+
+
 def load(
     settings: Any,
     name: str | None = None,
@@ -340,13 +374,15 @@ def load(
     `pages` is a destination's themes, in place of `render.themes`.
 
     Raises:
-        ProfileError: The profile, or a token it names, isn't defined, it sets
-            a page limit, or it waives an id that is no lint finding.
+        ProfileError: The profile, or a token it names, isn't defined, it lacks
+            a key it needs, it sets a page limit, or it waives an id that is no
+            lint finding.
         FileNotFoundError: A token file is in no reference repo and not in merrow.
     """
     name = name or str(settings.get("profile"))
     entry = extended(settings.get("profiles") or {}, name)
     entry = _merge(entry, (entry.get("themes") or {}).get(theme) or {})
+    _required(name, entry)
     pages = pages or settings.get("render")["themes"]
     page = pages.get(theme) or next(iter(pages.values()))
     scope: dict[str, str] = {"page.background": str(page["background"])}

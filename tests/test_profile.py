@@ -190,6 +190,12 @@ def test_a_forced_font_replaces_every_font_family(
             FileNotFoundError,
             "missing.tokens.json",
         ),
+        (
+            "profile: mine\nprofiles:\n  mine:\n    tokens: [profiles/house.tokens.json]\n",
+            None,
+            profile.ProfileError,
+            "profile mine has no class_properties: set it, or extend a profile that does",
+        ),
     ],
     ids=[
         "unknown_token",
@@ -199,6 +205,7 @@ def test_a_forced_font_replaces_every_font_family(
         "waiver_of_no_finding",
         "page_limit_in_a_profile",
         "missing_token_file",
+        "a_key_left_out",
     ],
 )
 def test_a_broken_profile_is_named(
