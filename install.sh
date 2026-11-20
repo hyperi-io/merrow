@@ -84,7 +84,7 @@ main() {
         [[ -x "${bin}/uv" ]] || install_uv "${bin}"
         export PATH="${bin}:${PATH}"
     fi
-    uv tool install --force --python "$(cat "${here}/.python-version")" "${here}"
+    uv tool install --force --python "$(cat "${here}/.python-version")" "${here}[all]"
     merrow="$(uv tool dir --bin)/merrow"
     if [[ "${os}" == "Linux" ]] && command -v apt-get >/dev/null 2>&1; then
         # Playwright's bundled Node needs libatomic before it can install anything.

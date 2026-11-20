@@ -11,18 +11,25 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Environment :: Console",
 ]
+# The core writes, applies and source-lints diagrams. `render` adds the browser
+# that renders and measures them, `packs` the downloads, converters and readers.
 dependencies = [
-    "filelock>=4.2",
-    "nvchecker>=2.22",
-    "playwright>=1.64.1",
     "pydantic>=2.14",
-    "pydot>=4.0.1",
-    "pypdfium2>=5.15.2",
     "pyyaml>=6.0",
-    "scalo[http]>=2.32.9",
+    "scalo>=2.32.9",
     "tomli-w>=1.2.0",
     "typer>=0.27",
 ]
+
+[project.optional-dependencies]
+render = ["playwright>=1.64.1", "scalo[http]>=2.32.9"]
+packs = [
+    "nvchecker>=2.22",
+    "pydot>=4.0.1",
+    "pypdfium2>=5.15.2",
+    "scalo[http]>=2.32.9",
+]
+all = ["merrow[render,packs]"]
 
 [project.scripts]
 merrow = "merrow.cli:run"
@@ -33,6 +40,7 @@ Issues = "https://github.com/hyperi-io/merrow/issues"
 
 [dependency-groups]
 dev = [
+    "merrow[all]",
     "pytest>=9",
     "pytest-cov>=6",
     "pytest-xdist>=3.6",

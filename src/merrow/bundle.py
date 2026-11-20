@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Any
 
 from merrow import config
-from merrow.sources.fetch import download, write_atomic
 
 LOCKFILE = Path(__file__).parent / "npm" / "package-lock.json"
 
@@ -55,6 +54,9 @@ def path(settings: Any) -> Path:
     )
     if target.is_file():
         return target
+    # Only a download needs the HTTP client, which the render extra brings.
+    from merrow.sources.fetch import download, write_atomic
+
     data = download(pin["resolved"], config.limits(settings))
     if _integrity(data) != pin["integrity"]:
         raise BundleError(f"{pin['resolved']} doesn't match the lock's integrity")
