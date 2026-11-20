@@ -32,6 +32,7 @@ import argparse
 import json
 import re
 import sys
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -93,7 +94,6 @@ _LINK_ANCHOR = re.compile(r"\]\(([^)#\s]*)#([^)\s]+)\)")
 _EDGE = re.compile(
     r"^\s*([A-Za-z_]\w*)\s*[\[\](){}>]*\s*(?:-->|-\.->|---|-\.-|==>)(?:\|[^|]*\|)?\s*([A-Za-z_]\w*)"
 )
-_COMMENT = re.compile(r"^\s*<!--.*-->\s*$")
 # A line that opens its own markdown block, so a wrapped paragraph never runs into it.
 _BLOCK = ("#", "|", "```", "~~~", "- ", "* ", "> ", "*Figure", "_Figure")
 # An intro that announces the diagram instead of adding what it cannot show.
@@ -187,6 +187,7 @@ def page_blocks(path: Path) -> tuple[list[Block], list[str]]:
     start = 0
     boxed = False
     numbers: list[int] = []
+    shown: list[str | None] = []
     for number, line in enumerate([*lines, None], 1):
         if not opener:
             # A caption under an image or a table numbers a figure as one under a fence does.
@@ -216,8 +217,9 @@ def page_blocks(path: Path) -> tuple[list[Block], list[str]]:
             continue
         if kind == "mermaid":
             # A generator's marker comment is not on the rendered page, so it is neither intro nor caption.
-            before = _paragraph(lines[: start - 1][::-1])[::-1]
-            after = _paragraph(lines[number:])
+            shown = shown or _shown(lines)
+            before = _paragraph(shown[: start - 1][::-1])[::-1]
+            after = _paragraph(shown[number:])
             blocks.append(
                 Block(
                     f"{path}:{start}",
@@ -243,16 +245,40 @@ def page_blocks(path: Path) -> tuple[list[Block], list[str]]:
     return blocks, problems
 
 
-def _paragraph(lines: list[str]) -> list[str]:
+def _shown(lines: list[str]) -> list[str | None]:
+    """``lines`` with each line of an HTML comment outside a fence as None: a renderer shows none of it."""
+    shown: list[str | None] = []
+    opener = ""
+    comment = False
+    for line in lines:
+        text = line.strip()
+        if opener:
+            if set(text) == {opener[0]} and len(text) >= len(opener):
+                opener = ""
+        elif comment:
+            comment = "-->" not in text
+            shown.append(None)
+            continue
+        elif text.startswith("<!--") and ("-->" not in text or text.endswith("-->")):
+            comment = "-->" not in text[4:]
+            shown.append(None)
+            continue
+        elif fence := _FENCE.match(line):
+            opener = fence.group(1)
+        shown.append(line)
+    return shown
+
+
+def _paragraph(lines: Sequence[str | None]) -> list[str]:
     """The stripped lines of the first paragraph in ``lines``, which a formatter may have wrapped.
 
-    Blank lines and comments before it are skipped, and comments inside it. It
-    ends at a blank line, or before a line that opens a block (a heading, list,
-    table, quote, fence or another caption).
+    Comment lines (None) are skipped, and blank lines before it. It ends at a
+    blank line, or before a line that opens a block (a heading, list, table,
+    quote, fence or another caption).
     """
     found: list[str] = []
     for text in lines:
-        if _COMMENT.match(text):
+        if text is None:
             continue
         line = text.strip()
         if not line:
