@@ -3,6 +3,12 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.11](https://github.com/hyperi-io/merrow/compare/v0.1.10...v0.1.11) (2026-11-20)
+
+### Bug Fixes
+
+* **packaging:** make plain merrow the core install ([f0753fe](https://github.com/hyperi-io/merrow/commit/f0753fea0d57340b83c98cde2e24f9e94979ca5b))
+
 ## [0.1.10](https://github.com/hyperi-io/merrow/compare/v0.1.9...v0.1.10) (2026-11-19)
 
 ### Bug Fixes
