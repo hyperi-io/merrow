@@ -754,6 +754,24 @@ FENCE = "```mermaid\nflowchart LR\n```\n"
             "*Figure 1. T.*",
             id="a_list_item_and_a_comment",
         ),
+        pytest.param(
+            f"Intro.\n<!--\n  a note\n-->\n\n{FENCE}\n<!-- a\nb -->\n*Figure 1. T.*\n",
+            "Intro.",
+            "*Figure 1. T.*",
+            id="a_comment_over_several_lines",
+        ),
+        pytest.param(
+            f"```html\n<!-- open\n```\n\nIntro.\n\n{FENCE}\n*Figure 1. T.*\n",
+            "Intro.",
+            "*Figure 1. T.*",
+            id="a_comment_opener_in_a_fence_is_code",
+        ),
+        pytest.param(
+            f"Intro.\n\n{FENCE}\n<!-- x --> *Figure 1. T.*\n",
+            "Intro.",
+            "<!-- x --> *Figure 1. T.*",
+            id="text_after_a_comment_is_shown",
+        ),
     ],
 )
 def test_the_intro_and_caption_are_whole_paragraphs(tmp_path, page, intro, caption):
