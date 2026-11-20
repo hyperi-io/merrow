@@ -3,6 +3,14 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.12](https://github.com/hyperi-io/merrow/compare/v0.1.11...v0.1.12) (2026-11-20)
+
+### Bug Fixes
+
+* **lint:** skip multiline HTML comments ([6f24022](https://github.com/hyperi-io/merrow/commit/6f240225cb27db274fd435c3329815ef48dbc759))
+* **profile:** name the key a profile lacks ([e9c58d3](https://github.com/hyperi-io/merrow/commit/e9c58d3b6f795e3fa7637fe5cbf17cef574a35e9))
+* **profile:** reject profiles that waive page findings ([e648975](https://github.com/hyperi-io/merrow/commit/e6489758506edc5b96b8549d5f734f85e0e0e9b7))
+
 ## [0.1.11](https://github.com/hyperi-io/merrow/compare/v0.1.10...v0.1.11) (2026-11-20)
 
 ### Bug Fixes
