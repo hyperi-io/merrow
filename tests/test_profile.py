@@ -179,6 +179,12 @@ def test_a_forced_font_replaces_every_font_family(
             "profile house waives skip-arow, which is no lint finding",
         ),
         (
+            "profiles:\n  house:\n    lint: {waive: [figure-numbers]}\n",
+            None,
+            profile.ProfileError,
+            "profile house waives figure-numbers, a finding on the page",
+        ),
+        (
             "profiles:\n  house:\n    limits: {column: 700}\n",
             None,
             profile.ProfileError,
@@ -203,6 +209,7 @@ def test_a_forced_font_replaces_every_font_family(
         "unknown_profile",
         "waiver_by_text",
         "waiver_of_no_finding",
+        "waiver_of_a_page_finding",
         "page_limit_in_a_profile",
         "missing_token_file",
         "a_key_left_out",
