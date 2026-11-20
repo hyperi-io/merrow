@@ -57,6 +57,10 @@ IDS = frozenset(
 )
 
 
+# Findings on the page, not on one diagram, so no diagram's profile waives them.
+PAGE_IDS = frozenset({"figure-numbers", "h1-anchor", "text-diagram"})
+
+
 def finding(key: str, text: str) -> str:
     """Return a finding as lint prints it: `[id] text`.
 

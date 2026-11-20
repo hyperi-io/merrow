@@ -308,7 +308,8 @@ def _waive(name: str, lint: Mapping[str, Any]) -> frozenset[str]:
     """Return the finding ids a profile waives.
 
     Raises:
-        ProfileError: It names an id that is no lint finding, or waives by the
+        ProfileError: It names an id that is no lint finding or is a page's
+            finding, or waives by the
             `layout_waive` pattern, which reads the findings' text.
     """
     if "layout_waive" in lint:
@@ -321,6 +322,12 @@ def _waive(name: str, lint: Mapping[str, Any]) -> frozenset[str]:
     if unknown:
         raise ProfileError(
             f"profile {name} waives {unknown[0]}, which is no lint finding"
+        )
+    page = sorted(waive & findings.PAGE_IDS)
+    if page:
+        raise ProfileError(
+            f"profile {name} waives {page[0]}, a finding on the page: a profile "
+            "waives only its diagrams' findings"
         )
     return waive
 
