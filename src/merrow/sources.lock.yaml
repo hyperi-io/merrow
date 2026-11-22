@@ -56,10 +56,10 @@ lock:
     sha256: 2aef1b85837841b38f6a0181a0cc5170e844b89a94a11e1d022459cbd555b3e9
     bytes: 11092920
   kubernetes-icons:
-    version: '20260126.015052'
-    url: https://codeload.github.com/kubernetes/community/tar.gz/70a4bb2d8cc35bb0672f221bad9bc60c27a6f94b
-    sha256: c3e6b38bbfd488f551453c5203b403a0094a734d467f067d6842138a9e2c9662
-    bytes: 45064138
+    version: '20261118.052730'
+    url: https://codeload.github.com/kubernetes/community/tar.gz/a620d469b204a55912856084eae1f92a299b4852
+    sha256: 7acfc7d8407175781dcb6eac7417beac76ad38024e96f158afcef895084e124b
+    bytes: 45359565
   oci-icons:
     version: 66301b1e-693098
     url: https://docs.oracle.com/iaas/Content/Resources/Assets/OCI_Icons_Visio.zip
