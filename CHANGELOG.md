@@ -3,6 +3,12 @@
 Rendered by CI and committed back at the end of a release -- do not edit by
 hand. Release notes also appear on the GitHub Releases page, one per tag.
 
+## [0.1.13](https://github.com/hyperi-io/merrow/compare/v0.1.12...v0.1.13) (2026-11-28)
+
+### Bug Fixes
+
+* validate inputs, restrict rendering and correct config order ([807c93e](https://github.com/hyperi-io/merrow/commit/807c93eb03c125d8927bd59a60a3e93937524b26))
+
 ## [0.1.12](https://github.com/hyperi-io/merrow/compare/v0.1.11...v0.1.12) (2026-11-20)
 
 ### Bug Fixes
