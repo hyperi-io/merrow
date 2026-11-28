@@ -2,6 +2,8 @@ import base64
 import zlib
 from urllib.parse import quote
 
+import pytest
+
 from merrow import write
 from merrow.read import drawio
 
@@ -92,7 +94,60 @@ def test_an_uncompressed_model_reads_too():
     assert {n.label for n in page.graph.nodes} == {"Service", "Database", "Cache"}
 
 
-def test_text_strips_html_into_lines():
-    assert drawio.text(
-        "&lt;div&gt;IBM&amp;nbsp;Cloud&lt;/div&gt;&lt;div&gt; VPC &lt;/div&gt;"
-    ) == ["IBM Cloud", "VPC"]
+@pytest.mark.parametrize(
+    ("value", "lines"),
+    [
+        ("<div>IBM&nbsp;Cloud</div><div> VPC </div>", ["IBM Cloud", "VPC"]),
+        ("Vec&lt;T&gt; and a&lt;b", ["Vec<T> and a<b"]),
+        ("one<br/>two<p>three</p>", ["one", "two", "three"]),
+    ],
+    ids=["divs", "escaped-angle-brackets", "breaks"],
+)
+def test_text_strips_html_into_lines(value, lines):
+    assert drawio.text(value) == lines
+
+
+def model(*cells: str) -> bytes:
+    return (
+        '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>'
+        + "".join(cells)
+        + "</root></mxGraphModel>"
+    ).encode()
+
+
+def test_edges_that_name_each_other_as_parent_do_not_hang_the_read():
+    loop = [
+        '<mxCell id="e1" edge="1" parent="e2"/>',
+        '<mxCell id="e2" edge="1" parent="e1"/>',
+        cell("v", parent="e1", value="Service", vertex="1"),
+        cell("self", parent="self", value="Self", vertex="1"),
+    ]
+    [page] = drawio.pages(model(*loop), RULES)
+    assert {n.label for n in page.graph.nodes} == {"Service"}
+    assert [g.label for g in page.graph.groups] == ["Self"]
+    assert page.graph.groups[0].parent is None
+
+
+def packed(raw: bytes) -> bytes:
+    deflate = zlib.compressobj(9, zlib.DEFLATED, -15)
+    body = base64.b64encode(deflate.compress(raw) + deflate.flush())
+    return b'<mxfile><diagram name="p">' + body + b"</diagram></mxfile>"
+
+
+@pytest.mark.parametrize(
+    ("data", "message"),
+    [
+        (b"junk", "not draw.io XML"),
+        (b"", "not draw.io XML"),
+        (b"<svg/>", "not a draw.io file"),
+        (b"<mxfile><diagram>!!!</diagram></mxfile>", "page is corrupt"),
+        (packed(b"not url-encoded xml <"), "page is corrupt"),
+        (packed(b" " * 10_000), "inflates past 1000 bytes"),
+        (model(cell("v", vertex="1", x="wide")), "not a number"),
+    ],
+    ids=["junk", "empty", "other-xml", "bad-base64", "bad-xml", "bomb", "bad-geometry"],
+)
+def test_malformed_input_is_a_value_error(monkeypatch, data, message):
+    monkeypatch.setattr(drawio, "MAX_PAGE_BYTES", 1000)
+    with pytest.raises(ValueError, match=message):
+        drawio.pages(data, RULES)

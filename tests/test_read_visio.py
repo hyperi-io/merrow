@@ -1,6 +1,8 @@
 import io
 import zipfile
 
+import pytest
+
 from merrow.read import visio
 
 V = 'xmlns="http://schemas.microsoft.com/office/visio/2012/main"'
@@ -81,3 +83,42 @@ def test_a_visio_page_reads_into_a_graph():
         "a numbered marker is no label"
     )
     assert graph.problems() == []
+
+
+def zipped(parts: dict[str, str]) -> bytes:
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as package:
+        for name, body in parts.items():
+            package.writestr(name, body)
+    return out.getvalue()
+
+
+DOCUMENT = {"visio/document.xml": f"<VisioDocument {V}/>"}
+PAGES = f'<Pages {V} {R}><Page NameU="P"><Rel r:id="rId1"/></Page></Pages>'
+
+
+@pytest.mark.parametrize(
+    ("data", "message"),
+    [
+        (b"junk", "not a Visio package"),
+        (b"", "not a Visio package"),
+        (zipped({"readme.txt": "x"}), "no part"),
+        (zipped({"visio/document.xml": "<VisioDocument"}), "not XML"),
+        (zipped({**DOCUMENT, "visio/pages/pages.xml": "<Pages"}), "not XML"),
+        (
+            zipped(
+                {
+                    **DOCUMENT,
+                    "visio/pages/pages.xml": PAGES,
+                    "visio/pages/_rels/pages.xml.rels": f'<Relationships xmlns="{RELS}">'
+                    '<Relationship Id="rId1" Target="gone.xml"/></Relationships>',
+                }
+            ),
+            "no part",
+        ),
+    ],
+    ids=["junk", "empty", "no-document", "bad-document", "bad-pages", "missing-page"],
+)
+def test_malformed_packages_are_a_value_error(data, message):
+    with pytest.raises(ValueError, match=message):
+        visio.pages(data, RULES)

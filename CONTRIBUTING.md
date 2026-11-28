@@ -8,13 +8,7 @@ Two audiences, two paths.
 repo-local git hooks.** Standard tooling is enough.
 
 1. Fork the repository, clone your fork, create a topic branch.
-2. Make your change. Run the project's tests with whatever the
-   language ecosystem provides (`pytest`, `cargo test`,
-   `npm test`, `go test ./...`). Lint via the standard tools
-   the project declares in its manifest (`ruff`, `clippy`,
-   `eslint`, `golangci-lint`, etc.). The project's pyproject /
-   Cargo.toml / package.json has the lint config, and your IDE
-   picks it up without further setup.
+2. Make your change. Run `uv run pytest -n 2`, `uv run ruff check` and `uv run ty check`. The render tests need playwright's headless shell, which `merrow tools ensure` installs. The maintainers' full gate is `hyperi-ci check`, which also runs semgrep and the docs checks.
 3. Commit with whatever message format your workflow uses.
    Open a PR against `main`.
 
@@ -113,4 +107,4 @@ merrow is a CLI that turns a diagram file or hand-written Mermaid into Mermaid i
 
 ### Where this sits
 
-merrow depends on scalo-py (config, logging, HTTP) and on hyperi-ci for its CI. Reference repos are read by merrow as config layers and depend on its profile and object formats. Nothing else depends on merrow yet.
+merrow depends on scalo-py (config, logging, HTTP) and on hyperi-ci for its CI. Reference repos are read by merrow as config layers and depend on its profile and object formats. A product docs repo pins a release for its diagram generator, and hyperi-ai pins `merrow[all]`, so a change reaches them only through a release.

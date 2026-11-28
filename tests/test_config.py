@@ -1,5 +1,8 @@
 import json
+import os
+import subprocess
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 import pytest
@@ -24,7 +27,7 @@ def config_get(monkeypatch, repos):
 def test_version_and_default_config_boot(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert "0.1.0" in runner.invoke(app, ["--version"]).output
+    assert version("merrow") in runner.invoke(app, ["--version"]).output
     result = runner.invoke(app, ["config", "get"])
     assert result.exit_code == 0
     assert json.loads(result.output)["references"] == []
@@ -54,6 +57,40 @@ def test_later_reference_layer_wins_whatever_the_repo_names(
     assert settings["reference_file"] == "merrow.yaml"
 
 
+@pytest.mark.parametrize(
+    ("repo_profile", "env", "expected"),
+    [
+        (None, None, "aws"),
+        ("house", None, "aws"),
+        (None, "house", "house"),
+    ],
+    ids=["over-packaged", "over-reference-repo", "env-over-settings"],
+)
+def test_settings_yaml_sits_above_the_base_and_references(
+    tmp_path, repo_profile, env, expected
+):
+    # scalo finds settings.yaml when it is imported, so this runs in a fresh process.
+    (tmp_path / "settings.yaml").write_text("profile: aws\n", encoding="utf-8")
+    environ = {k: v for k, v in os.environ.items() if not k.startswith("MERROW_")}
+    if repo_profile:
+        repo = write_repo(tmp_path, "acme", f"profile: {repo_profile}\n")
+        environ["MERROW_REFERENCES"] = json.dumps([str(repo)])
+    if env:
+        environ["MERROW_PROFILE"] = env
+    probe = "from merrow import config; print(config.load().get('profile'))"
+    shown = subprocess.run(  # noqa: S603 -- a fixed argv of this interpreter
+        [sys.executable, "-c", probe],
+        cwd=tmp_path,
+        env=environ,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=True,
+    )
+    assert shown.stdout.strip() == expected
+
+
 def test_listed_repo_without_data_file_fails(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     empty = tmp_path / "no-data"
@@ -76,6 +113,26 @@ def test_the_installed_command_prints_a_missing_repo_as_one_line(
         capsys.readouterr().err
         == f"merrow: reference repo {tmp_path / 'gone'} has no merrow.yaml\n"
     )
+
+
+@pytest.mark.parametrize(
+    ("argv", "said"),
+    [
+        (["diagram", "apply", "."], "Is a directory"),
+        (["diagram", "lint", "--no-render", "gone.mmd"], "gone.mmd"),
+    ],
+    ids=["directory", "missing_file"],
+)
+def test_a_bad_path_is_one_line_and_exit_2(monkeypatch, tmp_path, capsys, argv, said):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["merrow", *argv])
+    with pytest.raises(SystemExit) as stopped:
+        run()
+    assert stopped.value.code == 2
+    err = capsys.readouterr().err
+    assert err.startswith("merrow: ")
+    assert said in err
+    assert "Traceback" not in err
 
 
 @pytest.mark.parametrize(

@@ -14,6 +14,12 @@ project:
   status: experimental
 quality:
   enabled: true
+  dep_licenses:
+    overrides:
+      - name: pypdfium2
+        version: "5.15.2"
+        licence: BSD-3-Clause AND Apache-2.0
+        reason: "Q53 A: the wheel ships PDFium (BSD-3-Clause) with Apache-2.0 bindings, and its metadata lists both"
 test:
   enabled: true
   python:

@@ -1,5 +1,7 @@
 import dataclasses
 import io
+import re
+import xml.etree.ElementTree as ET
 import zipfile
 
 import pytest
@@ -135,3 +137,30 @@ def test_build_fails_loudly(tmp_path, limits, decks, title, max_bytes, error, me
             groups_source(decks, title),
             dataclasses.replace(limits, deck_bytes=max_bytes),
         )
+
+
+def test_a_slide_with_no_layout_is_a_lookup_error():
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as package:
+        package.writestr(
+            "ppt/slides/slide1.xml",
+            f"<p:sld {A} {P}><a:t>Groups 1/1</a:t></p:sld>",
+        )
+    with zipfile.ZipFile(out) as deck, pytest.raises(LookupError, match="slideLayouts"):
+        pptx.deck_groups(deck, re.compile("^Groups"), 40)
+
+
+@pytest.mark.parametrize(
+    ("fill", "colour"),
+    [
+        ('<a:srgbClr val="FF9900"/>', "#FF9900"),
+        ('<a:srgbClr val="x&#10;y"/>', None),
+        ("<a:srgbClr/>", None),
+        ('<a:schemeClr val="accent1"/>', "#112233"),
+        ('<a:schemeClr val="phClr"/>', None),
+    ],
+    ids=["rgb", "injected", "no-val", "theme-slot", "unknown-slot"],
+)
+def test_a_group_colour_is_six_hex_digits_or_nothing(fill, colour):
+    line = ET.fromstring(f"<a:ln {A}><a:solidFill>{fill}</a:solidFill></a:ln>")
+    assert pptx._colour(line, {"accent1": "112233"}) == colour

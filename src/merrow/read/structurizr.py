@@ -17,32 +17,57 @@ from merrow.read import Drawing
 _CHILDREN = {"softwareSystems": "containers", "containers": "components"}
 
 
+def _list(value: object, what: str) -> list[Mapping[str, Any]]:
+    """Return `value` as a list of JSON objects, each with an id for an element."""
+    if not isinstance(value, list) or not all(isinstance(v, dict) for v in value):
+        raise ValueError(
+            f"not a Structurizr workspace: {what} is not a list of objects"
+        )
+    return value
+
+
 def _walk(
     elements: list[Mapping[str, Any]], kind: str, parent: str | None
 ) -> Iterator[tuple[str, Mapping[str, Any], str | None]]:
     for element in elements:
+        if "id" not in element:
+            raise ValueError(f"not a Structurizr workspace: a {kind} has no id")
         yield kind, element, parent
         child_kind = _CHILDREN.get(kind)
         if child_kind and element.get(child_kind):
-            yield from _walk(element[child_kind], child_kind, str(element["id"]))
+            children = _list(
+                element[child_kind], f"{kind} {element['id']} {child_kind}"
+            )
+            yield from _walk(children, child_kind, str(element["id"]))
 
 
 def read(data: bytes, rules: Mapping[str, object]) -> Drawing:
     """Return a workspace's model as a Graph. `rules` holds `readers.structurizr`.
 
     Raises:
-        json.JSONDecodeError: The bytes aren't JSON.
-        KeyError: The JSON has no `model`.
+        ValueError: The bytes aren't a Structurizr workspace: bad JSON, no `model`
+            object, or an element or relationship of the wrong shape.
     """
-    workspace = json.loads(data)
-    model = workspace["model"]
+    try:
+        workspace = json.loads(data)
+    except ValueError as error:
+        raise ValueError(
+            f"not a Structurizr workspace, the JSON is bad: {error}"
+        ) from error
+    model = workspace.get("model") if isinstance(workspace, dict) else None
+    if not isinstance(model, dict):
+        raise ValueError("not a Structurizr workspace: no `model` object")
     optional = {
         t.strip() for t in str(rules.get("optional_tags", "")).split(",") if t.strip()
     }
     drawing = Drawing(str(workspace.get("name") or "workspace"), Graph())
     found = [
-        *_walk(model.get("people", []), "people", None),
-        *_walk(model.get("softwareSystems", []), "softwareSystems", None),
+        *_walk(_list(model.get("people", []), "people"), "people", None),
+        *_walk(
+            _list(model.get("softwareSystems", []), "softwareSystems"),
+            "softwareSystems",
+            None,
+        ),
     ]
     for kind, element, parent in found:
         element_id = str(element["id"])
@@ -60,7 +85,7 @@ def read(data: bytes, rules: Mapping[str, object]) -> Drawing:
             )
     known = {n.id for n in drawing.graph.nodes} | {g.id for g in drawing.graph.groups}
     for _, element, _ in found:
-        for relation in element.get("relationships", []):
+        for relation in _list(element.get("relationships", []), "relationships"):
             source, target = (
                 str(relation.get("sourceId")),
                 str(relation.get("destinationId")),

@@ -48,10 +48,13 @@ class _Rules:
     @classmethod
     def of(cls, rules: Mapping[str, object]) -> _Rules:
         def num(key: str) -> float:
-            return float(str(rules[key]))
+            try:
+                return float(str(rules[key]))
+            except (KeyError, ValueError) as error:
+                raise ValueError(f"readers.pdf.{key} must be a number") from error
 
         def pair(key: str) -> tuple[float, float]:
-            value = rules[key]
+            value = rules.get(key)
             if not isinstance(value, list | tuple) or len(value) != 2:
                 raise ValueError(f"readers.pdf.{key} must be [smallest, largest]")
             return float(value[0]), float(value[1])
@@ -599,16 +602,13 @@ def _page(number: int, page: pdfium.PdfPage, rules: _Rules) -> Drawing:
         nodes[f"i{index}"] = (icon, label, subtitle)
         reach[f"i{index}"] = _box([icon[:2], icon[2:], block.box[:2], block.box[2:]])
 
+    holder = {id(b): _innermost(_centre(b.box), boxes) for b in blocks}
     groups: dict[str, tuple[Box, str]] = {}
     for index, box in enumerate(boxes):
         held = [n for n, (b, _, _) in nodes.items() if _within(_centre(b), box)]
         held += [g for g, (b, _) in groups.items() if _within(_centre(b), box)]
         inside = sorted(
-            (
-                b
-                for b in blocks
-                if not b.taken and _innermost(_centre(b.box), boxes) == box
-            ),
+            (b for b in blocks if not b.taken and holder[id(b)] == box),
             key=lambda b: (b.box[1], b.box[0]),
         )
         where = f"box at {box[0]:.0f},{box[1]:.0f}"
@@ -683,11 +683,14 @@ def pages(data: bytes, rules: Mapping[str, object]) -> list[Drawing]:
     """Return every page of a PDF as a Graph. `rules` holds `readers.pdf`.
 
     Raises:
-        ValueError: The bytes aren't a PDF PDFium can read.
+        ValueError: The bytes aren't a PDF PDFium can read, or a `readers.pdf` rule is
+            missing or not a number.
     """
+    settings = _Rules.of(rules)
     try:
         document = pdfium.PdfDocument(data)
+        return [
+            _page(i, document[i - 1], settings) for i in range(1, len(document) + 1)
+        ]
     except pdfium.PdfiumError as error:
         raise ValueError(f"not a readable PDF: {error}") from error
-    settings = _Rules.of(rules)
-    return [_page(i, document[i - 1], settings) for i in range(1, len(document) + 1)]

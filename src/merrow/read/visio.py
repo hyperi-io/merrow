@@ -7,21 +7,20 @@ snapped to the smallest shape within the configured distance. A shape whose
 bounds hold others is a group. Visio units are inches with y up.
 """
 
+import functools
 import re
 import xml.etree.ElementTree as ET
 from collections.abc import Mapping
 
 from merrow.convert import opc
-from merrow.convert.visio import Stencil, V, _num, _own
+from merrow.convert.visio import R_ID, Stencil, V, num, own_cell
 from merrow.graph import Box, Edge, Graph, Group, Node, nest_by_bounds
 from merrow.read import Drawing, skipper
 
-R_ID = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
-
 
 def _cell(shape: ET.Element, master: ET.Element | None, name: str) -> float:
-    value = _own(shape, name)
-    return _num(value if value is not None else _own(master, name))
+    value = own_cell(shape, name)
+    return num(value if value is not None else own_cell(master, name))
 
 
 def _text(element: ET.Element | None) -> list[str]:
@@ -47,22 +46,24 @@ def pages(data: bytes, rules: Mapping[str, object]) -> list[Drawing]:
     """Return every page of a Visio drawing as a Graph. `rules` holds `readers.visio`.
 
     Raises:
-        zipfile.BadZipFile: The bytes are not a Visio package.
-        KeyError: The package has no `visio/document.xml`.
+        ValueError: The bytes are not a Visio package (not a zip, no
+            `visio/document.xml`, a part that is not XML) or a part is over the size cap.
     """
-    stencil = Stencil(data)
-    index = "visio/pages/pages.xml"
-    if index not in stencil.zip.namelist():
-        return []
-    rels = opc.relationships(stencil.zip, index)
-    found = []
-    for page in opc.xml(stencil.zip, index).iter(f"{V}Page"):
-        rel = page.find(f"{V}Rel")
-        part = rels.get(rel.get(R_ID, "") if rel is not None else "", "")
-        if part:
-            name = page.get("NameU") or page.get("Name") or part
-            found.append(_page(name, stencil, opc.xml(stencil.zip, part), rules))
-    return found
+    with opc.bad_package("Visio"):
+        stencil = Stencil(data)
+        index = "visio/pages/pages.xml"
+        if index not in stencil.zip.namelist():
+            return []
+        rels = opc.relationships(stencil.zip, index)
+        found = []
+        for page in opc.xml(stencil.zip, index).iter(f"{V}Page"):
+            rel = page.find(f"{V}Rel")
+            part = rels.get(rel.get(R_ID, "") if rel is not None else "", "")
+            if part:
+                name = page.get("NameU") or page.get("Name") or part
+                root = opc.xml(stencil.zip, part)
+                found.append(_page(name, stencil, root, rules))
+        return found
 
 
 def _page(
@@ -80,12 +81,16 @@ def _page(
     shapes_root = root.find(f"{V}Shapes")
     shapes = shapes_root.findall(f"{V}Shape") if shapes_root is not None else []
 
+    @functools.cache
+    def master_named(master_id: str) -> tuple[str, ET.Element | None]:
+        name, top, _, _ = stencil.master(master_id)
+        return name, top[0] if top else None
+
     def master_of(shape: ET.Element) -> tuple[str, ET.Element | None]:
         master_id = shape.get("Master")
         if not master_id or master_id not in stencil.masters:
             return "", None
-        name, top, _, _ = stencil.master(master_id)
-        return name, top[0] if top else None
+        return master_named(master_id)
 
     def origin(shape: ET.Element, ox: float, oy: float) -> tuple[float, float]:
         master = master_of(shape)[1]
@@ -113,7 +118,8 @@ def _page(
         shape_id = shape.get("ID", "")
         master_name, master = master_of(shape)
         is_connector = (
-            _own(shape, "BeginX") is not None and _own(shape, "EndX") is not None
+            own_cell(shape, "BeginX") is not None
+            and own_cell(shape, "EndX") is not None
         )
         if is_connector or connector_name.search(master_name):
             connectors[shape_id] = shape
@@ -152,12 +158,12 @@ def _page(
     for connector_id, connector in connectors.items():
         ends = glued.get(connector_id, {})
         start = ends.get("from") or _snap(
-            (_num(_own(connector, "BeginX")), _num(_own(connector, "BeginY"))),
+            (num(own_cell(connector, "BeginX")), num(own_cell(connector, "BeginY"))),
             boxes,
             tolerance,
         )
         finish = ends.get("to") or _snap(
-            (_num(_own(connector, "EndX")), _num(_own(connector, "EndY"))),
+            (num(own_cell(connector, "EndX")), num(own_cell(connector, "EndY"))),
             boxes,
             tolerance,
         )
@@ -167,7 +173,7 @@ def _page(
             )
             continue
         label = " ".join(_text(connector)) or None
-        pattern = int(_num(_own(connector, "LinePattern"), 1))
+        pattern = int(num(own_cell(connector, "LinePattern"), 1))
         drawing.graph.edges.append(
             Edge(str(start), str(finish), label, pattern in optional_patterns)
         )

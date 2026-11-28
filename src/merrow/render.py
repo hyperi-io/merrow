@@ -11,13 +11,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from merrow import browser, bundle, config, post
+from merrow import MerrowError, browser, bundle, config, post
 
 _ICONIFY_ID = re.compile(r"IconifyId[0-9a-f]+")
 _PATH_DATA = re.compile(r'( d=")([^"]*)(")')
 _LONG_DECIMAL = re.compile(r"(-?\d+\.\d{2})\d+")
 
 FENCE = re.compile(r"^```mermaid[^\n]*\n(.*?)^```", re.MULTILINE | re.DOTALL)
+MARKDOWN = (".md", ".markdown", ".mdx")
+
+
+def is_markdown(path: Path) -> bool:
+    """Return whether `path` is a Markdown page, whose diagrams sit in fences."""
+    return path.suffix.lower() in MARKDOWN
+
 
 # Runs in the page with [source, id, Mermaid config, background colour]. Mermaid's
 # HTML labels are not valid XML, so the SVG is parsed as HTML and written as XML.
@@ -36,7 +43,7 @@ _PACKS = (
 )
 
 
-class RenderError(RuntimeError):
+class RenderError(MerrowError):
     """Mermaid failed on a diagram."""
 
 
@@ -56,7 +63,7 @@ class Diagram:
 def diagrams(path: Path) -> Iterator[Diagram]:
     """Yield the diagrams in a `.mmd` file, or each `mermaid` fence in Markdown."""
     text = path.read_text(encoding="utf-8")
-    if path.suffix != ".md":
+    if not is_markdown(path):
         yield Diagram(path.stem, text)
         return
     for number, fence in enumerate(FENCE.finditer(text), 1):
@@ -117,6 +124,7 @@ def render(
         shown = browser.launch(driver, settings)
         try:
             page = shown.new_page()
+            browser.offline(page)
             page.set_content("<!doctype html><body></body>")
             page.add_script_tag(path=str(bundle.path(settings)))
             page.evaluate(_PACKS, icon_packs(packs.values()))

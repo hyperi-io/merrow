@@ -214,7 +214,7 @@ Colour encodes a role, never decoration. Each class means one thing in every dia
 | `ext` | Outside our control, dashed border | `#EEF0F2` | `#6B7280` | `#1F2937` |
 | `group` | Subgraph boundary, no fill, dotted border | none | `#64748B` | site theme |
 
-Copy the lines a diagram uses to the end of the flowchart, byte for byte. A flowchart always includes `default`. A `stateDiagram-v2` takes only the lines it uses and never `default`, which fails to parse there. Never edit a line or add one.
+Copy the lines a diagram uses to the end of the flowchart, byte for byte. A role-palette flowchart always includes `default`. A `stateDiagram-v2` takes only the lines it uses and never `default`, which fails to parse there. Never edit a line or add one.
 
 ```text
     classDef default fill:#F8FAFC,stroke:#64748B,stroke-width:1px,color:#0F172A
@@ -372,7 +372,7 @@ flowchart LR
 - The intro states what the reader takes from the diagram, as a claim the diagram backs. It never announces the diagram: no "This diagram shows" or "Below is".
 - `accTitle` is one line, the title.
 - `accDescr` is one line of plain sentences with no colons.
-- The caption is `Figure N.`, the title, one sentence for any colour or line style the reader could not guess, then the links.
+- The caption is `Figure N.`, the title, then the links.
 - A repo whose formatter rewrites `*...*` emphasis to `_..._`, as prettier does, writes the caption in italics its way. The checker reads both forms.
 - An `Up` or `Down` link to a page's top diagram links the page itself, never its H1 anchor: a docs site turns the H1 into the page title, and the anchor does not exist there.
 

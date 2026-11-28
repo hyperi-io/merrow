@@ -79,6 +79,7 @@ def test_a_pattern_file_validates(realm):
             GOOD + "nodes: [{id: q, label: Kafka, subtitle: pulls, SaaS Kafka}]\n",
             "a comma in an unquoted value",
         ),
+        (GOOD + "pattern: data-path\n", "key 'pattern' is repeated"),
     ],
     ids=[
         "misspelt_key",
@@ -91,6 +92,7 @@ def test_a_pattern_file_validates(realm):
         "not_yaml",
         "bare_question_mark",
         "comma_splits_a_value",
+        "repeated_key",
     ],
 )
 def test_a_bad_file_is_named(realm, text, said):

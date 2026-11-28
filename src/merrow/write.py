@@ -1,7 +1,7 @@
 """Writers from a Graph to Mermaid. Every reader and pattern ends here.
 
 `flowchart` writes structure only: subgraphs for groups, boxes, arrows and
-labels. `house` adds a profile's frontmatter, label form and classes, so no
+labels. `diagram` adds a profile's frontmatter, label form and classes, so no
 colour is named here.
 """
 
@@ -213,6 +213,10 @@ def diagram(
         ValueError: The graph has problems, names an unknown object, or an
             object's class, shape or group style isn't the profile's.
     """
+    # The layout walks parents and edge ends, so a bad graph fails here, not inside it.
+    broken = graph.problems()
+    if broken:
+        raise ValueError("; ".join(broken))
     bound, problems = bind(graph, library)
     styles: dict[str, list[str]] = {}
     labels: dict[str, str] = {}

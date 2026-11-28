@@ -5,6 +5,8 @@ starts with `cluster` is a group, nested as written. An edge whose style is one
 of the configured optional styles is optional.
 """
 
+import contextlib
+import io
 import re
 from collections.abc import Mapping
 
@@ -19,15 +21,36 @@ def _clean(value: object) -> str:
     return text[1:-1] if len(text) > 1 and text[0] == text[-1] == '"' else text
 
 
+def _endpoint(value: object) -> str | None:
+    """Return the node an edge end names, without its `:port`, or None for a subgraph."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if text.startswith('"'):
+        close = text.find('"', 1)
+        return text[1:close] if close > 0 else text[1:]
+    return text.partition(":")[0]
+
+
 def read(data: bytes, rules: Mapping[str, object]) -> list[Drawing]:
     """Return every graph in a DOT file as a Graph. `rules` holds `readers.dot`.
 
     Raises:
-        ValueError: The bytes aren't DOT pydot can parse.
+        ValueError: The bytes aren't UTF-8 DOT that pydot can parse.
     """
-    parsed = pydot.graph_from_dot_data(data.decode("utf-8"))
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError as error:
+        raise ValueError(f"the DOT input is not UTF-8: {error}") from error
+    # pydot prints a parse error to stdout and returns None, so the reason is read from there.
+    printed = io.StringIO()
+    with contextlib.redirect_stdout(printed):
+        parsed = pydot.graph_from_dot_data(text)
     if not parsed:
-        raise ValueError("no graph in the DOT input")
+        lines = [
+            line.strip() for line in printed.getvalue().splitlines() if line.strip()
+        ]
+        raise ValueError(f"not DOT: {lines[-1] if lines else 'no graph in the input'}")
     cluster = str(rules.get("cluster_prefix", "cluster"))
     optional = {
         s.strip() for s in str(rules.get("optional_styles", "")).split(",") if s.strip()
@@ -68,7 +91,11 @@ def _drawing(
             else:
                 visit(sub, group)
         for edge in graph.get_edges():
-            source, target = _clean(edge.get_source()), _clean(edge.get_destination())
+            source = _endpoint(edge.get_source())
+            target = _endpoint(edge.get_destination())
+            if source is None or target is None:
+                drawing.dropped.append("an edge to or from a subgraph")
+                continue
             for end in (source, target):
                 if end not in seen:
                     seen.add(end)

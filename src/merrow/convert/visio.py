@@ -17,7 +17,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path, PurePosixPath
 
 from merrow import archive, naming
-from merrow.convert import opc
+from merrow.convert import opc, svg
 from merrow.model import Built, Limits, Source, tally
 
 V = "{http://schemas.microsoft.com/office/visio/2012/main}"
@@ -28,6 +28,8 @@ PATTERN_DASH = {2: (4, 3), 3: (1, 2), 4: (4, 2, 1, 2), 9: (8, 4), 10: (2, 2)}
 DEFAULT_LINE = "#000000"
 DEFAULT_FILL = "#FFFFFF"
 POINTS_PER_INCH = 72
+# Visio's own cap on a NURBS curve's degree.
+MAX_DEGREE = 25
 IMAGE_TYPES = {"PNG": "image/png", "JPEG": "image/jpeg", "BMP": "image/bmp"}
 
 type Point = tuple[float, float]
@@ -51,14 +53,15 @@ class Report:
     unrendered_foreign: dict[str, int] = field(default_factory=dict)
 
 
-def _num(value: str | None, default: float = 0.0) -> float:
+def num(value: str | None, default: float = 0.0) -> float:
+    """Return a cell value as a float, or `default` when it is missing or not a number."""
     try:
         return float(value) if value is not None else default
     except ValueError:
         return default
 
 
-def _own(element: ET.Element | None, name: str) -> str | None:
+def own_cell(element: ET.Element | None, name: str) -> str | None:
     """Return a cell's value set on this element itself, not inherited."""
     if element is None:
         return None
@@ -83,15 +86,17 @@ def _style_kind(name: str) -> str:
 class Stencil:
     """One open `.vssx` package: its style sheets and masters."""
 
-    def __init__(self, data: bytes) -> None:
-        """Open a stencil from its bytes.
+    def __init__(self, data: bytes, max_part: int = opc.MAX_PART_BYTES) -> None:
+        """Open a stencil from its bytes, reading no part over `max_part` bytes.
 
         Raises:
             zipfile.BadZipFile: The bytes are not a Visio package.
             KeyError: The package has no `visio/document.xml`.
+            ValueError: A part is over `max_part` bytes.
         """
         self.zip = zipfile.ZipFile(io.BytesIO(data))
-        document = opc.xml(self.zip, "visio/document.xml")
+        self.max_part = max_part
+        document = opc.xml(self.zip, "visio/document.xml", max_part)
         self.styles = {
             sheet.get("ID"): sheet for sheet in document.iter(f"{V}StyleSheet")
         }
@@ -99,7 +104,7 @@ class Stencil:
         if "visio/masters/masters.xml" in self.zip.namelist():
             index = "visio/masters/masters.xml"
             rels = opc.relationships(self.zip, index)
-            for master in opc.xml(self.zip, index).iter(f"{V}Master"):
+            for master in opc.xml(self.zip, index, max_part).iter(f"{V}Master"):
                 rel = master.find(f"{V}Rel")
                 path = rels.get(rel.get(R_ID, "") if rel is not None else "", "")
                 self.masters[master.get("ID", "")] = (master.get("NameU") or "", path)
@@ -109,7 +114,7 @@ class Stencil:
     ) -> tuple[str, list[ET.Element], dict[str, str], str]:
         """Return a master's name, top-level shapes, relationships and part path."""
         name, path = self.masters[master_id]
-        root = opc.xml(self.zip, path)
+        root = opc.xml(self.zip, path, self.max_part)
         shapes = root.find(f"{V}Shapes")
         rels = opc.relationships(self.zip, path)
         return (
@@ -124,7 +129,7 @@ class Stencil:
         sheet = self.styles.get(style_id) if style_id else None
         if sheet is None or depth > 8:
             return None
-        value = _own(sheet, name)
+        value = own_cell(sheet, name)
         if value is not None:
             return value
         parent = sheet.get(_style_kind(name))
@@ -132,7 +137,7 @@ class Stencil:
 
     def cell(self, shape: ET.Element, name: str) -> str | None:
         """Return a shape's cell: its own, else from its style chain."""
-        value = _own(shape, name)
+        value = own_cell(shape, name)
         return (
             value
             if value is not None
@@ -140,8 +145,11 @@ class Stencil:
         )
 
 
+_HEX = re.compile(r"#[0-9A-Fa-f]{6}")
+
+
 def _colour(value: str | None) -> str | None:
-    return value.upper() if value and value.startswith("#") else None
+    return value.upper() if value and _HEX.fullmatch(value) else None
 
 
 def nurbs(
@@ -151,7 +159,9 @@ def nurbs(
     found = re.search(r"NURBS\(([^)]*)\)", formula)
     if not found:
         return [end]
-    values = [_num(v) for v in found.group(1).split(",")]
+    values = [num(v) for v in found.group(1).split(",")]
+    if len(values) < 4 or not 0 <= values[1] <= MAX_DEGREE:
+        return [end]
     knot_last, degree, x_type, y_type = values[0], int(values[1]), values[2], values[3]
     points = [(start[0], start[1], 0.0, 1.0)]
     rest = values[4:]
@@ -241,7 +251,7 @@ def _geometry(
     """Yield each shown Geometry section as (segments, no_fill, no_line), in shape-local inches."""
     w, h = size
     for section in shape.findall(f"{V}Section"):
-        if section.get("N") != "Geometry" or _own(section, "NoShow") == "1":
+        if section.get("N") != "Geometry" or own_cell(section, "NoShow") == "1":
             continue
         segments: list[tuple] = []
         current: Point = (0.0, 0.0)
@@ -249,7 +259,7 @@ def _geometry(
             kind = row.get("T", "")
 
             def g(name: str, row: ET.Element = row) -> float:
-                return _num(_own(row, name))
+                return num(own_cell(row, name))
 
             match kind:
                 case "MoveTo" | "LineTo":
@@ -311,8 +321,10 @@ def _geometry(
                     current = end
                 case "PolylineTo":
                     found = re.search(r"POLYLINE\(([^)]*)\)", _formula(row, "A"))
-                    if found:
-                        values = [_num(v) for v in found.group(1).split(",")]
+                    values = (
+                        [num(v) for v in found.group(1).split(",")] if found else []
+                    )
+                    if len(values) >= 2:
                         x_type, y_type, rest = values[0], values[1], values[2:]
                         for i in range(0, len(rest) - 1, 2):
                             x = rest[i] * w if x_type == 0 else rest[i]
@@ -325,14 +337,14 @@ def _geometry(
         if segments:
             yield (
                 segments,
-                _own(section, "NoFill") == "1",
-                _own(section, "NoLine") == "1",
+                own_cell(section, "NoFill") == "1",
+                own_cell(section, "NoLine") == "1",
             )
 
 
 def _transform(shape: ET.Element, size: Point) -> Transform:
     def g(name: str) -> float:
-        return _num(_own(shape, name))
+        return num(own_cell(shape, name))
 
     return (
         g("PinX"),
@@ -375,7 +387,7 @@ def _draw(
     out: _Drawing,
 ) -> None:
     """Draw a shape and its group children into `out`, in the master's frame."""
-    size = (_num(_own(shape, "Width")), _num(_own(shape, "Height")))
+    size = (num(own_cell(shape, "Width")), num(own_cell(shape, "Height")))
     transforms = [*chain, _transform(shape, size)]
 
     drawn: list[Point] = []
@@ -388,9 +400,9 @@ def _draw(
 
     line = _colour(stencil.cell(shape, "LineColor")) or DEFAULT_LINE
     fill = _colour(stencil.cell(shape, "FillForegnd")) or DEFAULT_FILL
-    weight = _num(stencil.cell(shape, "LineWeight"), 0.01) * POINTS_PER_INCH
-    pattern = int(_num(stencil.cell(shape, "LinePattern"), 1))
-    fill_pattern = int(_num(stencil.cell(shape, "FillPattern"), 1))
+    weight = num(stencil.cell(shape, "LineWeight"), 0.01) * POINTS_PER_INCH
+    pattern = int(num(stencil.cell(shape, "LinePattern"), 1))
+    fill_pattern = int(num(stencil.cell(shape, "FillPattern"), 1))
     # Visio fills a shape's overlapping sections even-odd, so one path per paint.
     paints: dict[str, list[str]] = {}
     for segments, no_fill, no_line in _geometry(
@@ -462,7 +474,7 @@ def _draw_foreign(
     if not (target and mime):
         tally(report.unrendered_foreign, kind)
         return
-    data = base64.b64encode(stencil.zip.read(target)).decode()
+    data = base64.b64encode(opc.read(stencil.zip, target, stencil.max_part)).decode()
     (x0, y0), (x1, y1) = place((0.0, 0.0)), place(size)
     out.points.extend([(x0, y0), (x1, y1)])
     left, bottom, width, height = min(x0, x1), min(y0, y1), abs(x1 - x0), abs(y1 - y0)
@@ -472,14 +484,20 @@ def _draw_foreign(
     )
 
 
-def icon(drawing: _Drawing, padding: float) -> dict[str, object]:
-    """Return the Iconify entry for a drawing: flipped to y down, padded, sized to its bounds."""
+def icon(drawing: _Drawing, padding: float, key: str) -> dict[str, object]:
+    """Return the Iconify entry for a drawing: flipped to y down, padded, sized to its bounds.
+
+    The body goes through the SVG converter's `clean`, so a pack body is only ever
+    allowlisted markup whatever a stencil's cells held.
+    """
     xs = [p[0] for p in drawing.points]
     ys = [p[1] for p in drawing.points]
     x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
     width, height = (x1 - x0) + 2 * padding, (y1 - y0) + 2 * padding
     body = f'<g transform="translate({padding - x0:.4f} {y1 + padding:.4f}) scale(1 -1)">{"".join(drawing.elements)}</g>'
-    return {"body": body, "width": round(width, 4), "height": round(height, 4)}
+    box = f'viewBox="0 0 {round(width, 4)} {round(height, 4)}"'
+    cleaned, _ = svg.clean(f'<svg xmlns="{svg.SVG}" {box}>{body}</svg>'.encode(), key)
+    return cleaned
 
 
 def stencil_icons(
@@ -490,13 +508,13 @@ def stencil_icons(
     padding: float,
     icons: dict[str, object],
     report: Report,
+    max_part: int = opc.MAX_PART_BYTES,
 ) -> None:
     """Add every master in one stencil to `icons`, recording what was dropped."""
-    stencil = Stencil(data)
+    stencil = Stencil(data, max_part)
     report.stencils += 1
-    for master_id in stencil.masters:
+    for master_id, (master_name, _) in stencil.masters.items():
         report.masters += 1
-        master_name, shapes, rels, part = stencil.master(master_id)
         key = naming.key_for(f"{name}/{master_name}", rules)
         if not isinstance(key, str):
             continue
@@ -505,10 +523,13 @@ def stencil_icons(
             continue
         unrendered_before = sum(report.unrendered_foreign.values())
         try:
+            _, shapes, rels, part = stencil.master(master_id)
             drawing = _Drawing()
             for shape in shapes:
                 _draw(stencil, shape, [], rels, part, steps, report, drawing)
-        except (KeyError, ValueError, ET.ParseError) as error:
+            if drawing.points:
+                built = icon(drawing, padding, key)
+        except (KeyError, ValueError, ET.ParseError, RecursionError) as error:
             report.failed.append(f"{name}/{master_name}: {error!r}")
             continue
         if not drawing.points:
@@ -516,7 +537,7 @@ def stencil_icons(
             continue
         if sum(report.unrendered_foreign.values()) > unrendered_before:
             report.partial.append(f"{name}/{master_name}")
-        icons[key] = icon(drawing, padding)
+        icons[key] = built
 
 
 def build(download: Path, source: Source, limits: Limits) -> Built:
@@ -534,8 +555,9 @@ def build(download: Path, source: Source, limits: Limits) -> Built:
     icons: dict[str, object] = {}
     report = Report()
     if files.search(download.name) and zipfile.is_zipfile(download):
+        small = download.stat().st_size <= limits.deck_bytes
         stencils: Iterator[archive.Member] = iter(
-            [archive.Member(download.name, download.read_bytes())]
+            [archive.Member(download.name, download.read_bytes() if small else None)]
         )
     else:
         stencils = archive.members(download, files, limits.deck_bytes, limits.ignore)
@@ -545,8 +567,17 @@ def build(download: Path, source: Source, limits: Limits) -> Built:
             report.failed.append(f"{member.path}: over {limits.deck_bytes} bytes")
             continue
         try:
-            stencil_icons(stem, member.data, rules, steps, padding, icons, report)
-        except (zipfile.BadZipFile, KeyError, ET.ParseError) as error:
+            stencil_icons(
+                stem,
+                member.data,
+                rules,
+                steps,
+                padding,
+                icons,
+                report,
+                limits.member_bytes,
+            )
+        except (zipfile.BadZipFile, KeyError, ValueError, ET.ParseError) as error:
             report.failed.append(f"{member.path}: {error!r}")
     report.icons = len(icons)
     return Built(

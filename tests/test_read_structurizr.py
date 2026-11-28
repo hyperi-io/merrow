@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from merrow import write
 from merrow.read import structurizr
 
@@ -77,3 +79,23 @@ def test_a_workspace_reads_with_systems_and_containers_as_groups():
     assert any("r9" in d for d in drawing.dropped)
     assert graph.problems() == []
     assert "Loader" in write.flowchart(graph, "LR")
+
+
+@pytest.mark.parametrize(
+    ("data", "message"),
+    [
+        (b"junk", "JSON is bad"),
+        (b"[]", "no `model` object"),
+        (b"{}", "no `model` object"),
+        (b'{"model": {"people": {}}}', "people is not a list of objects"),
+        (b'{"model": {"people": [{"name": "x"}]}}', "a people has no id"),
+        (
+            b'{"model": {"people": [{"id": "1", "relationships": "r"}]}}',
+            "relationships is not a list",
+        ),
+    ],
+    ids=["junk", "list", "no-model", "people-dict", "no-id", "relationships-text"],
+)
+def test_malformed_workspaces_are_a_value_error(data, message):
+    with pytest.raises(ValueError, match=message):
+        structurizr.read(data, RULES)

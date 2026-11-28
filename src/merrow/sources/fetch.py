@@ -6,36 +6,49 @@ import tempfile
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlparse
 
-from scalo.http import HttpClient
+import httpx
+import stamina
+from scalo.crypto import CryptoProfile, ssl_context
 from scalo.logger import logger
 
+from merrow import MerrowError
 from merrow.model import Limits
 from merrow.sources.lock import Pin
 
 
-class DownloadError(RuntimeError):
+class DownloadError(MerrowError):
     """A download failed, was too large, or didn't match its pin."""
 
 
+@stamina.retry(on=httpx.TransportError, attempts=3)
 def download(url: str, limits: Limits) -> bytes:
-    """Return the body at `url`.
-
-    SHORTCUT: the body is held in memory. Stream it once a source passes a few
-    hundred MB, which `limits.download_bytes` bounds until then.
+    """Return the body at `url`, read in chunks and stopped past `limits.download_bytes`.
 
     Raises:
-        DownloadError: The body is over `limits.download_bytes`.
+        DownloadError: The server refused it, or the body is over `limits.download_bytes`.
     """
+    cap = limits.download_bytes
     # Publisher downloads redirect routinely (GitHub archives to codeload). No
     # credentials are sent, so following one leaks nothing.
-    with HttpClient(
-        timeout=limits.download_timeout_seconds, follow_redirects=True
-    ) as client:
-        response = client.get(url)
-    size = len(response.content)
-    if size > limits.download_bytes:
-        raise DownloadError(f"{url} is {size} bytes, over {limits.download_bytes}")
-    return response.content
+    with (
+        httpx.Client(
+            verify=ssl_context(CryptoProfile.PROD),
+            timeout=limits.download_timeout_seconds,
+            follow_redirects=True,
+        ) as client,
+        client.stream("GET", url) as response,
+    ):
+        if response.is_error:
+            raise DownloadError(f"{url}: HTTP {response.status_code}")
+        declared = int(response.headers.get("content-length") or 0)
+        if declared > cap:
+            raise DownloadError(f"{url} is {declared} bytes, over {cap}")
+        body = bytearray()
+        for chunk in response.iter_bytes():
+            body += chunk
+            if len(body) > cap:
+                raise DownloadError(f"{url} is over {cap} bytes")
+    return bytes(body)
 
 
 def cache_path(cache_dir: Path, source: str, pin: Pin) -> Path:

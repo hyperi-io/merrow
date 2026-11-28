@@ -4,6 +4,7 @@ A Graph says what is connected to what and what sits inside what. It carries no
 style and no layout: a profile's writer turns it into Mermaid.
 """
 
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -85,7 +86,8 @@ class Graph:
         node_ids = [n.id for n in self.nodes]
         group_ids = [g.id for g in self.groups]
         everything = node_ids + group_ids
-        for duplicate in sorted({i for i in everything if everything.count(i) > 1}):
+        counts = Counter(everything)
+        for duplicate in sorted(i for i, n in counts.items() if n > 1):
             found.append(f"id {duplicate!r} is used more than once")
         known = set(everything)
         groups = set(group_ids)

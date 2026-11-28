@@ -366,6 +366,23 @@ def _required(name: str, entry: Mapping[str, Any]) -> None:
             found = found[key]
 
 
+def _check_layout(name: str, entry: Mapping[str, Any]) -> None:
+    """Check the layout numbers are usable and `default_class` is one of `classes`.
+
+    Raises:
+        ProfileError: `max_ranks` is under 1, `stack_after` under 0, or the default class is unknown.
+    """
+    layout = entry["layout"]
+    if int(layout["max_ranks"]) < 1:
+        raise ProfileError(f"profile {name}: layout.max_ranks must be 1 or more")
+    if int(layout.get("stack_after", 0)) < 0:
+        raise ProfileError(f"profile {name}: layout.stack_after can't be negative")
+    if str(entry["default_class"]) not in entry["classes"]:
+        raise ProfileError(
+            f"profile {name}: default_class {entry['default_class']} isn't one of its classes"
+        )
+
+
 def load(
     settings: Any,
     name: str | None = None,
@@ -411,7 +428,11 @@ def load(
             each = {**scope, "class.name": class_name, "class.icon": icon}
             icon_lines.append(resolve(entry["icon_css"], each))
     scope["profile.icon_css"] = "\n".join(icon_lines)
-    facts = _icon_facts(settings, entry.get("icon_packs") or [])
+    _check_layout(name, entry)
+    packs = entry.get("icon_packs") or []
+    facts = _icon_facts(
+        settings, [packs] if isinstance(packs, str) and packs != "all" else packs
+    )
     fills = frozenset(fill for _, fill in facts.values())
     return Profile(
         name,

@@ -3,7 +3,7 @@
 A source is pure config: where its download comes from, how a new release is
 detected, which converter reads it and that converter's options. A converter is
 one function per format with the `Converter` signature, registered by format
-name, so a new vendor in a known format needs config and no code.
+name, so a new publisher in a known format needs config and no code.
 """
 
 import re
@@ -15,7 +15,7 @@ from typing import Any
 
 @dataclass(frozen=True, slots=True)
 class Source:
-    """One vendor source, from the `sources` config.
+    """One publisher source, from the `sources` config.
 
     Attributes:
         id: The key under `sources`.

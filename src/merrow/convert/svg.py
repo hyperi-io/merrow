@@ -1,10 +1,10 @@
-"""Vendor SVG icon sets to an Iconify JSON pack for Mermaid's `registerIconPacks`.
+"""Publisher SVG icon sets to an Iconify JSON pack for Mermaid's `registerIconPacks`.
 
-Per icon: drop editor metadata, foreign namespaces and anything that runs script
-(scripts, `on*` handlers, links off the icon), inline simple CSS class
-rules (a pack puts many icons on one page, so a shared `.st1` would recolour its
-neighbours), and prefix every id so gradients and clip paths can't collide. The
-artwork is never changed. Which file becomes which icon key is the source's
+Per icon: keep only allowlisted SVG shape, paint, gradient, clip, mask, filter and
+text elements and attributes, so a pack body is safe to paste into a page. Simple CSS
+class rules are inlined (a pack puts many icons on one page, so a shared `.st1`
+would recolour its neighbours) and every id is prefixed so gradients and clip paths
+can't collide. The artwork is never changed. Which file becomes which icon key is the source's
 `names` rules, never code.
 """
 
@@ -22,10 +22,50 @@ SVG = "http://www.w3.org/2000/svg"
 XLINK = "http://www.w3.org/1999/xlink"
 ET.register_namespace("", SVG)
 ET.register_namespace("xlink", XLINK)
-_DROP_TAGS = {"title", "desc", "metadata", "style"}
-# Render pastes group icons into the page without Mermaid's sanitiser.
-_UNSAFE_TAGS = {"script", "foreignObject"}
-_SAFE_HREF = re.compile(r"#|data:image/(png|jpeg|gif|webp)[;,]")
+# Render pastes group icons into the page without Mermaid's sanitiser, so only these
+# elements and attributes survive `clean`. Anything else is dropped with its subtree.
+_ELEMENTS = frozenset(
+    "svg g defs symbol use switch path rect circle ellipse line polyline polygon "
+    "text tspan textPath image linearGradient radialGradient stop pattern clipPath "
+    "mask marker filter feBlend feColorMatrix feComponentTransfer feComposite "
+    "feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight "
+    "feDropShadow feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feMerge "
+    "feMergeNode feMorphology feOffset fePointLight feSpecularLighting "
+    "feSpotLight feTile feTurbulence".split()
+)
+_ATTRIBUTES = frozenset(
+    "id style transform d x y x1 x2 y1 y2 cx cy r rx ry fx fy fr width height points "
+    "viewBox preserveAspectRatio offset gradientUnits gradientTransform spreadMethod "
+    "patternUnits patternContentUnits patternTransform clipPathUnits maskUnits "
+    "maskContentUnits filterUnits primitiveUnits markerUnits markerWidth "
+    "markerHeight refX refY orient dx dy rotate textLength lengthAdjust startOffset "
+    "fill fill-opacity fill-rule stroke stroke-width stroke-opacity stroke-linecap "
+    "stroke-linejoin stroke-miterlimit stroke-dasharray stroke-dashoffset opacity "
+    "color clip-path clip-rule mask filter marker-start marker-mid marker-end display "
+    "visibility overflow stop-color stop-opacity flood-color flood-opacity "
+    "lighting-color font-family font-size font-style font-weight font-variant "
+    "font-stretch text-anchor text-decoration letter-spacing word-spacing "
+    "dominant-baseline alignment-baseline baseline-shift writing-mode direction "
+    "mix-blend-mode isolation shape-rendering text-rendering image-rendering "
+    "color-interpolation color-interpolation-filters vector-effect paint-order "
+    "in in2 result mode operator type values k1 k2 k3 k4 stdDeviation tableValues "
+    "slope intercept amplitude exponent order kernelMatrix divisor bias targetX "
+    "targetY edgeMode scale xChannelSelector yChannelSelector baseFrequency "
+    "numOctaves seed stitchTiles radius surfaceScale diffuseConstant "
+    "specularConstant specularExponent azimuth elevation z pointsAtX pointsAtY "
+    "pointsAtZ limitingConeAngle href font line-height text-align text-indent "
+    "text-transform text-decoration-line text-decoration-style "
+    "text-decoration-color marker pointer-events white-space enable-background".split()
+)
+# Elements that run script, retarget an attribute to one or load a resource, which `clean` reports.
+_ACTIVE_TAGS = frozenset(
+    "script foreignObject set animate animateMotion animateTransform "
+    "img iframe embed object audio video".split()
+)
+# A link may point at an id in the icon, or inline a raster the browser can show.
+_SAFE_HREF = re.compile(r"#|data:image/(png|jpeg|gif|webp|bmp);base64,")
+_URL = re.compile(r"url\(\s*['\"]?\s*([^)'\"\s]*)", re.IGNORECASE)
+_DANGEROUS = re.compile(r"javascript:|expression\(|@import|\\", re.IGNORECASE)
 # What a root <svg> sets for every shape in it, kept on a wrapping <g>.
 _INHERITED = {
     "fill",
@@ -56,11 +96,14 @@ class Report:
     notes: dict[str, int] = field(default_factory=dict)
 
 
+_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+
+
 def _css_rules(text: str) -> tuple[dict[str, dict[str, str]], bool]:
     """Return `.class` rules from a `<style>` body, and whether any selector was more complex."""
     rules: dict[str, dict[str, str]] = {}
     complex_selector = False
-    for selectors, body in re.findall(r"([^{}]+)\{([^}]*)\}", text):
+    for selectors, body in re.findall(r"([^{}]+)\{([^}]*)\}", _COMMENT.sub("", text)):
         pairs = [part.split(":", 1) for part in body.split(";") if ":" in part]
         declarations = {name.strip(): value.strip() for name, value in pairs}
         for selector in (s.strip() for s in selectors.split(",")):
@@ -81,6 +124,67 @@ def _local_name(tag: object) -> tuple[str, str]:
     return "", tag
 
 
+def _safe_value(value: str) -> bool:
+    """Return whether a value refers to nothing off the icon and holds no script."""
+    return not _DANGEROUS.search(value) and all(
+        ref.startswith("#") for ref in _URL.findall(value)
+    )
+
+
+def _style_attribute(value: str) -> tuple[str, bool]:
+    """Return a `style` value cut to its allowlisted, safe declarations, and whether it held an unsafe one."""
+    kept, unsafe = [], False
+    for declaration in value.split(";"):
+        prop, _, text = declaration.partition(":")
+        prop = prop.strip().lower()
+        if prop.startswith("on") or not _safe_value(text):
+            unsafe = True
+        elif prop in _ATTRIBUTES - {"style", "id", "href"}:
+            kept.append(f"{prop}:{text.strip()}")
+    return ";".join(kept), unsafe
+
+
+def _sanitise(root: ET.Element, css: Mapping[str, Mapping[str, str]]) -> bool:
+    """Cut `root` to allowlisted elements and attributes, inlining `css` class rules.
+
+    Returns whether anything that runs script or reaches off the icon was dropped.
+    """
+    unsafe = False
+    for parent in list(root.iter()):
+        for child in list(parent):
+            namespace, local = _local_name(child.tag)
+            if local == "a":
+                child.tag, local = f"{{{SVG}}}g" if namespace else "g", "g"
+            if namespace not in ("", SVG) or local not in _ELEMENTS:
+                unsafe = unsafe or local in _ACTIVE_TAGS
+                parent.remove(child)
+    for element in root.iter():
+        # Inlined first, so a CSS declaration passes the same checks as an attribute.
+        for name in (element.attrib.pop("class", None) or "").split():
+            for prop, value in css.get(name, {}).items():
+                element.set(prop, value)
+        image = _local_name(element.tag)[1] == "image"
+        for attribute, value in list(element.attrib.items()):
+            namespace, local = _local_name(attribute)
+            keep = local in _ATTRIBUTES and namespace in ("", XLINK)
+            keep = keep and (local == "href" or not namespace)
+            if local == "style" and keep:
+                value, bad = _style_attribute(value)
+                element.set(attribute, value)
+                keep = keep and bool(value)
+            elif local == "href":
+                link = value.strip()
+                bad = not (_SAFE_HREF.match(link) and (image or link.startswith("#")))
+                keep = keep and not bad
+            else:
+                bad = local.lower().startswith(("on", "src")) or not _safe_value(value)
+                keep = keep and not bad
+            unsafe = unsafe or bad
+            if not keep:
+                del element.attrib[attribute]
+    return unsafe
+
+
 def clean(
     svg: bytes, key: str, fill: str | None = None
 ) -> tuple[dict[str, object], list[str]]:
@@ -91,6 +195,7 @@ def clean(
 
     Raises:
         xml.etree.ElementTree.ParseError: The file isn't well-formed XML.
+        ValueError: The file's size is missing, zero or not a number.
     """
     notes = []
     root = ET.fromstring(svg)  # noqa: S314 -- expat refuses entity expansion attacks
@@ -101,30 +206,7 @@ def clean(
         if complex_selector:
             notes.append("complex-css")
 
-    unsafe = False
-    for parent in list(root.iter()):
-        for child in list(parent):
-            namespace, local = _local_name(child.tag)
-            unsafe = unsafe or local in _UNSAFE_TAGS
-            if local in _DROP_TAGS | _UNSAFE_TAGS or (namespace and namespace != SVG):
-                parent.remove(child)
-    for element in root.iter():
-        # Inlined first, so a CSS declaration passes the same checks as an attribute.
-        for name in (element.attrib.pop("class", None) or "").split():
-            for prop, value in css.get(name, {}).items():
-                element.set(prop, value)
-        for attribute, value in list(element.attrib.items()):
-            local = _local_name(attribute)[1]
-            runs = local.lower().startswith("on") or (
-                local == "href" and not _SAFE_HREF.match(value.strip())
-            )
-            unsafe = unsafe or runs
-            foreign = attribute.startswith("{") and not attribute.startswith(
-                f"{{{XLINK}}}"
-            )
-            if runs or foreign:
-                del element.attrib[attribute]
-
+    unsafe = _sanitise(root, css)
     if unsafe:
         notes.append("script-dropped")
 
@@ -156,6 +238,8 @@ def clean(
             for side in ("width", "height")
         )
         notes.append("no-viewBox")
+    if width <= 0 or height <= 0:
+        raise ValueError("no size: the file has no viewBox, width or height")
 
     body = "".join(ET.tostring(child, encoding="unicode") for child in root)
     body = re.sub(r"\s+xmlns(:\w+)?=\"[^\"]+\"", "", body)
@@ -229,7 +313,7 @@ def pack(
             icon, cleaned = clean(data, key, fill)
             icons[key] = _squared(icon, size) if size else icon
             notes = [*notes, *cleaned]
-        except (ET.ParseError, ValueError) as error:
+        except (ET.ParseError, ValueError, RecursionError) as error:
             report.failed.append(f"{member.path}: {error}")
             continue
         for note in notes:

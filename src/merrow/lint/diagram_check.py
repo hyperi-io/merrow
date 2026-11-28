@@ -17,7 +17,8 @@ past 2 lines. A state diagram gets the same line checks, less the back-arrow
 limit, and a sequence diagram's autonumber badges are checked against its labels.
 
     python -m merrow.lint.diagram_check FILE... [--no-render] [--png DIR] [--json]
-                                            [--mermaid PATH]
+                                            [--mermaid PATH] [--profile NAME]
+                                            [--destination NAME]
 
 FILE is a Markdown page or a ``.mmd`` file. A page has every ``mermaid`` fence
 checked, apart from fences nested inside another fence, and its ``text`` and
@@ -39,12 +40,13 @@ from typing import Any
 
 from merrow import bundle as pinned
 from merrow import config, destination
-from merrow.browser import launch
+from merrow.browser import launch, offline
 from merrow.destination import Destination
 from merrow.lint import icons
 from merrow.lint.findings import finding, unwaived
 from merrow.objects import by_class_name, library
 from merrow.profile import Profile, ProfileError, load
+from merrow.render import is_markdown
 
 # The standard's Colour section, byte for byte. tests/test_diagram_check.py holds the two in step.
 CLASS_LINES = frozenset(
@@ -92,7 +94,7 @@ _UP = re.compile(r"Up: (?:\[|top of \S|L[0-4] )")
 _LINK_ANCHOR = re.compile(r"\]\(([^)#\s]*)#([^)\s]+)\)")
 # One arrow in a flowchart line: its source id, the arrow and its target id.
 _EDGE = re.compile(
-    r"^\s*([A-Za-z_]\w*)\s*[\[\](){}>]*\s*(?:-->|-\.->|---|-\.-|==>)(?:\|[^|]*\|)?\s*([A-Za-z_]\w*)"
+    r"^\s*([A-Za-z_]\w*)[\s\[\](){}>]*(?:-->|-\.->|---|-\.-|==>)(?:\|[^|]*\|)?\s*([A-Za-z_]\w*)"
 )
 # A line that opens its own markdown block, so a wrapped paragraph never runs into it.
 _BLOCK = ("#", "|", "```", "~~~", "- ", "* ", "> ", "*Figure", "_Figure")
@@ -176,8 +178,8 @@ def page_blocks(path: Path) -> tuple[list[Block], list[str]]:
     A fence closes on a line of its own character alone, at least as long as its
     opener, or at the end of the page.
     """
-    text = path.read_text(encoding="utf-8", errors="replace")
-    if path.suffix not in (".md", ".mdx"):
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
+    if not is_markdown(path):
         return [Block(str(path), text)], []
     lines = text.splitlines()
     blocks: list[Block] = []
@@ -292,9 +294,16 @@ def _paragraph(lines: Sequence[str | None]) -> list[str]:
 
 
 def _h1_slug(text: str) -> str:
-    """The anchor a renderer gives the page's first `# ` heading, or "" where it has none."""
+    """The anchor a renderer gives the page's first `# ` heading outside a fence, or "" where it has none."""
+    opener = ""
     for line in text.splitlines():
-        if line.startswith("# "):
+        if opener:
+            closer = line.strip()
+            if set(closer) == {opener[0]} and len(closer) >= len(opener):
+                opener = ""
+        elif fence := _FENCE.match(line):
+            opener = fence.group(1)
+        elif line.startswith("# "):
             return re.sub(r"[^\w\- ]", "", line[2:].strip().lower()).replace(" ", "-")
     return ""
 
@@ -305,7 +314,7 @@ def _title_anchors(path: Path, caption: str | None) -> list[str]:
     for target, anchor in _LINK_ANCHOR.findall(caption or ""):
         page = (path.parent / target) if target else path
         try:
-            slug = _h1_slug(page.read_text(encoding="utf-8", errors="replace"))
+            slug = _h1_slug(page.read_text(encoding="utf-8-sig", errors="replace"))
         except OSError:
             continue
         if slug and anchor == slug:
@@ -840,9 +849,12 @@ def render(
     from playwright.sync_api import sync_playwright
 
     results: list[dict] = []
+    if not blocks:
+        return results
     with sync_playwright() as driver:
         browser = launch(driver, settings)
         page = browser.new_page(viewport={"width": column + 40, "height": 700})
+        offline(page)
         page.set_content(
             f'<!doctype html><div id="o" style="width:{column}px;padding:16px"></div>'
         )
@@ -923,7 +935,11 @@ def main(argv: list[str] | None = None) -> int:
     blocks: list[Block] = []
     page_level: list[str] = []
     for path in args.files:
-        found, problems = page_blocks(path)
+        try:
+            found, problems = page_blocks(path)
+        except OSError as error:
+            print(f"merrow: {path}: {error.strerror or error}", file=sys.stderr)
+            return 2
         blocks += found
         page_level += problems
     settings = config.load()

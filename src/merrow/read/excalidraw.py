@@ -15,27 +15,49 @@ from merrow.graph import Box, Edge, Graph, Group, Node, nest_by_bounds
 from merrow.read import Drawing, skipper
 
 
+def _number(element: Mapping[str, Any], name: str) -> float:
+    try:
+        return float(element.get(name) or 0)
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            f"element {element.get('id')!r}: {name} is not a number"
+        ) from error
+
+
 def _box(element: Mapping[str, Any]) -> Box:
-    x, y = float(element.get("x", 0)), float(element.get("y", 0))
-    return (
-        x,
-        y,
-        x + float(element.get("width", 0)),
-        y + float(element.get("height", 0)),
-    )
+    x, y = _number(element, "x"), _number(element, "y")
+    return (x, y, x + _number(element, "width"), y + _number(element, "height"))
+
+
+def _elements(data: bytes) -> list[Mapping[str, Any]]:
+    """Return a scene's live elements, each a JSON object with an id."""
+    try:
+        scene = json.loads(data)
+    except ValueError as error:
+        raise ValueError(
+            f"not an Excalidraw scene, the JSON is bad: {error}"
+        ) from error
+    found = scene.get("elements", []) if isinstance(scene, dict) else None
+    if not isinstance(found, list):
+        raise ValueError("not an Excalidraw scene: no `elements` list")
+    for number, element in enumerate(found):
+        if not isinstance(element, dict) or not isinstance(element.get("id"), str):
+            raise ValueError(f"not an Excalidraw scene: element {number} has no id")
+    return [e for e in found if not e.get("isDeleted")]
 
 
 def read(data: bytes, rules: Mapping[str, object]) -> Drawing:
     """Return an Excalidraw scene as a Graph. `rules` holds `readers.excalidraw`.
 
     Raises:
-        json.JSONDecodeError: The bytes aren't an Excalidraw scene.
+        ValueError: The bytes aren't an Excalidraw scene: bad JSON, no `elements`
+            list, an element with no id, or a position or size that isn't a number.
     """
-    elements = [
-        e for e in json.loads(data).get("elements", []) if not e.get("isDeleted")
-    ]
-    shapes = set(str(rules.get("shapes", "")).split(","))
-    optional = set(str(rules.get("optional_stroke", "")).split(","))
+    elements = _elements(data)
+    shapes = {s.strip() for s in str(rules.get("shapes", "")).split(",") if s.strip()}
+    optional = {
+        s.strip() for s in str(rules.get("optional_stroke", "")).split(",") if s.strip()
+    }
     skip = skipper(rules.get("skip_labels"))
     scene = Drawing("scene", Graph())
 

@@ -1,7 +1,7 @@
 """L2 patterns: a Graph with named slots, filled with L1 objects by the caller."""
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from merrow.graph import Edge, Graph, Group, Node
@@ -51,22 +51,31 @@ def library(settings: Any) -> dict[str, Pattern]:
     """Return every configured pattern by id.
 
     Raises:
-        KeyError: A slot has no `name`, or an edge no `source` or `target`.
+        ValueError: A pattern has no `slots` or `edges`, a slot no `name`, or an
+            edge no `source` or `target`.
     """
     found = {}
     for pattern_id, entry in (settings.get("patterns") or {}).items():
-        slots = tuple(
-            Slot(s["name"], s.get("title", s["name"]), bool(s.get("optional")))
-            for s in entry["slots"]
-        )
-        edges = tuple(
-            PatternEdge(
-                Edge(e["source"], e["target"], e.get("label"), bool(e.get("optional"))),
-                frozenset(e.get("if") or ()),
-                frozenset(e.get("unless") or ()),
+        try:
+            slots = tuple(
+                Slot(s["name"], s.get("title", s["name"]), bool(s.get("optional")))
+                for s in entry["slots"]
             )
-            for e in entry["edges"]
-        )
+            edges = tuple(
+                PatternEdge(
+                    Edge(
+                        e["source"],
+                        e["target"],
+                        e.get("label"),
+                        bool(e.get("optional")),
+                    ),
+                    frozenset(e.get("if") or ()),
+                    frozenset(e.get("unless") or ()),
+                )
+                for e in entry["edges"]
+            )
+        except KeyError as missing:
+            raise ValueError(f"pattern {pattern_id} lacks {missing}") from missing
         found[pattern_id] = Pattern(pattern_id, slots, edges)
     return found
 
@@ -100,20 +109,28 @@ def expand(
     if unknown:
         raise ValueError(f"pattern {pattern.id} has no slot {', '.join(unknown)}")
     graph = Graph()
-    filled = set()
+    # The id each filled slot draws as: its group, or its one node, which a fill's `id` renames.
+    drawn: dict[str, str] = {}
     for slot in pattern.slots:
         members = list(fills.get(slot.name) or ())
         if not members:
             if not slot.optional:
                 raise ValueError(f"pattern {pattern.id} needs slot {slot.name}")
             continue
-        filled.add(slot.name)
         group = slot.name if len(members) > 1 else None
         if group:
             graph.groups.append(Group(group, slot.title))
-        graph.nodes += [_node(slot.name, fill, group) for fill in members]
+        nodes = [_node(slot.name, fill, group) for fill in members]
+        graph.nodes += nodes
+        drawn[slot.name] = group or nodes[0].id
+    filled = set(drawn)
     for rule in pattern.edges:
         ends = {rule.edge.source, rule.edge.target}
         if ends <= filled and rule.when <= filled and not rule.unless & filled:
-            graph.edges.append(rule.edge)
+            edge = replace(
+                rule.edge,
+                source=drawn[rule.edge.source],
+                target=drawn[rule.edge.target],
+            )
+            graph.edges.append(edge)
     return graph

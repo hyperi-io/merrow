@@ -99,12 +99,14 @@ Each box in Figure 1, where its code lives and what it decides.
 
 | Part | Code | What it decides |
 |---|---|---|
-| Sources | `src/merrow/sources/`, `sources.yaml`, `sources.lock.yaml` | Which publisher download, pinned by version and checksum, and when a release is out |
-| Icon packs | `src/merrow/convert/`, `naming.py` | Each publisher file's icon key and title. The artwork is never changed |
-| Config cascade | `config.py`, `profile.py`, `destination.py`, `objects.py` | merrow's defaults, then each reference repo, then `settings.yaml` and `MERROW_*` |
-| Writer | `write.py`, `compose.py`, `spec.py`, `patterns.py` | Node labels, classes, groups, rows, stacked boundaries and long chains in stages |
-| Render | `render.py`, `post.py`, `bundle.py`, `browser.py` | Mermaid drawn by playwright in light and dark, then group icons placed |
-| Lint | `lint/diagram_check.py` | The standard's source checks, then size, crossings and skip arrows on the render |
+| Sources | `src/merrow/sources/`, `src/merrow/sources.yaml`, `src/merrow/sources.lock.yaml` | Which publisher download, pinned by version and checksum, and when a release is out |
+| Icon packs | `src/merrow/convert/`, `src/merrow/naming.py` | Each publisher file's icon key and title. The artwork is never changed |
+| Config cascade | `src/merrow/config.py`, `src/merrow/profile.py`, `src/merrow/destination.py`, `src/merrow/objects.py` | merrow's defaults, then each reference repo, then `settings.yaml` and `MERROW_*` |
+| Writer | `src/merrow/write.py`, `src/merrow/compose.py`, `src/merrow/spec.py`, `src/merrow/patterns.py` | Node labels, classes, groups, rows, stacked boundaries and long chains in stages |
+| Render | `src/merrow/render.py`, `src/merrow/post.py`, `src/merrow/bundle.py`, `src/merrow/browser.py` | Mermaid drawn by playwright in light and dark, then group icons placed |
+| Lint | `src/merrow/lint/diagram_check.py` | The standard's source checks, then size, crossings and skip arrows on the render |
+
+The readers in `src/merrow/read/` turn a draw.io, PPTX, Visio, Excalidraw, Graphviz, Structurizr or PDF drawing into a Graph. They're Python only, with no command, so Figure 1 has no box for them.
 
 ## Everything a company owns comes in from outside
 
@@ -197,7 +199,7 @@ A destination in `destinations.yaml` holds what depends on the page: the column,
 
 ## Objects are drawn the same everywhere
 
-An object is a thing with a label, a class or an icon, defined once. Every titled icon in a pack that `generated_objects` lists becomes an object by itself, such as `aws.amazon-ec2` from the AWS pack or `k8s.sts` from the Kubernetes one. merrow ships one pack, `starter`: 34 generic Carbon icons drawn as `icon.server` and the like with nothing built, and a built pack of the same name wins over it. A title comes from a `names` rule, or from the source's `titles` map where file names are abbreviations. A reference repo adds its objects, and an entry it writes wins over a generated one. A diagram file can carry its own `objects:` block for things only it draws, and those win for that file alone.
+An object is a thing with a label, a class or an icon, defined once. Every titled icon in a pack that `generated_objects` lists becomes an object by itself, such as `aws.amazon-ec2` from the AWS pack or `k8s.sts` from the Kubernetes one. merrow ships one pack, `starter`, of generic Carbon icons drawn as `icon.server` and the like with nothing built, and a built pack of the same name wins over it. A title comes from a `names` rule, or from the source's `titles` map where file names are abbreviations. A reference repo adds its objects, and an entry it writes wins over a generated one. A diagram file can carry its own `objects:` block for things only it draws, and those win for that file alone.
 
 ## What merrow won't do
 

@@ -1,3 +1,4 @@
+import dataclasses
 import io
 import zipfile
 
@@ -60,7 +61,7 @@ MASTERS = {
 }
 
 
-def stencil_bytes() -> bytes:
+def stencil_bytes(masters: dict[str, str] = MASTERS) -> bytes:
     style = (
         f"<VisioDocument {V}><StyleSheets>"
         '<StyleSheet ID="3" LineStyle="6"/>'
@@ -69,7 +70,7 @@ def stencil_bytes() -> bytes:
     )
     index = "".join(
         f'<Master ID="{n}" NameU="{name}"><Rel r:id="rId{n}"/></Master>'
-        for n, name in enumerate(MASTERS, 1)
+        for n, name in enumerate(masters, 1)
     )
     parts = {
         "visio/document.xml": style,
@@ -77,11 +78,11 @@ def stencil_bytes() -> bytes:
         "visio/masters/_rels/masters.xml.rels": f'<Relationships xmlns="{RELS}">'
         + "".join(
             f'<Relationship Id="rId{n}" Target="master{n}.xml"/>'
-            for n in range(1, len(MASTERS) + 1)
+            for n in range(1, len(masters) + 1)
         )
         + "</Relationships>",
     }
-    for n, body in enumerate(MASTERS.values(), 1):
+    for n, body in enumerate(masters.values(), 1):
         parts[f"visio/masters/master{n}.xml"] = (
             f"<MasterContents {V} {R}><Shapes>{body}</Shapes></MasterContents>"
         )
@@ -166,3 +167,69 @@ def test_a_broken_stencil_is_reported_not_raised(tmp_path, limits):
 )
 def test_relationship_targets_resolve_inside_the_package(part, target, resolved):
     assert opc.resolve(part, target) == resolved
+
+
+def test_a_master_with_no_part_is_reported_and_the_rest_build(tmp_path, limits):
+    download = tmp_path / "Demo.vssx"
+    with (
+        zipfile.ZipFile(io.BytesIO(stencil_bytes())) as whole,
+        zipfile.ZipFile(download, "w") as cut,
+    ):
+        for item in whole.infolist():
+            if item.filename != "visio/masters/master1.xml":
+                cut.writestr(item, whole.read(item))
+    built = visio.build(download, source(), limits)
+    assert "arc" in built.data["icons"]
+    assert [f.split(":")[0] for f in built.report["failed"]] == ["Demo/Square"]
+
+
+def test_empty_nurbs_and_polyline_formulas_draw_what_they_can(tmp_path, limits):
+    odd = geometry(
+        '<Row T="MoveTo">' + cells(X=0, Y=0) + "</Row>"
+        '<Row T="NURBSTo">' + cells(X=1, Y=1) + '<Cell N="E" F="NURBS()"/></Row>'
+        '<Row T="PolylineTo">' + cells(X=1, Y=0) + '<Cell N="A" F="POLYLINE()"/></Row>'
+    )
+    download = tmp_path / "Demo.vssx"
+    download.write_bytes(stencil_bytes({"Odd": shape(odd)}))
+    built = visio.build(download, source(), limits)
+    assert list(built.data["icons"]) == ["odd"]
+    assert built.report["failed"] == []
+
+
+def test_a_stencil_over_the_size_cap_is_reported(tmp_path, limits):
+    download = tmp_path / "Demo.vssx"
+    download.write_bytes(stencil_bytes())
+    small = dataclasses.replace(limits, deck_bytes=10)
+    built = visio.build(download, source(), small)
+    assert "over 10 bytes" in built.report["failed"][0]
+
+
+@pytest.mark.parametrize(
+    ("value", "colour"),
+    [("#8c4fff", "#8C4FFF"), ('#" onload="x', None), ("#12", None), ("red", None)],
+    ids=["hex", "attribute-breakout", "short", "name"],
+)
+def test_a_cell_colour_is_a_six_digit_hex_or_nothing(value, colour):
+    assert visio._colour(value) == colour
+
+
+def test_an_icon_body_holds_only_allowlisted_markup():
+    drawing = visio._Drawing(
+        elements=['<path d="M0 0" onload="x()" fill="url(http://e.test/a)"/>'],
+        points=[(0.0, 0.0), (1.0, 1.0)],
+    )
+    body = str(visio.icon(drawing, 0.02, "k")["body"])
+    assert "<path" in body
+    assert "onload" not in body
+    assert "http" not in body
+
+
+def test_a_part_over_the_cap_is_refused():
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as package:
+        package.writestr("p.xml", "<a>" + " " * 100 + "</a>")
+    with zipfile.ZipFile(out) as package:
+        assert opc.xml(package, "p.xml", 1000).tag == "a"
+        for reader in (opc.xml, opc.read):
+            with pytest.raises(ValueError, match="over the 10 byte limit"):
+                reader(package, "p.xml", 10)

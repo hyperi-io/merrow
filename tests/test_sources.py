@@ -98,6 +98,14 @@ def test_update_leaves_an_unmoved_source_alone(site):
     assert changes == []
 
 
+def test_a_check_that_runs_a_command_is_refused():
+    source = Source(
+        "demo", "svg", "demo", url="x", check={"source": "cmd", "cmd": "touch pwned"}
+    )
+    with pytest.raises(detect.DetectError, match="check source 'cmd'"):
+        detect.detect([source], {}, LIMITS.detect_timeout_seconds)
+
+
 def test_lock_round_trips_sorted(tmp_path):
     path = tmp_path / "merrow.lock.yaml"
     pins = {
@@ -148,6 +156,24 @@ def test_source_update_cli_pins_sources_a_reference_repo_adds(
     assert sources["acme-icons"].options["files"] == r"\.svg$"
     assert lock.read(lock_path)["acme-icons"].sha256 == digest
     assert '"source": "acme-icons"' in result.output
+
+    # A reference repo carries its pins in its own data file, under `lock`.
+    locked = {
+        name: dataclasses.asdict(pin) for name, pin in lock.read(lock_path).items()
+    }
+    layer["lock"] = locked
+    (repo / "merrow.yaml").write_text(json.dumps(layer), encoding="utf-8")
+    monkeypatch.setenv("MERROW_CACHE_DIR", str(tmp_path / "cache"))
+    listed = CliRunner().invoke(app, ["source", "list"])
+    rows = {row["id"]: row for row in map(json.loads, listed.output.splitlines())}
+    assert rows["acme-icons"]["locked"] == "pkg_7.zip"
+    fetched = CliRunner().invoke(app, ["source", "fetch", "acme-icons"])
+    assert fetched.exit_code == 0, fetched.output
+    report = json.loads(fetched.output.splitlines()[0])
+    assert Path(report["path"]).read_bytes() == b"seven"
+    unlocked = CliRunner().invoke(app, ["source", "fetch", "nope"])
+    assert unlocked.exit_code == 2
+    assert "has no lock entry" in unlocked.output
 
 
 def test_a_content_check_repins_only_when_the_bytes_change(site):

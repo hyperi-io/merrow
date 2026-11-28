@@ -12,6 +12,7 @@ not here.
 
 import dataclasses
 import re
+import time
 from pathlib import Path
 
 import pytest
@@ -936,3 +937,72 @@ def test_the_source_pass_runs_without_a_browser(
     out = capsys.readouterr().out
     assert verdict in out
     assert "source only, not rendered" in out
+
+
+@pytest.mark.parametrize(
+    ("page", "slug"),
+    [
+        ("# Real title\n", "real-title"),
+        ("```bash\n# install\n```\n\n# Real title\n", "real-title"),
+        ("~~~\n# in a tilde fence\n~~~\n", ""),
+        ("no heading here\n", ""),
+    ],
+    ids=["plain", "after-a-fence-comment", "only-in-a-fence", "none"],
+)
+def test_the_h1_anchor_ignores_fenced_lines(page, slug):
+    assert dc._h1_slug(page) == slug
+
+
+def test_a_byte_order_mark_is_not_part_of_the_diagram(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Path("flow.mmd").write_bytes(b"\xef\xbb\xbf" + GOOD.encode())
+    [block], _ = dc.page_blocks(Path("flow.mmd"))
+    assert dc.diagram_type(block.source)[0] == "flowchart"
+
+
+def test_a_long_whitespace_run_is_read_in_linear_time():
+    start = time.perf_counter()
+    assert dc._EDGE.match("a" + " " * 100_000 + "b") is None
+    assert time.perf_counter() - start < 1
+
+
+@pytest.mark.parametrize("name", ["missing.md", "."], ids=["missing", "directory"])
+def test_a_path_that_cannot_be_read_is_named_not_a_traceback(
+    tmp_path, monkeypatch, capsys, name
+):
+    monkeypatch.chdir(tmp_path)
+    assert dc.main([name, "--no-render"]) == 2
+    assert capsys.readouterr().err.startswith(f"merrow: {name}: ")
+
+
+def test_the_render_page_is_offline_before_any_content_goes_in(monkeypatch):
+    calls: list[str] = []
+
+    class Recorder:
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: calls.append(name) or {"ok": True}
+
+        def new_page(self, **kwargs):
+            return self
+
+    class Driver:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    recorder = Recorder()
+    monkeypatch.setattr("playwright.sync_api.sync_playwright", Driver)
+    monkeypatch.setattr(dc, "launch", lambda driver, settings: recorder)
+    monkeypatch.setattr(dc, "offline", lambda page: calls.append("offline"))
+    dc.render([dc.Block("b", GOOD)], Path("mermaid.js"), 600, {})
+    assert calls.index("offline") < calls.index("set_content")
+
+
+def test_a_page_with_no_diagrams_starts_no_browser(monkeypatch):
+    def refuse(*args):
+        raise AssertionError("a browser started")
+
+    monkeypatch.setattr(dc, "launch", refuse)
+    assert dc.render([], Path("mermaid.js"), 600, {}) == []

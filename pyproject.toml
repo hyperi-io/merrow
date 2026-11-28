@@ -22,12 +22,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-render = ["playwright>=1.64.1", "scalo[http]>=2.32.9"]
+render = ["httpx>=0.28.1", "playwright>=1.64.1", "scalo[http]>=2.32.9", "stamina>=26.1"]
 packs = [
+    "httpx>=0.28.1",
     "nvchecker>=2.22",
     "pydot>=4.0.1",
     "pypdfium2>=5.15.2",
     "scalo[http]>=2.32.9",
+    "stamina>=26.1",
 ]
 all = ["merrow[render,packs]"]
 

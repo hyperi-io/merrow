@@ -17,6 +17,7 @@ from scalo.cli.version import version_option
 from typer import BadParameter, Exit
 
 from merrow import (
+    MerrowError,
     apply,
     browser,
     bundle,
@@ -36,18 +37,18 @@ from merrow.sources import lock
 app = Typer(help="Style, render and lint Mermaid diagrams.", no_args_is_help=True)
 # The modules each extra brings, which a core install lacks.
 EXTRAS = {
-    "render": ("playwright.sync_api", "scalo.http"),
-    "packs": ("nvchecker", "pypdfium2", "pydot", "scalo.http"),
+    "render": ("playwright.sync_api", "scalo.http", "httpx", "stamina"),
+    "packs": ("nvchecker", "pypdfium2", "pydot", "scalo.http", "httpx", "stamina"),
 }
 config_app = Typer(help="The resolved configuration.", no_args_is_help=True)
 tools_app = Typer(
     help="The pinned Mermaid bundle and browser render runs on.", no_args_is_help=True
 )
 source_app = Typer(
-    help="Vendor sources: detect releases, pin, fetch.", no_args_is_help=True
+    help="Publisher sources: detect releases, pin, fetch.", no_args_is_help=True
 )
 diagram_app = Typer(help="Diagrams: render to SVG and lint.", no_args_is_help=True)
-pack_app = Typer(help="Icon packs built from vendor sources.", no_args_is_help=True)
+pack_app = Typer(help="Icon packs built from publisher sources.", no_args_is_help=True)
 profile_app = Typer(help="Profiles: the look a diagram takes.", no_args_is_help=True)
 skill_app = Typer(help="The agent skill merrow ships.", no_args_is_help=True)
 graph_app = Typer(
@@ -77,7 +78,8 @@ def _needs(extra: str, command: str) -> None:
     """
     for module in EXTRAS[extra]:
         try:
-            importlib.import_module(module)
+            # The names come from the EXTRAS constant above, never from input.
+            importlib.import_module(module)  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
         except ModuleNotFoundError:
             print(
                 f"merrow: {command} needs merrow[{extra}]: "
@@ -163,6 +165,7 @@ def pack_build(
     """
     _needs("packs", "pack build")
     from merrow.convert import CONVERTERS
+    from merrow.sources.fetch import write_atomic
 
     settings = config.load()
     sources = config.sources(settings)
@@ -183,8 +186,8 @@ def pack_build(
         download = from_path or _fetch_locked(settings, source_id, limits)
         built = CONVERTERS[source.format](download, source, limits)
         out = config.packs_dir(settings) / built.name
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(built.data, separators=(",", ":")), encoding="utf-8")
+        data = json.dumps(built.data, separators=(",", ":")).encode("utf-8")
+        write_atomic(out, data)
         report = {"pack": str(out), "bytes": out.stat().st_size, **built.report}
         print(json.dumps(report))
 
@@ -257,6 +260,7 @@ def diagram_render(
     render isn't the light frontmatter on a dark page.
     """
     _needs("render", "diagram render")
+    _one_output_each(files)
     settings = config.load()
     pages = destination.load(settings, where or None).themes
     items = [diagram for path in files for diagram in render.diagrams(path)]
@@ -273,7 +277,7 @@ def diagram_render(
             print(json.dumps(written))
 
 
-Loaded = dict[tuple[str | None, str | None], profile.Profile]
+type Loaded = dict[tuple[str | None, str | None], profile.Profile]
 
 
 def _written(
@@ -290,8 +294,7 @@ def _written(
     `loaded` caches each by name and theme. `pages` is a destination's themes.
 
     Raises:
-        ValueError: The file, its graph or its objects can't be drawn.
-        yaml.YAMLError: The file isn't YAML or JSON.
+        ValueError: The file isn't YAML or JSON, or its graph or objects can't be drawn.
     """
     found = spec.read(path)
     key = (name or found.profile, theme)
@@ -329,7 +332,7 @@ def graph_validate(
     for path in files:
         try:
             source, shown = _written(path, settings, name, loaded)
-        except (ValueError, yaml.YAMLError) as error:
+        except ValueError as error:
             report[str(path)] = [str(error)]
             continue
         block = diagram_check.Block(path.name, source, None, None)
@@ -387,7 +390,7 @@ def graph_write(
     for path in files:
         try:
             source = _written(path, settings, name, loaded)[0]
-        except (ValueError, yaml.YAMLError) as error:
+        except ValueError as error:
             raise BadParameter(f"{path}: {error}") from error
         target = out_dir / f"{path.stem}.mmd"
         target.write_text(source, encoding="utf-8", newline="\n")
@@ -429,7 +432,7 @@ def graph_render(
             }
             for theme in themes:
                 sources[theme] = _written(path, settings, name, loaded, theme, pages)[0]
-        except (ValueError, yaml.YAMLError) as error:
+        except ValueError as error:
             raise BadParameter(f"{path}: {error}") from error
         (out_dir / f"{path.stem}.mmd").write_text(
             sources[None], encoding="utf-8", newline="\n"
@@ -525,9 +528,9 @@ def diagram_lint(
 
 
 def run() -> None:
-    """Run the CLI, printing a missing reference repo, file or profile as one line."""
+    """Run the CLI, printing a bad file, profile, render, browser or download as one line."""
     try:
         app()
-    except (FileNotFoundError, profile.ProfileError) as error:
+    except (OSError, profile.ProfileError, MerrowError) as error:
         print(f"merrow: {error}", file=sys.stderr)
         sys.exit(2)
