@@ -1,14 +1,14 @@
 # Icon pack licence verdicts
 
-Every source merrow knows, with its quoted terms, is in [source-register.md](source-register.md). This page is the verdict for the packs a profile draws with.
+[source-register.md](source-register.md) is the research list of every publisher source found. `src/merrow/sources.yaml` is what merrow builds, pinned in `src/merrow/sources.lock.yaml`. This page is the licence verdict for the packs a profile draws with, and for two publishers merrow builds no source for.
 
 | Publisher | Package | Terms (quoted from the publisher) | Commit the converted pack to a repo? |
 |---|---|---|---|
-| AWS | Icon-package_07312026 + PPTX toolkit, release 24-2026.07.31 | Use them "to create architecture diagrams"; don't crop, flip, rotate or change shapes; predefined size and colour; no groups with non-approved icons; custom service groups allowed (deck slide 26). No redistribution grant; no CC BY-ND on AWS's page | No |
-| Azure | V25 zip, Nov 2026 | Use in diagrams, training or docs; "copy, distribute, and display the icons only for the permitted use"; don't crop, rotate or distort. No Visio stencil | Unclear: legal call |
-| Google Cloud | Core 19 + category 26 + legacy 216, PDF May 2026 | No terms on the page or in the zips. Iconify's `gcp` pack (v1.2.3, 214) is the deprecated legacy 2-tone set, labelled Apache-2.0 by Iconify only | No |
-| Kubernetes | kubernetes/community `icons/` at 70a4bb2 | Apache-2.0 | Yes, with attribution |
-| Microsoft 365 Visio | 2024 templates | Same Microsoft terms as Azure | Unclear: legal call |
+| AWS | Icon package and PPTX toolkit | Use them "to create architecture diagrams". Don't crop, flip, rotate or change shapes. Keep the predefined size and colour. No groups with non-approved icons. Custom service groups are allowed (deck slide 26). No redistribution grant, and no CC BY-ND on AWS's page | No |
+| Azure | Icon zip. No source is built | Use in diagrams, training or docs, and "copy, distribute, and display the icons only for the permitted use". Don't crop, rotate or distort. No Visio stencil | Unclear: legal call |
+| Google Cloud | Core, category and legacy icon sets | No terms on the page or in the zips. Iconify's `gcp` pack is the deprecated legacy 2-tone set, labelled Apache-2.0 by Iconify only | No |
+| Kubernetes | kubernetes/community `icons/` | Apache-2.0 | Yes, with attribution |
+| Microsoft 365 Visio | Visio templates. No source is built | Same Microsoft terms as Azure | Unclear: legal call |
 | IBM Carbon | `@carbon/icons`, the 32 px set without `ibm-*` and `logo-*` | Apache-2.0 (LICENSE in the package) | Yes, with its LICENSE |
 | HashiCorp | `@hashicorp/flight-icons`, the 24 px set | MPL-2.0 (LICENSE.md in the package). Product logos stay HashiCorp's trademarks | Yes, with its LICENSE |
 | Tabler | `@tabler/icons`, the outline set without `brand-*` | MIT (LICENSE in the package) | Yes, with its LICENSE |
@@ -20,8 +20,8 @@ A diagram rendered with publisher icons is the permitted use ("to create archite
 
 ## What merrow does about it
 
-- Fetches AWS, Azure and GCP packs from the publisher at build time and caches them outside every repo.
-- Ships one pack in merrow itself, `starter`: 34 Carbon icons with Carbon's LICENSE beside it.
+- Fetches AWS and GCP packs from the publisher at build time and caches them outside every repo.
+- Ships one pack in merrow itself, `starter`: a set of Carbon icons with Carbon's LICENSE beside it.
 - Paints a monochrome open set that sets no colour (Carbon, Red Hat) in the theme's icon colour, through the source's `fill`.
 - Never recolours or resizes publisher icons. AWS ships separate artwork per size (viewBox 24/40/64/80), and the aws profile draws each icon at its own artwork size.
 - Draws AWS groups only in AWS's styles, plus AWS's custom-group recipe for a service group.

@@ -1,4 +1,4 @@
-"""Icon keys from vendor names, by config rules every converter shares."""
+"""Icon keys from publisher file names, by config rules every converter shares."""
 
 import re
 from collections.abc import Mapping, Sequence
@@ -58,13 +58,14 @@ def _first(
 def key_for(path: str, rules: Sequence[NameRule]) -> str | None | bool:
     """Return the key the first matching rule gives.
 
-    Returns None when a rule skips the file, False when no rule matches.
+    Returns None when a rule skips the file, or its key has no ASCII letter or
+    digit, and False when no rule matches.
     """
     hit = _first(path, rules)
     if hit is None:
         return False
     rule, found = hit
-    return None if rule.key is None else slug(found.expand(rule.key))
+    return None if rule.key is None else slug(found.expand(rule.key)) or None
 
 
 def title_for(path: str, rules: Sequence[NameRule]) -> str | None:

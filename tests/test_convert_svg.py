@@ -67,10 +67,10 @@ SODI = 'xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"'
             '<image href="data:image/svg+xml;base64,BB"/><foreignObject/></svg>',
             [
                 '<rect width="1" />',
-                "<a><rect /></a>",
+                "<g><rect /></g>",
                 'href="data:image/png;base64,AA"',
             ],
-            ["<script", "onload", "javascript", "svg+xml", "foreignObject"],
+            ["<script", "<a", "onload", "javascript", "svg+xml", "foreignObject"],
             {},
             ["script-dropped"],
         ),
@@ -81,6 +81,41 @@ SODI = 'xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"'
             ["onclick"],
             {},
             ["script-dropped"],
+        ),
+        (
+            f'<svg {NS} viewBox="0 0 8 8"><a><set attributeName="href" '
+            'to="javascript:alert(1)"/><circle r="1"/></a>'
+            '<animate attributeName="href" to="javascript:x()"/></svg>',
+            ['<g><circle r="1" /></g>'],
+            ["<set", "<animate", "javascript", "<a"],
+            {},
+            ["script-dropped"],
+        ),
+        (
+            f'<svg {NS} viewBox="0 0 8 8"><img src="http://127.0.0.1:9/b.png"/>'
+            '<rect src="http://127.0.0.1:9/c.png" width="1"/></svg>',
+            ['<rect width="1" />'],
+            ["<img", "src=", "127.0.0.1"],
+            {},
+            ["script-dropped"],
+        ),
+        (
+            f'<svg {NS} viewBox="0 0 8 8"><rect fill="url(http://127.0.0.1:9/a.svg#a)"/>'
+            '<rect style="fill:url(//evil/x);stroke:#000;onclick:x()" width="2"/>'
+            '<rect fill="url(\\68ttp://x)"/></svg>',
+            ["stroke:#000", 'width="2"'],
+            ["127.0.0.1", "evil", "fill:", "onclick", "http"],
+            {},
+            ["script-dropped"],
+        ),
+        (
+            f'<svg {NS} viewBox="0 0 8 8"><style>/* note */ .a{{fill:red}}</style>'
+            '<path class="a" data-x="1" aria-hidden="true"/><unknown><rect/></unknown>'
+            "</svg>",
+            ['<path fill="red" />'],
+            ["data-x", "aria-hidden", "unknown", "<rect"],
+            {},
+            [],
         ),
         (
             f'<svg {NS} viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -99,6 +134,10 @@ SODI = 'xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"'
         "offset-complex-css",
         "script-dropped",
         "script-in-css-dropped",
+        "smil-retargeting-dropped",
+        "html-img-and-src-dropped",
+        "remote-url-dropped",
+        "allowlist-and-css-comment",
         "root-presentation-kept",
     ],
 )
@@ -400,3 +439,22 @@ def test_the_open_sources_name_and_title_icons(source, path, key, title):
     rules = naming.rules(config.sources(config.load())[source].options["names"])
     assert naming.key_for(path, rules) == key
     assert naming.title_for(path, rules) == title
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        f'<svg {NS}><path d="M0"/></svg>',
+        f'<svg {NS} viewBox="0 0 10"><path d="M0"/></svg>',
+        f'<svg {NS} viewBox="0 0 8 8">' + "<g>" * 3000 + "</g>" * 3000 + "</svg>",
+        f'<svg {NS} viewBox="0 0 inf 8"><path d="M0"/></svg>',
+    ],
+    ids=["no-size", "short-viewBox", "nested-too-deep", "infinite-viewBox"],
+)
+def test_a_bad_icon_is_reported_and_the_pack_goes_on(bad):
+    members = [archive.Member("bad.svg", bad.encode()), archive.Member("ok.svg", ICON)]
+    rules = naming.rules([{"match": r"(\w+)\.svg$", "key": r"\1"}])
+    built, report = svg.pack(members, "p", rules, size=24)
+    assert isinstance(built["icons"], dict)
+    assert list(built["icons"]) == ["ok"]
+    assert [f.split(":")[0] for f in report.failed] == ["bad.svg"]

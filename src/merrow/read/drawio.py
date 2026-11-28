@@ -7,7 +7,7 @@ stored compressed (base64 of raw deflate of URL-encoded XML) is unpacked.
 """
 
 import base64
-import html
+import binascii
 import re
 import xml.etree.ElementTree as ET
 import zlib
@@ -17,6 +17,9 @@ from urllib.parse import unquote
 
 from merrow.graph import Box, Edge, Graph, Group, Node, nest_by_bounds
 from merrow.read import Drawing, skipper
+
+# One page, inflated: a drawing past this is a compression bomb, not a diagram.
+MAX_PAGE_BYTES = 20_000_000
 
 
 class _Text(HTMLParser):
@@ -35,7 +38,7 @@ class _Text(HTMLParser):
 def text(value: str) -> list[str]:
     """Return a cell's label as its non-empty lines of plain text."""
     parser = _Text()
-    parser.feed(html.unescape(value or ""))
+    parser.feed(value or "")
     joined = "".join(parser.parts).replace("\xa0", " ")
     lines = (re.sub(r"\s+", " ", line).strip() for line in joined.split("\n"))
     return [line for line in lines if line]
@@ -54,8 +57,17 @@ def _model(diagram: ET.Element) -> ET.Element | None:
     packed = (diagram.text or "").strip()
     if not packed:
         return None
-    xml = unquote(zlib.decompress(base64.b64decode(packed), -15).decode("utf-8"))
-    return ET.fromstring(xml)  # noqa: S314 -- expat refuses entity expansion attacks
+    try:
+        inflater = zlib.decompressobj(-15)
+        raw = inflater.decompress(base64.b64decode(packed), MAX_PAGE_BYTES + 1)
+        if len(raw) > MAX_PAGE_BYTES:
+            raise ValueError(f"a page inflates past {MAX_PAGE_BYTES} bytes")
+        if not inflater.eof:
+            raise ValueError("a compressed page is corrupt: the data stops early")
+        xml = unquote(raw.decode("utf-8"))
+        return ET.fromstring(xml)  # noqa: S314 -- expat refuses entity expansion attacks
+    except (binascii.Error, zlib.error, UnicodeDecodeError, ET.ParseError) as error:
+        raise ValueError(f"a compressed page is corrupt: {error}") from error
 
 
 def pages(data: bytes, rules: Mapping[str, object]) -> list[Drawing]:
@@ -65,10 +77,15 @@ def pages(data: bytes, rules: Mapping[str, object]) -> list[Drawing]:
     container) and `optional` (style key=value pairs marking an optional edge).
 
     Raises:
-        xml.etree.ElementTree.ParseError: The file isn't draw.io XML.
-        zlib.error: A compressed page is corrupt.
+        ValueError: The bytes aren't draw.io XML, a compressed page is corrupt or
+            inflates past `MAX_PAGE_BYTES`, or a geometry value isn't a number.
     """
-    root = ET.fromstring(data)  # noqa: S314 -- expat refuses entity expansion attacks
+    try:
+        root = ET.fromstring(data)  # noqa: S314 -- expat refuses entity expansion attacks
+    except ET.ParseError as error:
+        raise ValueError(f"not draw.io XML: {error}") from error
+    if root.tag not in ("mxGraphModel", "mxfile"):
+        raise ValueError(f"not a draw.io file: the root element is <{root.tag}>")
     if root.tag == "mxGraphModel":
         return [_page("page-1", root, rules)]
     found = []
@@ -95,14 +112,24 @@ def _keys(rules: Mapping[str, object], name: str) -> set[str]:
     return {k.strip() for k in str(rules.get(name, "")).split(",") if k.strip()}
 
 
+def _number(geometry: ET.Element, name: str, cell_id: str) -> float:
+    try:
+        return float(geometry.get(name, 0))
+    except ValueError as error:
+        raise ValueError(
+            f"cell {cell_id!r}: geometry {name} is not a number"
+        ) from error
+
+
 def _boxes(cells: Mapping[str, ET.Element]) -> dict[str, Box]:
     """Return each vertex's box in page coordinates: geometry is parent-relative."""
     local: dict[str, Box] = {}
     for cell_id, cell in cells.items():
         geometry = cell.find("mxGeometry")
         if cell.get("vertex") == "1" and geometry is not None:
-            x, y = float(geometry.get("x", 0)), float(geometry.get("y", 0))
-            w, h = float(geometry.get("width", 0)), float(geometry.get("height", 0))
+            x, y = _number(geometry, "x", cell_id), _number(geometry, "y", cell_id)
+            w = _number(geometry, "width", cell_id)
+            h = _number(geometry, "height", cell_id)
             local[cell_id] = (x, y, x + w, y + h)
 
     def absolute(cell_id: str, depth: int = 0) -> Box:
@@ -142,10 +169,13 @@ def _page(name: str, model: ET.Element, rules: Mapping[str, object]) -> Drawing:
         ]
 
     def parent_group(cell: ET.Element) -> str | None:
+        own = cell.get("id", "")
+        seen = {own}
         parent = cell.get("parent")
-        while parent and parent not in groups:
+        while parent and parent not in groups and parent not in seen:
+            seen.add(parent)
             parent = cells[parent].get("parent") if parent in cells else None
-        return parent
+        return parent if parent in groups and parent != own else None
 
     # A shape laid over a container without being parented to it still sits in it.
     by_bounds = nest_by_bounds(_boxes(cells), groups)

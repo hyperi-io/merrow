@@ -22,16 +22,18 @@ from pathlib import Path
 import tomli_w
 from scalo.logger import logger
 
-from merrow import proc
+from merrow import MerrowError, proc
 from merrow.model import Limits, Source
 from merrow.sources.fetch import download
 from merrow.sources.lock import Pin
 
 # merrow's own check type, beside nvchecker's: the download's hash is its version.
 CONTENT_CHECK = "content"
+# nvchecker kinds that only read a URL. Its `cmd` kind runs a shell, so config can't name it.
+CHECKS = frozenset({"github", "httpheader", "npm", "regex"})
 
 
-class DetectError(RuntimeError):
+class DetectError(MerrowError):
     """nvchecker failed outright, or a source's URL template is unusable."""
 
 
@@ -61,13 +63,18 @@ def detect(
     A source nvchecker can't check is missing from the result.
 
     Raises:
-        DetectError: nvchecker itself failed to run.
+        DetectError: nvchecker itself failed to run, or a check names a kind outside `CHECKS`.
     """
     entries = {
         source.id: dict(source.check)
         for source in sources
         if source.check and source.check.get("source") != CONTENT_CHECK
     }
+    for source_id, entry in entries.items():
+        if entry.get("source") not in CHECKS:
+            raise DetectError(
+                f"{source_id}: check source {entry.get('source')!r} isn't one of {sorted(CHECKS)}"
+            )
     if not entries:
         return {}
     with tempfile.TemporaryDirectory(prefix="merrow-nvchecker-") as work:
@@ -136,7 +143,7 @@ def update(
     """Return the new pins and what changed: a source whose URL moved is downloaded and re-pinned.
 
     A source that failed detection or download keeps its old pin and is listed with
-    its error, so one bad vendor page never blocks the rest.
+    its error, so one bad publisher page never blocks the rest.
     """
     updated = dict(pins)
     changes = []

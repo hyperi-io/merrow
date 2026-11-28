@@ -1,11 +1,14 @@
+import contextlib
 import json
 import re
+import sys
+from http.server import SimpleHTTPRequestHandler
 
 import pytest
 from typer.testing import CliRunner
 
 from merrow import config, destination, render
-from merrow.cli import app
+from merrow.cli import app, run
 
 ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><rect width="8" height="8"/></svg>'
 
@@ -76,12 +79,43 @@ def test_render_writes_one_svg_per_theme_with_local_icons(tmp_path, monkeypatch)
         assert svg == again, "a render repeats byte for byte, a stadium included"
 
 
-def test_render_names_the_diagram_mermaid_rejects(tmp_path, monkeypatch):
+def test_render_names_the_diagram_mermaid_rejects(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     bad = tmp_path / "bad.mmd"
     bad.write_text("flowchart LR\n  a -->\n", encoding="utf-8")
     with pytest.raises(render.RenderError, match="bad"):
         render.render(list(render.diagrams(bad)), tmp_path / "out", config.load())
+    monkeypatch.setattr(
+        sys, "argv", ["merrow", "diagram", "render", "bad.mmd", "--out", "o"]
+    )
+    with pytest.raises(SystemExit) as stopped:
+        run()
+    assert stopped.value.code == 2
+    err = capsys.readouterr().err
+    assert err.startswith("merrow: bad")
+    assert "Traceback" not in err
+
+
+def test_a_diagram_reaches_no_network(tmp_path, monkeypatch, site):
+    root, base = site
+    (root / "beacon.png").write_bytes(b"x")
+    monkeypatch.chdir(tmp_path)
+    page = tmp_path / "beacon.mmd"
+    page.write_text(
+        f'flowchart LR\n  a["<img src={base}/beacon.png>"] --> b@{{ img: "{base}/beacon.png" }}\n',
+        encoding="utf-8",
+    )
+    requests: list[str] = []
+    original = SimpleHTTPRequestHandler.log_message
+    monkeypatch.setattr(
+        SimpleHTTPRequestHandler,
+        "log_message",
+        lambda self, *args: requests.append(self.path) or original(self, *args),
+    )
+    # An image shape can't load its blocked image, so its render fails by name.
+    with contextlib.suppress(render.RenderError):
+        render.render(list(render.diagrams(page)), tmp_path / "out", config.load())
+    assert requests == []
 
 
 GITHUB = """destinations:

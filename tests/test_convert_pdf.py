@@ -11,10 +11,15 @@ from merrow.convert import pdf
 from merrow.model import Source
 
 
-def made_pdf(text: bool) -> bytes:
+def made_pdf(
+    text: bool, rotation: int = 0, box: tuple[int, int, int, int] | None = None
+) -> bytes:
     """A 40x20 pt page with an orange square, and a word of text when `text`."""
     document = pdfium.PdfDocument.new()
     page = document.new_page(40, 20)
+    page.set_rotation(rotation)
+    if box:
+        page.set_mediabox(*box)
     square = raw.FPDFPageObj_CreateNewPath(2, 2)
     for x, y in ((18, 2), (18, 18), (2, 18)):
         raw.FPDFPath_LineTo(square, x, y)
@@ -74,3 +79,22 @@ def test_a_single_pdf_download_builds_a_pack(tmp_path, limits):
     icon = built.data["icons"]["kafka"]
     assert (icon["width"], icon["height"]) == (96, 96), "a 40x20 page squared to 96"
     assert icon["body"].startswith('<g transform="translate(0 24) scale(2.4)">')
+
+
+@pytest.mark.parametrize(
+    ("made", "message"),
+    [
+        (lambda: made_pdf(False, box=(0, 0, 0, 0)), "no area"),
+        (lambda: b"", "not a readable PDF"),
+    ],
+    ids=["zero-area", "empty"],
+)
+def test_a_pdf_that_cannot_be_an_icon_is_refused(made, message):
+    with pytest.raises(ValueError, match=message):
+        pdf.page_svg(made(), 64)
+
+
+def test_a_rotated_page_keeps_its_turned_shape():
+    data, notes = pdf.page_svg(made_pdf(False, rotation=90), 64)
+    assert 'viewBox="0 0 20.00 40.00"' in data.decode()
+    assert notes == ["rasterised"]

@@ -202,6 +202,18 @@ def test_a_forced_font_replaces_every_font_family(
             profile.ProfileError,
             "profile mine has no class_properties: set it, or extend a profile that does",
         ),
+        (
+            "profiles:\n  house:\n    layout: {max_ranks: 0}\n",
+            None,
+            profile.ProfileError,
+            "layout.max_ranks must be 1 or more",
+        ),
+        (
+            "profiles:\n  house:\n    default_class: nope\n",
+            None,
+            profile.ProfileError,
+            "default_class nope isn't one of its classes",
+        ),
     ],
     ids=[
         "unknown_token",
@@ -213,6 +225,8 @@ def test_a_forced_font_replaces_every_font_family(
         "page_limit_in_a_profile",
         "missing_token_file",
         "a_key_left_out",
+        "no_ranks",
+        "unknown_default_class",
     ],
 )
 def test_a_broken_profile_is_named(

@@ -37,10 +37,10 @@ class L1Object:
 
 
 @functools.cache
-def _titles(path: Path, mtime: float) -> dict[str, str] | None:
+def _titles(path: Path, _mtime: float) -> dict[str, str] | None:
     """Return a built pack's titles by icon key, None for a pack with none.
 
-    `mtime` keys the cache: a library load reads every pack, several MB.
+    `_mtime` keys the cache: a library load reads every pack, several MB.
     """
     return json.loads(path.read_text(encoding="utf-8")).get("titles")
 
@@ -71,7 +71,7 @@ def library(settings: Any) -> dict[str, L1Object]:
     """Return every object by id: the generated ones, then the configured ones over them.
 
     Raises:
-        KeyError: An entry has no `label`.
+        ValueError: An entry has no `label`.
     """
     found = generated(settings)
     for object_id, fields in (settings.get("objects") or {}).items():
@@ -83,8 +83,10 @@ def entry(object_id: str, fields: Mapping[str, Any]) -> L1Object:
     """Return one object from an `objects:` entry, in merrow.yaml or a diagram file.
 
     Raises:
-        KeyError: The entry has no `label`.
+        ValueError: The entry has no `label`.
     """
+    if "label" not in fields:
+        raise ValueError(f"object {object_id} has no label")
     return L1Object(
         object_id,
         str(fields.get("class", "")),

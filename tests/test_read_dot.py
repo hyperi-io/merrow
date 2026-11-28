@@ -44,6 +44,34 @@ def test_a_dot_graph_reads_with_clusters_as_groups():
     assert "topic -.-> xf" in write.flowchart(graph, "LR")
 
 
-def test_bad_dot_is_refused():
-    with pytest.raises(ValueError):
-        dot.read(b"this is not dot {", RULES)
+@pytest.mark.parametrize(
+    ("data", "message"),
+    [
+        (b"this is not dot {", "not DOT"),
+        (b"", "not DOT"),
+        (b"digraph g { a -> }", "not DOT"),
+        ("digraph g { a [label=caf\xe9] }".encode("latin-1"), "not UTF-8"),
+    ],
+    ids=["junk", "empty", "truncated", "latin-1"],
+)
+def test_bad_dot_is_refused(data, message):
+    with pytest.raises(ValueError, match=message):
+        dot.read(data, RULES)
+
+
+@pytest.mark.parametrize(
+    ("data", "nodes", "edges", "dropped"),
+    [
+        (b'digraph { a:p1 -> "b c":out }', {"a", "b c"}, [("a", "b c")], 0),
+        (b"\xef\xbb\xbfdigraph { a -> b }", {"a", "b"}, [("a", "b")], 0),
+        (b"digraph { a -> {b c} }", set(), [], 1),
+    ],
+    ids=["ports", "bom", "subgraph-end"],
+)
+def test_ports_a_bom_and_subgraph_ends_read_as_nodes_and_edges(
+    data, nodes, edges, dropped
+):
+    [drawing] = dot.read(data, RULES)
+    assert {n.id for n in drawing.graph.nodes} >= nodes
+    assert [(e.source, e.target) for e in drawing.graph.edges] == edges
+    assert len(drawing.dropped) == dropped

@@ -185,6 +185,16 @@ def test_a_page_with_no_diagram_reads_empty(draw, dropped):
     assert page.dropped == dropped
 
 
-def test_a_broken_pdf_is_named():
-    with pytest.raises(ValueError, match="not a readable PDF"):
-        pdf.pages(b"%PDF-1.7 nothing here", RULES)
+@pytest.mark.parametrize(
+    ("data", "rules", "message"),
+    [
+        (b"%PDF-1.7 nothing here", RULES, "not a readable PDF"),
+        (b"", RULES, "not a readable PDF"),
+        (None, {k: v for k, v in RULES.items() if k != "snap"}, "readers.pdf.snap"),
+        (None, {**RULES, "icon": [12]}, "readers.pdf.icon"),
+    ],
+    ids=["broken", "empty", "missing-rule", "bad-pair"],
+)
+def test_a_broken_pdf_or_rule_is_named(data, rules, message):
+    with pytest.raises(ValueError, match=message):
+        pdf.pages(made(empty) if data is None else data, rules)

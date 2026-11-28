@@ -1,4 +1,4 @@
-# Weekly: detect new vendor releases, re-pin the lock, rebuild every pack from
+# Weekly: detect new publisher releases, re-pin the lock, rebuild every pack from
 # it, and open a PR when anything moved. A human only reviews the PR.
 name: Sources
 
@@ -14,8 +14,31 @@ jobs:
   update:
     runs-on: ${{ vars.GH_RUNNER_PYTHON || vars.GH_RUNNER_DEFAULT || 'ubuntu-latest' }}
     steps:
-      # An App token, because a PR opened with GITHUB_TOKEN triggers no CI.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      # Detection and the builds read publisher pages and archives, so they get the job's read-only token.
+      - name: Detect and re-pin
+        id: update
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        # One publisher failing must not hold back the others' PR: record, carry on.
+        run: |
+          status=0
+          uv run --locked merrow source update --lock src/merrow/sources.lock.yaml > changes.jsonl || status=$?
+          cat changes.jsonl
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "moved=$(git status --porcelain src/merrow/sources.lock.yaml | wc -l)" >> "$GITHUB_OUTPUT"
+      - name: Rebuild every pack from the new lock
+        if: steps.update.outputs.moved != '0'
+        run: |
+          for source in $(uv run --locked merrow source list --quiet); do
+            uv run --locked merrow pack build "$source" | tee -a builds.jsonl
+          done
+      # An App token, because a PR opened with GITHUB_TOKEN triggers no CI. Only the PR step sees it.
       - id: app
+        if: steps.update.outputs.moved != '0'
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.GH_APP_CLIENT_ID }}
@@ -24,42 +47,21 @@ jobs:
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
           permission-pull-requests: write
-      # The PR step pushes with this credential. The job uploads no artifacts.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # zizmor: ignore[artipacked]
-        with:
-          token: ${{ steps.app.outputs.token }}
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-      - name: Detect and re-pin
-        id: update
-        env:
-          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
-        # One vendor failing must not hold back the others' PR: record, carry on.
-        run: |
-          status=0
-          uv run merrow source update --lock src/merrow/sources.lock.yaml > changes.jsonl || status=$?
-          cat changes.jsonl
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          echo "moved=$(git status --porcelain src/merrow/sources.lock.yaml | wc -l)" >> "$GITHUB_OUTPUT"
-      - name: Rebuild every pack from the new lock
-        if: steps.update.outputs.moved != '0'
-        run: |
-          for source in $(uv run merrow source list --quiet); do
-            uv run merrow pack build "$source" | tee -a builds.jsonl
-          done
       - name: Open the PR
         if: steps.update.outputs.moved != '0'
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           branch="sources/update-$(date -u +%Y%m%d)"
+          gh auth setup-git
           git config user.name "merrow sources"
           git config user.email "dev@hyperi.io"
           git switch -c "$branch"
           git add src/merrow/sources.lock.yaml
-          git commit -m "fix(sources): re-pin vendor sources that published a new release"
+          git commit -m "fix(sources): re-pin publisher sources that released"
           git push origin "$branch"
           {
-            echo "New vendor releases, re-pinned and rebuilt."
+            echo "New publisher releases, re-pinned and rebuilt."
             echo
             echo '```json'
             cat changes.jsonl builds.jsonl
@@ -67,7 +69,7 @@ jobs:
             echo
             echo "Check builds for unmatched files, broken aliases and failed icons before merging."
           } > body.md
-          gh pr create --title "fix(sources): re-pin vendor sources" --body-file body.md
+          gh pr create --title "fix(sources): re-pin publisher sources" --body-file body.md
       - name: Fail on any source that could not be checked or fetched
         if: steps.update.outputs.status != '0'
         run: |

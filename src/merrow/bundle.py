@@ -13,12 +13,12 @@ import tarfile
 from pathlib import Path
 from typing import Any
 
-from merrow import config
+from merrow import MerrowError, config
 
 LOCKFILE = Path(__file__).parent / "npm" / "package-lock.json"
 
 
-class BundleError(RuntimeError):
+class BundleError(MerrowError):
     """The pinned bundle could not be fetched, or didn't match the lock."""
 
 
@@ -52,8 +52,13 @@ def path(settings: Any) -> Path:
         / f"{wanted['package']}-{pin['version']}"
         / Path(member).name
     )
-    if target.is_file():
-        return target
+    # The lock pins the tarball, so the file's own digest is kept beside it at extract time.
+    digest = target.with_name(target.name + ".sha256")
+    if target.is_file() and digest.is_file():
+        if hashlib.sha256(target.read_bytes()).hexdigest() == digest.read_text(
+            encoding="utf-8"
+        ):
+            return target
     # Only a download needs the HTTP client, which the render extra brings.
     from merrow.sources.fetch import download, write_atomic
 
@@ -67,5 +72,7 @@ def path(settings: Any) -> Path:
             raise BundleError(f"{pin['resolved']} has no {member}") from missing
         if handle is None:
             raise BundleError(f"{pin['resolved']}: {member} is not a file")
-        write_atomic(target, handle.read())
+        body = handle.read()
+        write_atomic(target, body)
+        write_atomic(digest, hashlib.sha256(body).hexdigest().encode("utf-8"))
     return target

@@ -1,4 +1,8 @@
+import io
 import xml.etree.ElementTree as ET
+import zipfile
+
+import pytest
 
 from merrow.read import pptx
 
@@ -79,3 +83,73 @@ def test_a_slide_reads_into_a_graph_with_exact_edges():
     assert "22: connector not glued" in dropped
     assert "23: connector glued to an unlabelled shape" in dropped
     assert graph.problems() == []
+
+
+RELS = "http://schemas.openxmlformats.org/package/2006/relationships"
+R = 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
+
+
+def package(parts: dict[str, str]) -> bytes:
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as deck:
+        for name, body in parts.items():
+            deck.writestr(name, body)
+    return out.getvalue()
+
+
+def test_slides_come_back_in_the_order_the_deck_lists_them():
+    parts = {
+        "ppt/slides/slide1.xml": SLIDE.replace("Database", "Created first"),
+        "ppt/slides/slide2.xml": SLIDE.replace("Database", "Created second"),
+        "ppt/presentation.xml": (
+            f"<p:presentation {NS} {R}><p:sldIdLst>"
+            '<p:sldId id="1" r:id="rId2"/><p:sldId id="2" r:id="rId1"/>'
+            "</p:sldIdLst></p:presentation>"
+        ),
+        "ppt/_rels/presentation.xml.rels": (
+            f'<Relationships xmlns="{RELS}">'
+            '<Relationship Id="rId1" Target="slides/slide1.xml"/>'
+            '<Relationship Id="rId2" Target="slides/slide2.xml"/></Relationships>'
+        ),
+    }
+    shown = [
+        (d.name, {n.label for n in d.graph.nodes} & {"Created first", "Created second"})
+        for d in pptx.slides(package(parts), RULES)
+    ]
+    assert shown == [("1", {"Created second"}), ("2", {"Created first"})]
+
+
+@pytest.mark.parametrize(
+    ("data", "message"),
+    [
+        (b"junk", "not a PPTX package"),
+        (b"", "not a PPTX package"),
+        (package({"ppt/slides/slide1.xml": "<p:sld"}), "not XML"),
+        (
+            package({"ppt/slides/slide1.xml": " " * 5_000_100}),
+            "over the 5000000 byte limit",
+        ),
+        (
+            package(
+                {
+                    "ppt/slides/slide1.xml": SLIDE,
+                    "ppt/presentation.xml": (
+                        f"<p:presentation {NS} {R}><p:sldIdLst>"
+                        '<p:sldId id="1" r:id="rId1"/><p:sldId id="2" r:id="rId9"/>'
+                        "</p:sldIdLst></p:presentation>"
+                    ),
+                    "ppt/_rels/presentation.xml.rels": (
+                        f'<Relationships xmlns="{RELS}">'
+                        '<Relationship Id="rId1" Target="slides/slide1.xml"/>'
+                        "</Relationships>"
+                    ),
+                }
+            ),
+            "lists slides it doesn't hold",
+        ),
+    ],
+    ids=["junk", "empty", "bad-slide", "too-big", "unlisted-part"],
+)
+def test_malformed_decks_are_a_value_error(data, message):
+    with pytest.raises(ValueError, match=message):
+        pptx.slides(data, RULES)

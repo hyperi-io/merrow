@@ -122,10 +122,11 @@ def test_an_object_edit_restyles_on_the_next_apply(settings, tmp_path):
     assert "class loader load" not in again
 
 
-def test_a_markdown_page_changes_only_its_managed_fences(settings, tmp_path):
+@pytest.mark.parametrize("name", ["page.md", "page.mdx", "page.markdown", "PAGE.MD"])
+def test_a_markdown_page_changes_only_its_managed_fences(settings, tmp_path, name):
     other = "flowchart LR\n    a --> b\n"
     sequence = "sequenceDiagram\n    a->>b: hi\n"
-    page = tmp_path / "page.md"
+    page = tmp_path / name
     page.write_text(
         f"# Page\n\n```mermaid\n{HAND}```\n\nText.\n\n```mermaid\n{other}```\n"
         f"\n```mermaid\n{sequence}```\n",
@@ -135,6 +136,7 @@ def test_a_markdown_page_changes_only_its_managed_fences(settings, tmp_path):
     assert result.exit_code == 0, result.output
     assert result.output.startswith("changed")
     text = page.read_text(encoding="utf-8")
+    assert text.startswith("# Page\n"), "the page itself takes no frontmatter"
     assert text.count(apply.BEGIN) == 1
     assert f"```mermaid\n{other}```" in text, "a fence with no object is left alone"
     assert text.count("actorBkg") == 1, "a sequence takes the frontmatter alone"

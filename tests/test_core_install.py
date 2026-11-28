@@ -13,7 +13,15 @@ _CORE = """
 import sys
 from importlib.abc import MetaPathFinder
 
-EXTRAS = ("playwright", "nvchecker", "pypdfium2", "pydot", "httpx", "scalo.http")
+EXTRAS = (
+    "playwright",
+    "nvchecker",
+    "pypdfium2",
+    "pydot",
+    "httpx",
+    "stamina",
+    "scalo.http",
+)
 
 
 class Refuse(MetaPathFinder):

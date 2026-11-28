@@ -14,7 +14,7 @@ from merrow.graph import Node
 from merrow.lint.diagram_check import diagram_type, split_front
 from merrow.objects import L1Object
 from merrow.profile import Profile
-from merrow.render import FENCE
+from merrow.render import FENCE, is_markdown
 from merrow.write import misfits, profile_label
 
 BEGIN = "%% merrow:begin"
@@ -129,7 +129,7 @@ def applied(
             a class block marker has no partner.
     """
     text = path.read_text(encoding="utf-8")
-    if path.suffix != ".md":
+    if not is_markdown(path):
         return text, apply(text, profile, by_ref)
 
     def one(fence: re.Match[str]) -> str:

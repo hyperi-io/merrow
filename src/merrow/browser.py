@@ -5,10 +5,12 @@ import subprocess
 import sys
 from typing import Any
 
-from merrow import config, proc
+from scalo.logger import logger
+
+from merrow import MerrowError, config, proc
 
 
-class BrowserError(RuntimeError):
+class BrowserError(MerrowError):
     """No browser could be installed or launched."""
 
 
@@ -64,9 +66,17 @@ def launch(driver: Any, settings: Any) -> Any:
         ensure(settings)
         return driver.chromium.launch()
     except (BrowserError, Error) as pinned:
+        logger.warning(
+            "pinned browser failed, using the host's Chrome", error=str(pinned)
+        )
         try:
             return driver.chromium.launch(channel="chrome")
         except Error as chrome:
             raise BrowserError(
                 f"no browser to render with: {pinned}; Chrome: {chrome}"
             ) from chrome
+
+
+def offline(page: Any) -> None:
+    """Abort every request `page` makes, so diagram content can't reach the network or local services."""
+    page.route("**/*", lambda route: route.abort())

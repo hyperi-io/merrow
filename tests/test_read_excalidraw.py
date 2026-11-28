@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from merrow import write
 from merrow.read import excalidraw
 
@@ -80,3 +82,56 @@ def test_a_scene_reads_into_a_graph():
     assert any("mark" in d for d in scene.dropped), "a numbered marker is no label"
     assert graph.problems() == []
     assert "api -.-> zone" in write.flowchart(graph, "LR")
+
+
+@pytest.mark.parametrize(
+    ("data", "message"),
+    [
+        (b"junk", "JSON is bad"),
+        (b"", "JSON is bad"),
+        (b"[]", "no `elements` list"),
+        (b'{"elements": {}}', "no `elements` list"),
+        (b'{"elements": [1]}', "element 0 has no id"),
+        (b'{"elements": [{"type": "frame"}]}', "element 0 has no id"),
+        (
+            json.dumps(
+                {"elements": [box("a", "wide", 0, 9, 9), label("t", "a", "Hi")]}
+            ).encode(),
+            "x is not a number",
+        ),
+        (
+            json.dumps(
+                {
+                    "elements": [
+                        {**label("t", "a", "Hi"), "originalText": 7},
+                        box("a", 0, 0, 9, 9),
+                    ]
+                }
+            ).encode(),
+            "wrong type",
+        ),
+    ],
+    ids=[
+        "junk",
+        "empty",
+        "list",
+        "elements-dict",
+        "not-object",
+        "no-id",
+        "bad-number",
+        "label-not-text",
+    ],
+)
+def test_malformed_scenes_are_a_value_error(data, message):
+    with pytest.raises(ValueError, match=message):
+        excalidraw.read(data, RULES)
+
+
+def test_rule_lists_may_have_spaces_after_the_commas():
+    scene = {
+        "elements": [box("a", 0, 0, 10, 10, kind="ellipse"), label("t", "a", "Hi")]
+    }
+    read = excalidraw.read(
+        json.dumps(scene).encode(), {**RULES, "shapes": "rectangle, ellipse"}
+    )
+    assert [n.label for n in read.graph.nodes] == ["Hi"]

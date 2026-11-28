@@ -7,6 +7,9 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+# How long a killed tool gets to close its pipes before its output is dropped.
+_DRAIN_SECONDS = 5.0
+
 
 def run(
     argv: Sequence[str], cwd: Path | None = None, timeout: float | None = None
@@ -30,7 +33,11 @@ def run(
             stdout, stderr = process.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
             _stop(process)
-            stdout, stderr = process.communicate()
+            try:
+                stdout, stderr = process.communicate(timeout=_DRAIN_SECONDS)
+            except subprocess.TimeoutExpired:
+                # A grandchild that survived the kill still holds the pipes.
+                stdout, stderr = "", ""
             said = [stdout, stderr, f"timed out after {timeout:g} s"]
             return subprocess.CompletedProcess(
                 list(argv), -1, stdout, "\n".join(filter(None, said))
@@ -42,11 +49,14 @@ def run(
 
 
 def _stop(process: subprocess.Popen[str]) -> None:
-    """Kill the tool and every process it started.
-
-    SHORTCUT: Windows kills the tool only. Upgrade if a Windows install outlives its timeout.
-    """
+    """Kill the tool and every process it started."""
     if sys.platform == "win32":
+        # taskkill ships with Windows, and the argv is fixed.
+        subprocess.run(  # noqa: S603
+            ["taskkill", "/T", "/F", "/PID", str(process.pid)],  # noqa: S607
+            capture_output=True,
+            check=False,
+        )
         process.kill()
     else:
         os.killpg(process.pid, signal.SIGKILL)

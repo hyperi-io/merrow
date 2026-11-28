@@ -1,4 +1,4 @@
-# Vendor sources, part of merrow's base layer. A reference repo adds or
+# Publisher sources, part of merrow's base layer. A reference repo adds or
 # overrides one under the same `sources:` key.
 #
 # `names` maps a file's path in the download to an icon key. First match wins.

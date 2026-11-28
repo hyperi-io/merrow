@@ -1,4 +1,4 @@
-"""Group-box styles from a vendor PPTX deck, such as AWS's Groups slide.
+"""Group-box styles from a publisher PPTX deck, such as AWS's Groups slide.
 
 Each group on the slide is a `p:grpSp` (or a lone `p:sp`) holding the box
 rectangle (line colour, dash, weight, fill), its text label and a `p:pic` corner
@@ -31,17 +31,26 @@ _ALIASES = {"tx1": "dk1", "bg1": "lt1", "tx2": "dk2", "bg2": "lt2"}
 
 
 def _related(deck: zipfile.ZipFile, part: str, kind: str) -> str:
-    """Return the first part related to `part` whose name has `kind` in it."""
-    return next(t for t in opc.relationships(deck, part).values() if f"/{kind}" in t)
+    """Return the first part related to `part` whose name has `kind` in it.
+
+    Raises:
+        LookupError: The part has no such relationship.
+    """
+    found = (t for t in opc.relationships(deck, part).values() if f"/{kind}" in t)
+    if (target := next(found, None)) is None:
+        raise LookupError(f"{part} has no relationship to {kind.rstrip('/')}")
+    return target
 
 
-def theme_colours(deck: zipfile.ZipFile, slide: str) -> dict[str, str]:
+def theme_colours(
+    deck: zipfile.ZipFile, slide: str, max_part: int = opc.MAX_PART_BYTES
+) -> dict[str, str]:
     """Return the colour scheme of the theme the slide's master uses."""
     layout = _related(deck, slide, "slideLayouts/")
     master = _related(deck, layout, "slideMasters/")
     theme = _related(deck, master, "theme/")
     colours = {}
-    scheme = opc.xml(deck, theme).find(".//a:clrScheme", NS)
+    scheme = opc.xml(deck, theme, max_part).find(".//a:clrScheme", NS)
     for slot in scheme if scheme is not None else []:
         rgb = slot.find("a:srgbClr", NS)
         system = slot.find("a:sysClr", NS)
@@ -54,8 +63,18 @@ def theme_colours(deck: zipfile.ZipFile, slide: str) -> dict[str, str]:
     return colours
 
 
+_HEX = re.compile(r"[0-9A-Fa-f]{6}")
+
+
+def _hex(value: str | None) -> str | None:
+    return f"#{value}" if value and _HEX.fullmatch(value) else None
+
+
 def _colour(element: ET.Element | None, theme: Mapping[str, str]) -> str | None:
-    """Return an element's solid fill as `#RRGGBB`, `none`, or None when unset."""
+    """Return an element's solid fill as `#RRGGBB`, `none`, or None when unset.
+
+    A theme slot's `lumMod`, `lumOff` and `alpha` adjustments are not applied.
+    """
     if element is None:
         return None
     if element.find("a:noFill", NS) is not None:
@@ -65,10 +84,10 @@ def _colour(element: ET.Element | None, theme: Mapping[str, str]) -> str | None:
         return None
     rgb = fill.find("a:srgbClr", NS)
     if rgb is not None:
-        return f"#{rgb.get('val')}"
+        return _hex(rgb.get("val"))
     scheme = fill.find("a:schemeClr", NS)
     if scheme is not None:
-        return f"#{theme.get(scheme.get('val', ''), scheme.get('val'))}"
+        return _hex(theme.get(scheme.get("val", "")))
     return None
 
 
@@ -125,7 +144,9 @@ def group_style(
     }
 
 
-def find_slide(deck: zipfile.ZipFile, title: re.Pattern[str]) -> str:
+def find_slide(
+    deck: zipfile.ZipFile, title: re.Pattern[str], max_part: int = opc.MAX_PART_BYTES
+) -> str:
     """Return the first slide holding a text run that matches `title`.
 
     Raises:
@@ -135,20 +156,23 @@ def find_slide(deck: zipfile.ZipFile, title: re.Pattern[str]) -> str:
         n for n in deck.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", n)
     ]
     for name in sorted(slides, key=lambda n: int(re.sub(r"\D", "", n))):
-        runs = opc.xml(deck, name).iter(f"{{{NS['a']}}}t")
+        runs = opc.xml(deck, name, max_part).iter(f"{{{NS['a']}}}t")
         if any(title.search(run.text or "") for run in runs):
             return name
     raise LookupError(f"no slide has a text run matching {title.pattern!r}")
 
 
 def deck_groups(
-    deck: zipfile.ZipFile, title: re.Pattern[str], max_name: int
+    deck: zipfile.ZipFile,
+    title: re.Pattern[str],
+    max_name: int,
+    max_part: int = opc.MAX_PART_BYTES,
 ) -> list[dict[str, object]]:
     """Return every distinct group style on the deck's matching slide."""
-    slide = find_slide(deck, title)
-    theme = theme_colours(deck, slide)
+    slide = find_slide(deck, title, max_part)
+    theme = theme_colours(deck, slide, max_part)
     rels = opc.relationships(deck, slide)
-    root = opc.xml(deck, slide)
+    root = opc.xml(deck, slide, max_part)
     candidates = [*root.iter(f"{{{NS['p']}}}grpSp"), *root.iter(f"{{{NS['p']}}}sp")]
     styles, seen = [], set()
     for shape in candidates:
@@ -170,7 +194,7 @@ def build(download: Path, source: Source, limits: Limits) -> Built:
 
     Raises:
         LookupError: A deck or the titled slide is missing.
-        ValueError: A deck is over the size cap.
+        ValueError: A deck or one of its parts is over the size cap.
     """
     title = re.compile(source.options["slide_title"])
     decks: dict[str, str] = source.options["decks"]
@@ -179,7 +203,9 @@ def build(download: Path, source: Source, limits: Limits) -> Built:
         with zipfile.ZipFile(download) as deck:
             if "ppt/presentation.xml" in deck.namelist():
                 theme = next(iter(decks))
-                themes[theme] = deck_groups(deck, title, limits.group_name_chars)
+                themes[theme] = deck_groups(
+                    deck, title, limits.group_name_chars, limits.member_bytes
+                )
                 return Built(f"{source.prefix}-groups.json", themes, _counts(themes))
     for theme, pattern in decks.items():
         found = next(
@@ -193,7 +219,9 @@ def build(download: Path, source: Source, limits: Limits) -> Built:
         if found.data is None:
             raise ValueError(f"{found.path} is over {limits.deck_bytes} bytes")
         with zipfile.ZipFile(io.BytesIO(found.data)) as deck:
-            themes[theme] = deck_groups(deck, title, limits.group_name_chars)
+            themes[theme] = deck_groups(
+                deck, title, limits.group_name_chars, limits.member_bytes
+            )
     return Built(f"{source.prefix}-groups.json", themes, _counts(themes))
 
 

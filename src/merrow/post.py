@@ -11,16 +11,30 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from merrow import MerrowError
 from merrow.write import GROUP_ICON
 
 _MARK = re.compile(rf"^\s*{re.escape(GROUP_ICON)}\s+(\S+)\s+(\S+)\s*$", re.MULTILINE)
 
 # Runs in the page with [svg text, {group id: icon}]. Each icon draws at its own artwork size.
+# A pack built by an older merrow may hold active content, so each body is stripped again here.
 _PLACE = """([text, groups]) => {
   const svg = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement;
   document.body.appendChild(svg);
+  const keys = Object.keys(groups);
+  const raster = /^data:image\\/(png|jpeg|gif|webp|bmp);base64,/i;
+  const strip = box => {
+    box.querySelectorAll('script,foreignObject,set,animate,animateMotion,animateTransform,iframe,img').forEach(el => el.remove());
+    for (const el of box.querySelectorAll('*')) {
+      for (const {name, value} of [...el.attributes]) {
+        const v = value.trim();
+        const link = /(^|:)href$/i.test(name) && !v.startsWith('#') && !(el.localName === 'image' && raster.test(v));
+        if (/^on/i.test(name) || name === 'src' || link || /url\\(\\s*(?!\\s|['"]?#)/i.test(v)) el.removeAttribute(name);
+      }
+    }
+  };
   for (const cluster of svg.querySelectorAll('g.cluster')) {
-    const id = Object.keys(groups).find(k => cluster.id === k || cluster.id.endsWith('-' + k));
+    const id = keys.find(k => cluster.id === k) || keys.find(k => cluster.id.endsWith('-' + k));
     const rect = cluster.querySelector('rect');
     if (!id || !rect) continue;
     const icon = groups[id];
@@ -30,6 +44,7 @@ _PLACE = """([text, groups]) => {
     box.setAttribute('width', icon.width); box.setAttribute('height', icon.height);
     box.setAttribute('viewBox', `${icon.left} ${icon.top} ${icon.width} ${icon.height}`);
     box.innerHTML = icon.body;
+    strip(box);
     cluster.parentNode.insertBefore(box, cluster.nextSibling);
     const label = cluster.querySelector('.cluster-label');
     if (label) {
@@ -51,14 +66,26 @@ def marks(source: str) -> dict[str, str]:
 def _icons(
     packs: Mapping[str, Path], keys: Sequence[str], suffix: str
 ) -> dict[str, dict[str, Any]]:
-    """Return each icon's body and box by key, its `suffix` variant where one exists."""
+    """Return each icon's body and box by key, its `suffix` variant where one exists.
+
+    Raises:
+        MerrowError: A key has no `prefix:` part, its pack isn't built, or the pack lacks it.
+    """
     found = {}
     for key in keys:
-        prefix, name = key.split(":", 1)
+        prefix, colon, name = key.partition(":")
+        if not colon:
+            raise MerrowError(f"group icon {key!r} has no pack prefix, as in aws:s3")
+        if prefix not in packs:
+            raise MerrowError(
+                f"group icon {key}: no {prefix} pack, run merrow pack build {prefix}"
+            )
         pack = json.loads(packs[prefix].read_text(encoding="utf-8"))
         icons = pack["icons"]
         name = pack.get("aliases", {}).get(name, {}).get("parent", name)
         name = f"{name}{suffix}" if suffix and f"{name}{suffix}" in icons else name
+        if name not in icons:
+            raise MerrowError(f"group icon {key}: the {prefix} pack has no {name}")
         icon = icons[name]
         found[key] = {
             "body": icon["body"],
@@ -82,8 +109,7 @@ def group_icons(
     `suffix` picks each icon's variant for the theme, where one exists.
 
     Raises:
-        KeyError: A marked icon isn't in its pack.
-        KeyError: A marked icon's pack isn't built either.
+        MerrowError: A marked icon, or its pack, isn't there.
     """
     icons = _icons(packs, sorted(set(groups.values())), suffix)
     by_group = {gid: icons[key] for gid, key in groups.items()}

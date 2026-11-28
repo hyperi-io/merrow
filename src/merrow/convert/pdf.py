@@ -100,7 +100,7 @@ def page_svg(data: bytes, raster_px: int) -> tuple[bytes, list[str]]:
     `raster_px` is the PNG's longest side.
 
     Raises:
-        ValueError: The bytes aren't a PDF PDFium can read.
+        ValueError: The bytes aren't a PDF PDFium can read, or its page has no area.
     """
     try:
         document = pdfium.PdfDocument(data)
@@ -109,9 +109,16 @@ def page_svg(data: bytes, raster_px: int) -> tuple[bytes, list[str]]:
     page = document[0]
     left, bottom, right, top = page.get_mediabox()
     width, height = right - left, top - bottom
+    if width <= 0 or height <= 0:
+        raise ValueError("the first page has no area")
+    # The raster comes out turned, so the SVG's box turns with it.
+    rotation = page.get_rotation()
+    if rotation in (90, 270):
+        width, height = height, width
     view = f'viewBox="0 0 {width:.2f} {height:.2f}"'
     objects = list(page.get_objects(max_depth=0))
-    if objects and all(o.type == raw.FPDF_PAGEOBJ_PATH for o in objects):
+    plain = objects and all(o.type == raw.FPDF_PAGEOBJ_PATH for o in objects)
+    if plain and not rotation:
         paths = "".join(_path(o.raw, left, top) for o in objects)
         return f'<svg xmlns="{_SVG_NS}" {view}>{paths}</svg>'.encode(), []
     scale = raster_px / max(width, height)

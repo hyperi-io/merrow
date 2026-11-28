@@ -4,12 +4,14 @@ The JSON Schema comes from these types, so it can't drift from what merrow reads
 """
 
 import re
+from collections.abc import Hashable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, Required, TypedDict
 
 import yaml
 from pydantic import ConfigDict, TypeAdapter, ValidationError, with_config
+from yaml.constructor import ConstructorError
 
 from merrow.graph import Edge, Graph, Group, Node
 from merrow.patterns import Pattern, expand
@@ -18,7 +20,23 @@ _BOOL = "tag:yaml.org,2002:bool"
 
 
 class _Loader(yaml.SafeLoader):
-    """YAML 1.2 booleans: only true and false, so a label of `yes` or `on` stays text."""
+    """YAML 1.2 booleans: only true and false, so a label of `yes` or `on` stays text.
+
+    A key repeated in one mapping is an error, so a second `edges:` can't drop the first.
+    """
+
+    def construct_mapping(self, node: yaml.MappingNode, deep: bool = False) -> dict:
+        seen = set()
+        for key_node, _ in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if not isinstance(key, Hashable):
+                continue  # SafeLoader's own check names an unhashable key
+            if key in seen:
+                raise ConstructorError(
+                    None, None, f"key {key!r} is repeated", key_node.start_mark
+                )
+            seen.add(key)
+        return super().construct_mapping(node, deep=deep)
 
 
 _Loader.yaml_implicit_resolvers = {

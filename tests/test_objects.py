@@ -84,8 +84,10 @@ def test_a_written_house_diagram_carries_the_whole_profile(monkeypatch, tmp_path
         (Graph([Node("a", object="demo.nothing")]), "unknown object 'demo.nothing'"),
         (Graph([Node("a")]), "no label and no object"),
         (Graph([Node("a", "A", group="nowhere")]), "unknown group 'nowhere'"),
+        (Graph([Node("a", "A")], [Edge("a", "zzz")]), "names unknown 'zzz'"),
+        (Graph(groups=[Group("x", "X", "y"), Group("y", "Y", "x")]), "contains itself"),
     ],
-    ids=["unknown_object", "no_label", "graph_problem"],
+    ids=["unknown_object", "no_label", "graph_problem", "dangling_edge", "group_cycle"],
 )
 def test_a_graph_that_cannot_be_drawn_is_refused(monkeypatch, tmp_path, graph, said):
     settings = settings_with(monkeypatch, tmp_path, LIBRARY)

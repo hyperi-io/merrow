@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from scalo.config import get_config
+from scalo.config.config import settings_files as user_settings_files
 from scalo.runtime import RuntimeEnvironment
 
 from merrow.model import Limits, Source
@@ -97,15 +98,23 @@ def limits(settings: Any) -> Limits:
     return Limits.from_config(settings.get("limits"), settings.get("ignore"))
 
 
+def _cascade(layers: list[Path]) -> Any:
+    """Return the settings with `layers` below the user's settings files and env.
+
+    scalo ranks `additional_files` above its own settings files, so they go in
+    first and scalo's files after them.
+    """
+    files = [*(str(layer) for layer in layers), *user_settings_files]
+    return get_config(
+        additional_files=files, env_prefix=ENV_PREFIX, merge_existing=False
+    )
+
+
 def load() -> Any:
-    """Return merrow's settings: base layer, then each reference repo, later wins.
+    """Return merrow's settings: base layer, each reference repo, settings.yaml, env, later wins.
 
     The reference list itself comes from the cascade, so the first pass reads
     only that and the second merges the repos' data files in.
     """
-    base = [str(layer) for layer in BASE_LAYERS]
-    first = get_config(additional_files=base, env_prefix=ENV_PREFIX)
-    layers = [*BASE_LAYERS, *reference_layers(first)]
-    return get_config(
-        additional_files=[str(layer) for layer in layers], env_prefix=ENV_PREFIX
-    )
+    first = _cascade(BASE_LAYERS)
+    return _cascade([*BASE_LAYERS, *reference_layers(first)])

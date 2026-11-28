@@ -18,6 +18,7 @@ from merrow.read import Drawing, skipper
 
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 P = "http://schemas.openxmlformats.org/presentationml/2006/main"
+R_ID = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
 NS = {"a": A, "p": P}
 
 # A group's child coordinates: (child offset x, y, slide offset x, y, scale x, y).
@@ -139,17 +140,39 @@ def read_slide(number: int, slide: ET.Element, rules: Mapping[str, object]) -> D
     return result
 
 
+def _slide_parts(deck: zipfile.ZipFile) -> list[str]:
+    """Return the slide parts in deck order: the order `ppt/presentation.xml` lists them.
+
+    A deck whose presentation lists none falls back to the slide file numbers.
+
+    Raises:
+        ValueError: The presentation lists a slide whose part isn't in the package.
+    """
+    names = {n for n in deck.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", n)}
+    by_number = sorted(names, key=lambda n: int(re.sub(r"\D", "", n)))
+    if "ppt/presentation.xml" not in deck.namelist():
+        return by_number
+    rels = opc.relationships(deck, "ppt/presentation.xml")
+    listed = opc.xml(deck, "ppt/presentation.xml").iter(f"{{{P}}}sldId")
+    ordered = [rels.get(slide.get(R_ID, ""), "") for slide in listed]
+    missing = [part or "(no relationship)" for part in ordered if part not in names]
+    if missing:
+        raise ValueError(f"the deck lists slides it doesn't hold: {', '.join(missing)}")
+    return ordered or by_number
+
+
 def slides(data: bytes, rules: Mapping[str, object]) -> list[Drawing]:
     """Return every slide in a deck as a Graph, in deck order.
 
     Raises:
-        zipfile.BadZipFile: The bytes are not a PPTX package.
+        ValueError: The bytes are not a PPTX package, a slide is not XML, or a part is
+            over the size cap.
     """
-    with zipfile.ZipFile(io.BytesIO(data)) as deck:
-        names = [
-            n for n in deck.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", n)
-        ]
-        ordered = sorted(names, key=lambda n: int(re.sub(r"\D", "", n)))
+    with (
+        opc.bad_package("PPTX"),
+        zipfile.ZipFile(io.BytesIO(data)) as deck,
+    ):
         return [
-            read_slide(i, opc.xml(deck, n), rules) for i, n in enumerate(ordered, 1)
+            read_slide(i, opc.xml(deck, n), rules)
+            for i, n in enumerate(_slide_parts(deck), 1)
         ]

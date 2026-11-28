@@ -60,7 +60,7 @@ Why [`style/diagrams.md`](../style/diagrams.md) says what it says: the sources, 
 | No longer links in the repair ladder | `a ---> b` is ignored by Mermaid 12.3.0 and makes a skip arrow on 11.17.2 |
 | A queue or topic is `async`, a table or database is `store` | Both are cylinders. Naming each thing in one class stops two authors colouring a topic two ways |
 | No shared pairs | Two nodes in one column that both link to the same two nodes in the next form a cycle between two columns, which cannot be drawn without a crossing |
-| Intro sentence reads "This diagram shows" | The rule is GitLab's. The wording avoids "the following" |
+| The intro sentence states a claim the diagram backs | GitLab requires an introductory sentence. "This diagram shows" and "Below is" add no fact |
 | The standard, this page and the agent summary are three files | The standard is instructions alone, so an agent loads it without the reasoning |
 
 ## Test evidence
@@ -82,7 +82,7 @@ Natural SVG size in px, measured by the checker in Chrome 157 in an 860 px colum
 
 All eight pass the checker's source and render passes on both releases.
 
-### Behaviours confirmed by rendering
+### Mermaid rendering
 
 | Finding | Detail |
 |---|---|
@@ -96,7 +96,7 @@ All eight pass the checker's source and render passes on both releases.
 | A longer link (`a ---> b`) is no repair | On 12.3.0 the node stays in its column. On 11.17.2 it moves, and the arrow jumps the box between |
 | `maid` 0.0.29 rejects `accTitle` and `accDescr` in a flowchart | It reports `FL-LINK-MISSING` on the line, so it cannot check a diagram written to R7 |
 
-The first two rows and the last three were measured with the checker. The other four come from renders made while the rules were drafted and were not re-run.
+The first two rows and the last three come from the checker. The other four were not re-run.
 
 ### Palette contrast
 
@@ -127,9 +127,9 @@ A typical brand set fails here: a light blue passes on dark and fails on white, 
 | A skip arrow inside a left-to-right stage of a top-down chart | The skip arrow | Found | Found |
 | `graph TD` with an init directive, `style`, `click`, a thick and a double-headed arrow, a circle and a made-up class | Each fault named | 11 source findings | Not run |
 
-Five diagrams from those product docs were then redrawn to the standard. The checker failed three of the redraws on the first try, two for width and one for proportion, and all six resulting diagrams pass. That run found two gaps in the standard, which it now covers: three decision diamonds in a row leave no room for a start node, and an arrow touching the `core` box is labelled.
+Run over nine pages of one product's docs holding 29 diagrams, every diagram failed, as expected of pages written before the standard. The verdicts on its routing page (871 x 1234, no crossings, three skip arrows, six arrows into one box) match its screenshot. It found one text-box diagram and one diagram that no longer parses on Mermaid 12.3.0.
 
-It was first run, read-only, over nine pages of one product's docs holding 29 diagrams. Every diagram failed, which is expected of pages written before the standard. The verdicts on its routing page (871 x 1234, no crossings, three skip arrows, six arrows into one box) were compared with the screenshot and match. It found one text-box diagram and one diagram that no longer parses on Mermaid 12.3.0.
+Five diagrams redrawn to the standard pass. Two gaps the standard covers: three decision diamonds in a row leave no room for a start node, and an arrow touching the `core` box is labelled.
 
 Across that product's four repos' `docs/` trees: 165 Markdown files, 62 with diagrams, 36 top-down flowcharts, 69 left-to-right, 18 of other types, and none with `accTitle` or `accDescr`.
 
@@ -139,11 +139,11 @@ Across that product's four repos' `docs/` trees: 165 Markdown files, 62 with dia
 |---|---|
 | Source order controls row order | Common practice for Mermaid's layered layouts. Shuffling declaration order and counting crossings was not done |
 | The order of the repair ladder | The invisible link is a documented Mermaid feature. The order of the steps is judgement |
-| The screenshots' themes | `neutral` and `dark`. GitHub's own theme was not tested |
+| The screenshots' themes | `default` and `dark`. GitHub's own theme was not tested |
 | Which arrow is named as against the flow | The checker reads the layout. When two feedback arrows push the start node to the right, a forward arrow can be the one it names |
 | Arrow limits: nodes plus 2, and 5 on one node | Our thresholds, from no source |
 | The 860 px content column | Assumed. Measure the docs site's column and adjust the 1250 px limit |
-| Which Mermaid release the docs site and GitHub run | Unknown. The checker pins 12.3.0 and takes another bundle with `--mermaid` |
+| Which Mermaid release the docs site and GitHub run | Unknown. The checker pins 12.3.0 in `src/merrow/npm/package.json` |
 | Rendering on GitHub | Not tested |
 | The full eight-line class block in `stateDiagram-v2` | Not tested, so a state diagram copies the lines it uses |
 | Lines that run on top of each other | The checker does not report them. Right-angle routing in Mermaid 12 makes them more common |
@@ -154,7 +154,7 @@ Across that product's four repos' `docs/` trees: 165 Markdown files, 62 with dia
 ## Actions for a docs site owner
 
 - Pin the Mermaid release. Layout and line routing changed between 11 and 12.
-- Set the theme pair once in the site config. The templates were tested with `neutral` for light and `dark` for dark.
+- Set the theme pair once in the site config. The templates were tested with `default` for light and `dark` for dark.
 - Set `layout` and `look` in the site's Mermaid options, so an upgrade does not restyle every diagram.
 - Run the checker's source pass in CI on changed pages. The render pass needs Chrome.
 

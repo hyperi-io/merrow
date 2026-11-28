@@ -263,4 +263,3 @@ stateDiagram-v2
 ```
 
 *Figure 8. L4 Detail -- Batch lifecycle.* Up: L3 Components -- Loader.
-

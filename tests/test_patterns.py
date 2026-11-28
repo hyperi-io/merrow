@@ -58,6 +58,15 @@ def test_an_empty_optional_slot_drops_with_its_edges(settings):
     }
 
 
+def test_a_fill_id_renames_the_node_and_its_edges(settings):
+    fills = {**FILLS, "intake": [{"object": "x.receiver", "id": "rx"}]}
+    graph = patterns.expand(patterns.library(settings)["data-path"], fills)
+    assert graph.problems() == []
+    ends = {end for e in graph.edges for end in (e.source, e.target)}
+    assert "rx" in ends
+    assert "intake" not in ends
+
+
 def test_a_filled_optional_slot_turns_the_direct_edge_into_a_bypass(settings):
     fills = {**FILLS, "transform": ["x.transform"]}
     graph = patterns.expand(patterns.library(settings)["data-path"], fills)
