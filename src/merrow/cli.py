@@ -79,7 +79,7 @@ def _needs(extra: str, command: str) -> None:
     for module in EXTRAS[extra]:
         try:
             # The names come from the EXTRAS constant above, never from input.
-            importlib.import_module(module)  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
+            importlib.import_module(module)  # nosemgrep
         except ModuleNotFoundError:
             print(
                 f"merrow: {command} needs merrow[{extra}]: "

@@ -29,7 +29,7 @@ _PLACE = """([text, groups]) => {
       for (const {name, value} of [...el.attributes]) {
         const v = value.trim();
         const link = /(^|:)href$/i.test(name) && !v.startsWith('#') && !(el.localName === 'image' && raster.test(v));
-        if (/^on/i.test(name) || name === 'src' || link || /url\\(\\s*['"]?(?!#)/i.test(v)) el.removeAttribute(name);
+        if (/^on/i.test(name) || name === 'src' || link || /url\\(\\s*(?!\\s|['"]?#)/i.test(v)) el.removeAttribute(name);
       }
     }
   };

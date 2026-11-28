@@ -99,8 +99,28 @@ def test_a_scene_reads_into_a_graph():
             ).encode(),
             "x is not a number",
         ),
+        (
+            json.dumps(
+                {
+                    "elements": [
+                        {**label("t", "a", "Hi"), "originalText": 7},
+                        box("a", 0, 0, 9, 9),
+                    ]
+                }
+            ).encode(),
+            "wrong type",
+        ),
     ],
-    ids=["junk", "empty", "list", "elements-dict", "not-object", "no-id", "bad-number"],
+    ids=[
+        "junk",
+        "empty",
+        "list",
+        "elements-dict",
+        "not-object",
+        "no-id",
+        "bad-number",
+        "label-not-text",
+    ],
 )
 def test_malformed_scenes_are_a_value_error(data, message):
     with pytest.raises(ValueError, match=message):

@@ -51,9 +51,18 @@ def read(data: bytes, rules: Mapping[str, object]) -> Drawing:
 
     Raises:
         ValueError: The bytes aren't an Excalidraw scene: bad JSON, no `elements`
-            list, an element with no id, or a position or size that isn't a number.
+            list, an element with no id, or a field of the wrong type.
     """
     elements = _elements(data)
+    try:
+        return _scene(elements, rules)
+    except (AttributeError, TypeError, KeyError) as error:
+        raise ValueError(
+            f"not an Excalidraw scene, a field has the wrong type: {error}"
+        ) from error
+
+
+def _scene(elements: list[Mapping[str, Any]], rules: Mapping[str, object]) -> Drawing:
     shapes = {s.strip() for s in str(rules.get("shapes", "")).split(",") if s.strip()}
     optional = {
         s.strip() for s in str(rules.get("optional_stroke", "")).split(",") if s.strip()

@@ -129,8 +129,26 @@ def test_slides_come_back_in_the_order_the_deck_lists_them():
             package({"ppt/slides/slide1.xml": " " * 5_000_100}),
             "over the 5000000 byte limit",
         ),
+        (
+            package(
+                {
+                    "ppt/slides/slide1.xml": SLIDE,
+                    "ppt/presentation.xml": (
+                        f"<p:presentation {NS} {R}><p:sldIdLst>"
+                        '<p:sldId id="1" r:id="rId1"/><p:sldId id="2" r:id="rId9"/>'
+                        "</p:sldIdLst></p:presentation>"
+                    ),
+                    "ppt/_rels/presentation.xml.rels": (
+                        f'<Relationships xmlns="{RELS}">'
+                        '<Relationship Id="rId1" Target="slides/slide1.xml"/>'
+                        "</Relationships>"
+                    ),
+                }
+            ),
+            "lists slides it doesn't hold",
+        ),
     ],
-    ids=["junk", "empty", "bad-slide", "too-big"],
+    ids=["junk", "empty", "bad-slide", "too-big", "unlisted-part"],
 )
 def test_malformed_decks_are_a_value_error(data, message):
     with pytest.raises(ValueError, match=message):

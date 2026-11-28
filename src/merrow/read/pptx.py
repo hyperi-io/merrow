@@ -144,6 +144,9 @@ def _slide_parts(deck: zipfile.ZipFile) -> list[str]:
     """Return the slide parts in deck order: the order `ppt/presentation.xml` lists them.
 
     A deck whose presentation lists none falls back to the slide file numbers.
+
+    Raises:
+        ValueError: The presentation lists a slide whose part isn't in the package.
     """
     names = {n for n in deck.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", n)}
     by_number = sorted(names, key=lambda n: int(re.sub(r"\D", "", n)))
@@ -152,7 +155,10 @@ def _slide_parts(deck: zipfile.ZipFile) -> list[str]:
     rels = opc.relationships(deck, "ppt/presentation.xml")
     listed = opc.xml(deck, "ppt/presentation.xml").iter(f"{{{P}}}sldId")
     ordered = [rels.get(slide.get(R_ID, ""), "") for slide in listed]
-    return [n for n in ordered if n in names] or by_number
+    missing = [part or "(no relationship)" for part in ordered if part not in names]
+    if missing:
+        raise ValueError(f"the deck lists slides it doesn't hold: {', '.join(missing)}")
+    return ordered or by_number
 
 
 def slides(data: bytes, rules: Mapping[str, object]) -> list[Drawing]:

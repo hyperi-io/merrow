@@ -30,24 +30,31 @@ def download(url: str, limits: Limits) -> bytes:
     cap = limits.download_bytes
     # Publisher downloads redirect routinely (GitHub archives to codeload). No
     # credentials are sent, so following one leaks nothing.
+    # Identity encoding and raw chunks, so no decoder inflates a chunk past the cap.
     with (
         httpx.Client(
             verify=ssl_context(CryptoProfile.PROD),
             timeout=limits.download_timeout_seconds,
             follow_redirects=True,
+            headers={"Accept-Encoding": "identity"},
         ) as client,
         client.stream("GET", url) as response,
     ):
         if response.is_error:
             raise DownloadError(f"{url}: HTTP {response.status_code}")
+        encoding = response.headers.get("content-encoding", "identity").lower()
+        if encoding != "identity":
+            raise DownloadError(
+                f"{url} came {encoding}-encoded after asking for identity"
+            )
         declared = int(response.headers.get("content-length") or 0)
         if declared > cap:
             raise DownloadError(f"{url} is {declared} bytes, over {cap}")
         body = bytearray()
-        for chunk in response.iter_bytes():
-            body += chunk
-            if len(body) > cap:
+        for chunk in response.iter_raw(chunk_size=65536):
+            if len(body) + len(chunk) > cap:
                 raise DownloadError(f"{url} is over {cap} bytes")
+            body += chunk
     return bytes(body)
 
 

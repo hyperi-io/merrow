@@ -447,8 +447,9 @@ def test_the_open_sources_name_and_title_icons(source, path, key, title):
         f'<svg {NS}><path d="M0"/></svg>',
         f'<svg {NS} viewBox="0 0 10"><path d="M0"/></svg>',
         f'<svg {NS} viewBox="0 0 8 8">' + "<g>" * 3000 + "</g>" * 3000 + "</svg>",
+        f'<svg {NS} viewBox="0 0 inf 8"><path d="M0"/></svg>',
     ],
-    ids=["no-size", "short-viewBox", "nested-too-deep"],
+    ids=["no-size", "short-viewBox", "nested-too-deep", "infinite-viewBox"],
 )
 def test_a_bad_icon_is_reported_and_the_pack_goes_on(bad):
     members = [archive.Member("bad.svg", bad.encode()), archive.Member("ok.svg", ICON)]

@@ -8,6 +8,7 @@ can't collide. The artwork is never changed. Which file becomes which icon key i
 `names` rules, never code.
 """
 
+import math
 import re
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -238,6 +239,8 @@ def clean(
             for side in ("width", "height")
         )
         notes.append("no-viewBox")
+    if not all(math.isfinite(v) for v in (left, top, width, height)):
+        raise ValueError(f"bad size: viewBox {view_box!r} isn't four finite numbers")
     if width <= 0 or height <= 0:
         raise ValueError("no size: the file has no viewBox, width or height")
 
