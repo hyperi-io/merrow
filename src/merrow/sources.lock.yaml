@@ -56,10 +56,10 @@ lock:
     sha256: 2aef1b85837841b38f6a0181a0cc5170e844b89a94a11e1d022459cbd555b3e9
     bytes: 11092920
   kubernetes-icons:
-    version: '20260126.015052'
-    url: https://codeload.github.com/kubernetes/community/tar.gz/70a4bb2d8cc35bb0672f221bad9bc60c27a6f94b
-    sha256: c3e6b38bbfd488f551453c5203b403a0094a734d467f067d6842138a9e2c9662
-    bytes: 45064138
+    version: '20261118.052730'
+    url: https://codeload.github.com/kubernetes/community/tar.gz/a620d469b204a55912856084eae1f92a299b4852
+    sha256: 7acfc7d8407175781dcb6eac7417beac76ad38024e96f158afcef895084e124b
+    bytes: 45359565
   oci-icons:
     version: 66301b1e-693098
     url: https://docs.oracle.com/iaas/Content/Resources/Assets/OCI_Icons_Visio.zip
@@ -81,7 +81,7 @@ lock:
     sha256: ed2635e02e6bb29ecfccd65550b2311230bb550229ffacdaa8a079ad8e6f0321
     bytes: 6998677
   tabler-icons:
-    version: 3.52.0
-    url: https://registry.npmjs.org/@tabler/icons/-/icons-3.52.0.tgz
-    sha256: 626620c7d42afd2f294fba167ce4653b5cb946336d186b4991c70b700e5616af
-    bytes: 1299871
+    version: 3.53.0
+    url: https://registry.npmjs.org/@tabler/icons/-/icons-3.53.0.tgz
+    sha256: 207d929bb9337c22019073df4b997e20735a4a91fede8861af96d05ceed7b396
+    bytes: 1304176
